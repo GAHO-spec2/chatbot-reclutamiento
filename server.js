@@ -20,23 +20,26 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /* =========================
+   OPENAI
+========================= */
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+/* =========================
    FIREBASE ADMIN
 ========================= */
-const firebaseProjectId = process.env.FIREBASE_PROJECT_ID;
-const firebaseClientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-const firebasePrivateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
-
 if (!admin.apps.length) {
-  if (!firebaseProjectId || !firebaseClientEmail || !firebasePrivateKey) {
-    console.warn("⚠️ Firebase Admin no está completamente configurado en .env");
-  } else {
+  const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+
+  if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
+    const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf-8"));
+
     admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: firebaseProjectId,
-        clientEmail: firebaseClientEmail,
-        privateKey: firebasePrivateKey
-      })
+      credential: admin.credential.cert(serviceAccount)
     });
+  } else {
+    console.warn("⚠️ Firebase Admin no inicializado. Revisa FIREBASE_SERVICE_ACCOUNT_PATH en Render.");
   }
 }
 
@@ -45,28 +48,49 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
   .map((email) => email.trim().toLowerCase())
   .filter(Boolean);
 
+async function verifyAdmin(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization || "";
+
+    if (!authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Token no enviado." });
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const decoded = await admin.auth().verifyIdToken(token);
+
+    const email = decoded.email?.toLowerCase();
+
+    if (!email || !ADMIN_EMAILS.includes(email)) {
+      return res.status(403).json({ error: "No tienes permisos administrativos." });
+    }
+
+    req.adminUser = decoded;
+    next();
+  } catch (error) {
+    console.error("❌ Error verificando admin:", error);
+    return res.status(401).json({ error: "Sesión inválida o expirada." });
+  }
+}
+
 /* =========================
    CARPETAS Y ARCHIVOS
 ========================= */
 const uploadsDir = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir);
-}
-
 const dataDir = path.join(__dirname, "data");
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir);
-}
+
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
 
 const postulacionesFile = path.join(dataDir, "postulaciones.json");
+const vacantesFile = path.join(dataDir, "vacantes.json");
+
 if (!fs.existsSync(postulacionesFile)) {
   fs.writeFileSync(postulacionesFile, "[]", "utf-8");
 }
 
-const vacantesFile = path.join(dataDir, "vacantes.json");
-
 /* =========================
-   DATA BASE INICIAL
+   VACANTES INICIALES
 ========================= */
 const vacantesIniciales = [
   {
@@ -316,7 +340,7 @@ if (!fs.existsSync(vacantesFile)) {
 }
 
 /* =========================
-   HELPERS DE ARCHIVO
+   HELPERS JSON
 ========================= */
 function leerJson(filePath, fallback = []) {
   try {
@@ -412,80 +436,31 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({ limit: "3mb" }));
+app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 app.use("/uploads", express.static(uploadsDir));
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-/* =========================
-   DATA EN MEMORIA + ARCHIVO
-========================= */
 let postulaciones = leerPostulaciones();
 let vacantes = leerVacantes();
 
+/* =========================
+   UBICACIONES
+========================= */
 const ubicaciones = {
-  "México": {
-    "Chihuahua": ["Ciudad Juárez", "Chihuahua"],
+  México: {
+    Chihuahua: ["Ciudad Juárez", "Chihuahua"],
     "Baja California": ["Mexicali"],
-    "Jalisco": ["Guadalajara"]
+    Jalisco: ["Guadalajara"]
   },
   "Estados Unidos": {
-    "Texas": ["El Paso"]
+    Texas: ["El Paso"]
   }
 };
 
 /* =========================
-   MIDDLEWARE ADMIN
+   TEXTO HELPERS
 ========================= */
-async function verifyAdmin(req, res, next) {
-  try {
-    if (!admin.apps.length) {
-      return res.status(500).json({ error: "Firebase Admin no está configurado en el servidor." });
-    }
-
-    const authHeader = req.headers.authorization || "";
-    const token = authHeader.startsWith("Bearer ")
-      ? authHeader.split("Bearer ")[1]
-      : null;
-
-    if (!token) {
-      return res.status(401).json({ error: "No autorizado. Falta token." });
-    }
-
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    const userEmail = String(decodedToken.email || "").toLowerCase();
-
-    if (!userEmail || !ADMIN_EMAILS.includes(userEmail)) {
-      return res.status(403).json({ error: "Acceso denegado. Usuario no autorizado." });
-    }
-
-    req.adminUser = decodedToken;
-    next();
-  } catch (error) {
-    console.error("❌ Error validando admin:", error);
-    return res.status(401).json({ error: "Token inválido o expirado." });
-  }
-}
-
-/* =========================
-   HELPERS
-========================= */
-function obtenerGruposPorTipo(tipoVacante) {
-  const grupos = [...new Set(vacantes.filter((v) => v.tipoVacante === tipoVacante).map((v) => v.grupo))];
-  return grupos.sort();
-}
-
-function limpiarJsonRespuesta(texto = "") {
-  return String(texto)
-    .replace(/```json/gi, "")
-    .replace(/```/g, "")
-    .trim();
-}
-
 function normalizarTexto(texto = "") {
   return String(texto)
     .normalize("NFD")
@@ -497,11 +472,18 @@ function normalizarTexto(texto = "") {
     .trim();
 }
 
+function limpiarJsonRespuesta(texto = "") {
+  return String(texto)
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
+}
+
 function resolverPais(valor = "") {
   const t = normalizarTexto(valor);
 
   const aliases = {
-    "México": ["mexico", "méxico", "mx"],
+    México: ["mexico", "méxico", "mx"],
     "Estados Unidos": ["estados unidos", "usa", "us", "eeuu", "eua", "united states"]
   };
 
@@ -518,10 +500,10 @@ function resolverEstado(valor = "") {
   const t = normalizarTexto(valor);
 
   const aliases = {
-    "Chihuahua": ["chihuahua", "chih"],
+    Chihuahua: ["chihuahua", "chih"],
     "Baja California": ["baja california", "baja", "bc"],
-    "Jalisco": ["jalisco", "gdl"],
-    "Texas": ["texas", "tx"]
+    Jalisco: ["jalisco", "gdl", "guadalajara"],
+    Texas: ["texas", "tx"]
   };
 
   for (const [oficial, lista] of Object.entries(aliases)) {
@@ -538,9 +520,9 @@ function resolverCiudad(valor = "") {
 
   const aliases = {
     "Ciudad Juárez": ["juarez", "ciudad juarez", "cd juarez", "cd. juarez", "jrz"],
-    "Chihuahua": ["chihuahua", "ciudad chihuahua", "cd chihuahua"],
-    "Guadalajara": ["guadalajara", "gdl"],
-    "Mexicali": ["mexicali"],
+    Chihuahua: ["chihuahua", "ciudad chihuahua", "cd chihuahua"],
+    Guadalajara: ["guadalajara", "gdl"],
+    Mexicali: ["mexicali"],
     "El Paso": ["el paso", "elpaso", "paso"]
   };
 
@@ -560,14 +542,14 @@ function resolverGrupo(valor = "") {
     "Wendy's": ["wendys", "wendy", "wendy's"],
     "Applebee's": ["applebees", "applebee", "applebee's"],
     "Great American": ["great american", "great american steakhouse", "great"],
-    "Ardeo": ["ardeo"],
-    "Yoko": ["yoko"],
+    Ardeo: ["ardeo"],
+    Yoko: ["yoko"],
     "Little Caesars": ["little caesars", "little", "caesars", "little caesar"],
-    "RH": ["rh", "recursos humanos", "reclutamiento"],
-    "Contabilidad": ["contabilidad", "contable"],
-    "Mercadotecnia": ["mercadotecnia", "marketing", "mkt"],
-    "Sistemas": ["sistemas", "soporte", "soporte tecnico", "it"],
-    "Monitoreo": ["monitoreo", "monitorista"],
+    RH: ["rh", "recursos humanos", "reclutamiento"],
+    Contabilidad: ["contabilidad", "contable"],
+    Mercadotecnia: ["mercadotecnia", "marketing", "mkt"],
+    Sistemas: ["sistemas", "soporte", "soporte tecnico", "it"],
+    Monitoreo: ["monitoreo", "monitorista"],
     "Proyectos y Construcción": ["proyectos y construccion", "proyectos", "construccion"],
     "Capital Humano": ["capital humano", "capital", "talento humano"]
   };
@@ -581,6 +563,9 @@ function resolverGrupo(valor = "") {
   return valor;
 }
 
+/* =========================
+   PDF + IA
+========================= */
 async function extraerTextoPdf(filePath) {
   try {
     const pdfBuffer = fs.readFileSync(filePath);
@@ -592,30 +577,90 @@ async function extraerTextoPdf(filePath) {
   }
 }
 
-async function analizarCvConIA(cvTexto = "", contextoExtra = "") {
+function sugerirVacantesBasicas(texto = "", tipoVacante = "") {
+  const lower = normalizarTexto(texto);
+  const lista = leerVacantes();
+
+  return lista
+    .filter((v) => !tipoVacante || v.tipoVacante === tipoVacante)
+    .map((v) => {
+      let score = 0;
+
+      const full = normalizarTexto(
+        `${v.titulo} ${v.area} ${v.grupo} ${v.requisitos.join(" ")} ${v.sucursal}`
+      );
+
+      const keywords = [
+        "cliente",
+        "servicio",
+        "ventas",
+        "caja",
+        "cajero",
+        "cocina",
+        "alimentos",
+        "restaurante",
+        "sushi",
+        "parrilla",
+        "logistica",
+        "importacion",
+        "exportacion",
+        "documental",
+        "facturacion",
+        "almacen",
+        "inventario",
+        "administracion",
+        "administrativo",
+        "excel",
+        "contabilidad",
+        "reclutamiento",
+        "recursos humanos",
+        "rh",
+        "soporte",
+        "sistemas",
+        "tecnico",
+        "marketing",
+        "mercadotecnia",
+        "monitoreo",
+        "proyectos"
+      ];
+
+      keywords.forEach((k) => {
+        if (lower.includes(k) && full.includes(k)) score += 25;
+      });
+
+      if (lower.includes(normalizarTexto(v.titulo))) score += 35;
+      if (lower.includes(normalizarTexto(v.area))) score += 30;
+      if (lower.includes(normalizarTexto(v.grupo))) score += 20;
+
+      return { ...v, score };
+    })
+    .filter((v) => v.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 6);
+}
+
+async function analizarCvConIA(cvTexto = "") {
   if (!cvTexto.trim()) {
     return {
       resumen: "No fue posible analizar el CV.",
       habilidadesDetectadas: [],
       perfilRecomendado: "",
-      observaciones: "",
       palabrasClave: []
     };
   }
 
   try {
-    const analisisPrompt = `
-Analiza este CV para reclutamiento y devuelve JSON válido con esta estructura exacta:
+    const prompt = `
+Analiza este CV para reclutamiento.
+
+Devuelve SOLO JSON válido con esta estructura:
 {
   "resumen": "resumen profesional breve",
   "habilidadesDetectadas": ["..."],
-  "perfilRecomendado": "operativo o administrativo",
-  "observaciones": "...",
-  "palabrasClave": ["..."]
+  "perfilRecomendado": "operativa o administrativa",
+  "palabrasClave": ["..."],
+  "areasCompatibles": ["..."]
 }
-
-Contexto adicional:
-${contextoExtra || "Sin contexto adicional."}
 
 CV:
 ${cvTexto.slice(0, 12000)}
@@ -624,8 +669,8 @@ ${cvTexto.slice(0, 12000)}
     const completion = await openai.chat.completions.create({
       model: "gpt-5-mini",
       messages: [
-        { role: "system", content: "Responde solo JSON válido, sin texto extra." },
-        { role: "user", content: analisisPrompt }
+        { role: "system", content: "Responde únicamente JSON válido, sin markdown." },
+        { role: "user", content: prompt }
       ]
     });
 
@@ -634,133 +679,70 @@ ${cvTexto.slice(0, 12000)}
 
     return {
       resumen: parsed.resumen || "CV recibido correctamente.",
-      habilidadesDetectadas: Array.isArray(parsed.habilidadesDetectadas) ? parsed.habilidadesDetectadas : [],
+      habilidadesDetectadas: Array.isArray(parsed.habilidadesDetectadas)
+        ? parsed.habilidadesDetectadas
+        : [],
       perfilRecomendado: parsed.perfilRecomendado || "",
-      observaciones: parsed.observaciones || "",
-      palabrasClave: Array.isArray(parsed.palabrasClave) ? parsed.palabrasClave : []
+      palabrasClave: Array.isArray(parsed.palabrasClave)
+        ? parsed.palabrasClave
+        : [],
+      areasCompatibles: Array.isArray(parsed.areasCompatibles)
+        ? parsed.areasCompatibles
+        : []
     };
   } catch (error) {
-    console.error("❌ Error en análisis IA del CV:", error);
+    console.error("❌ Error IA CV:", error);
+
     return {
       resumen: "CV recibido correctamente. El análisis automático no estuvo disponible en este momento.",
       habilidadesDetectadas: [],
       perfilRecomendado: "",
-      observaciones: "",
-      palabrasClave: []
+      palabrasClave: [],
+      areasCompatibles: []
     };
   }
 }
 
-function sugerirVacantesInteligentes({
-  cvTexto = "",
-  perfilRecomendado = "",
-  habilidadesDetectadas = [],
-  palabrasClave = []
-}) {
-  const textoBase = `
-    ${cvTexto}
-    ${perfilRecomendado}
-    ${(habilidadesDetectadas || []).join(" ")}
-    ${(palabrasClave || []).join(" ")}
-  `.toLowerCase();
+/* =========================
+   RUTAS HTML
+========================= */
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
 
-  return vacantes
-    .map((vacante) => {
-      let score = 0;
+app.get("/index.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
 
-      const titulo = String(vacante.titulo || "").toLowerCase();
-      const area = String(vacante.area || "").toLowerCase();
-      const grupo = String(vacante.grupo || "").toLowerCase();
-      const requisitos = Array.isArray(vacante.requisitos)
-        ? vacante.requisitos.join(" ").toLowerCase()
-        : "";
+app.get("/vacantes.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "vacantes.html"));
+});
 
-      const contenidoVacante = `${titulo} ${area} ${grupo} ${requisitos}`;
+app.get("/login-admin.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "login-admin.html"));
+});
 
-      if (perfilRecomendado === "administrativo" && vacante.tipoVacante === "administrativa") score += 30;
-      if (perfilRecomendado === "operativo" && vacante.tipoVacante === "operativa") score += 30;
+app.get("/dashboard.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "dashboard.html"));
+});
 
-      if (textoBase.includes("logistica") || textoBase.includes("logística") || textoBase.includes("importacion") || textoBase.includes("importación") || textoBase.includes("exportacion") || textoBase.includes("exportación") || textoBase.includes("aduanas") || textoBase.includes("pedimentos")) {
-        if (vacante.grupo === "Monitoreo" || vacante.grupo === "Proyectos y Construcción") score += 40;
-      }
-
-      if (textoBase.includes("facturacion") || textoBase.includes("facturación") || textoBase.includes("contabilidad") || textoBase.includes("finanzas")) {
-        if (vacante.grupo === "Contabilidad") score += 35;
-      }
-
-      if (textoBase.includes("reclutamiento") || textoBase.includes("entrevistas") || textoBase.includes("capital humano") || textoBase.includes("rh")) {
-        if (vacante.grupo === "RH" || vacante.grupo === "Capital Humano") score += 35;
-      }
-
-      if (textoBase.includes("soporte") || textoBase.includes("redes") || textoBase.includes("hardware") || textoBase.includes("software") || textoBase.includes("sistemas")) {
-        if (vacante.grupo === "Sistemas") score += 35;
-      }
-
-      if (textoBase.includes("marketing") || textoBase.includes("mercadotecnia") || textoBase.includes("diseño") || textoBase.includes("publicidad") || textoBase.includes("redes sociales")) {
-        if (vacante.grupo === "Mercadotecnia") score += 35;
-      }
-
-      if (textoBase.includes("monitoreo") || textoBase.includes("seguimiento") || textoBase.includes("control documental") || textoBase.includes("reportes")) {
-        if (vacante.grupo === "Monitoreo") score += 28;
-      }
-
-      if (textoBase.includes("atencion al cliente") || textoBase.includes("atención al cliente") || textoBase.includes("servicio al cliente")) {
-        if (["Wendy's", "Applebee's", "Great American"].includes(vacante.grupo)) {
-          score += 15;
-        }
-      }
-
-      if (textoBase.includes("cocina") || textoBase.includes("alimentos") || textoBase.includes("chef")) {
-        if (
-          vacante.tipoVacante === "operativa" &&
-          ["Ardeo", "Yoko", "Little Caesars", "Great American"].includes(vacante.grupo)
-        ) {
-          score += 28;
-        }
-      }
-
-      if (titulo && textoBase.includes(titulo)) score += 22;
-      if (area && textoBase.includes(area)) score += 18;
-      if (grupo && textoBase.includes(grupo)) score += 16;
-
-      const palabras = textoBase.split(/\s+/).filter(Boolean);
-      palabras.forEach((palabra) => {
-        if (palabra.length >= 4 && contenidoVacante.includes(palabra)) {
-          score += 2;
-        }
-      });
-
-      if (vacante.titulo === "Próximamente") {
-        score -= 25;
-      }
-
-      return { ...vacante, score };
-    })
-    .filter((v) => v.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 5);
-}
+app.get("/vacantes-admin.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "vacantes-admin.html"));
+});
 
 /* =========================
-   RUTAS
+   RUTAS PUBLICAS
 ========================= */
 app.get("/health", (req, res) => {
   res.json({
     ok: true,
     service: "chatbot-reclutamiento",
-    timestamp: new Date().toISOString(),
+    timestamp: new Date().toISOString()
   });
 });
 
 app.get("/api/ubicaciones", (req, res) => {
   res.json(ubicaciones);
-});
-
-app.get("/api/admin/session-check", verifyAdmin, (req, res) => {
-  res.json({
-    ok: true,
-    email: req.adminUser.email
-  });
 });
 
 app.get("/api/vacantes", (req, res) => {
@@ -779,42 +761,38 @@ app.get("/api/vacantes", (req, res) => {
     const vCiudad = normalizarTexto(v.ciudad);
     const vGrupo = normalizarTexto(v.grupo);
 
-    const coincideTipo = !tipoVacante || vTipo === tipoVacante;
-    const coincidePais = !pais || vPais.includes(pais) || pais.includes(vPais);
-    const coincideEstado = !estado || vEstado.includes(estado) || estado.includes(vEstado);
-    const coincideCiudad = !ciudad || vCiudad.includes(ciudad) || ciudad.includes(vCiudad);
-    const coincideGrupo = !grupo || vGrupo.includes(grupo) || grupo.includes(vGrupo);
-
-    return coincideTipo && coincidePais && coincideEstado && coincideCiudad && coincideGrupo;
+    return (
+      (!tipoVacante || vTipo === tipoVacante) &&
+      (!pais || vPais.includes(pais) || pais.includes(vPais)) &&
+      (!estado || vEstado.includes(estado) || estado.includes(vEstado)) &&
+      (!ciudad || vCiudad.includes(ciudad) || ciudad.includes(vCiudad)) &&
+      (!grupo || vGrupo.includes(grupo) || grupo.includes(vGrupo))
+    );
   });
 
   res.json(resultado);
-});
-
-app.get("/api/grupos", (req, res) => {
-  vacantes = leerVacantes();
-
-  const { tipoVacante } = req.query;
-  if (!tipoVacante) {
-    return res.status(400).json({ error: "tipoVacante es obligatorio" });
-  }
-
-  res.json(obtenerGruposPorTipo(tipoVacante));
 });
 
 app.get("/api/postulacion/:id", (req, res) => {
   postulaciones = leerPostulaciones();
 
   const item = postulaciones.find((p) => p.id === req.params.id);
+
   if (!item) {
-    return res.status(404).json({ error: "Postulación no encontrada" });
+    return res.status(404).json({ error: "Postulación no encontrada." });
   }
 
-  res.json(item);
+  res.json({
+    id: item.id,
+    estadoSolicitud: item.estadoSolicitud,
+    vacanteTitulo: item.vacanteTitulo,
+    ciudad: item.ciudad,
+    fechaRegistro: item.fechaRegistro
+  });
 });
 
 /* =========================
-   ANÁLISIS ATS SOLO CV
+   ANALIZAR CV PUBLICO
 ========================= */
 app.post(
   "/api/analizar-cv",
@@ -828,13 +806,22 @@ app.post(
       }
 
       const cvTexto = await extraerTextoPdf(cvFile.path);
-      const analisisIA = await analizarCvConIA(cvTexto, "Analizar CV para sugerir vacantes.");
-      const sugerenciasIA = sugerirVacantesInteligentes({
-        cvTexto,
-        perfilRecomendado: analisisIA.perfilRecomendado,
-        habilidadesDetectadas: analisisIA.habilidadesDetectadas,
-        palabrasClave: analisisIA.palabrasClave
-      });
+      const analisisIA = await analizarCvConIA(cvTexto);
+
+      let tipoSugerido = "";
+
+      if (normalizarTexto(analisisIA.perfilRecomendado).includes("administr")) {
+        tipoSugerido = "administrativa";
+      }
+
+      if (normalizarTexto(analisisIA.perfilRecomendado).includes("oper")) {
+        tipoSugerido = "operativa";
+      }
+
+      const sugerenciasIA = sugerirVacantesBasicas(
+        `${cvTexto} ${analisisIA.habilidadesDetectadas.join(" ")} ${analisisIA.palabrasClave.join(" ")} ${analisisIA.areasCompatibles.join(" ")}`,
+        tipoSugerido
+      );
 
       res.json({
         ok: true,
@@ -842,25 +829,23 @@ app.post(
         analisis: {
           cvNombre: cvFile.originalname,
           cvRuta: `/uploads/${cvFile.filename}`,
-          cvTexto,
           resumenIA: analisisIA.resumen,
           habilidadesDetectadas: analisisIA.habilidadesDetectadas,
           perfilRecomendado: analisisIA.perfilRecomendado,
-          observaciones: analisisIA.observaciones,
+          palabrasClave: analisisIA.palabrasClave,
+          areasCompatibles: analisisIA.areasCompatibles,
           sugerenciasIA
         }
       });
     } catch (error) {
       console.error("❌ Error analizando CV:", error);
-      res.status(500).json({
-        error: "No fue posible analizar el CV."
-      });
+      res.status(500).json({ error: "No fue posible analizar el CV." });
     }
   }
 );
 
 /* =========================
-   POSTULACIÓN REAL
+   POSTULACION PUBLICA
 ========================= */
 app.post(
   "/api/postulacion",
@@ -893,59 +878,24 @@ app.post(
         habilidades
       } = req.body;
 
-      if (
-        !nombre ||
-        !correo ||
-        !telefono ||
-        !pais ||
-        !estado ||
-        !ciudad ||
-        !tipoVacante ||
-        !grupoSeleccionado ||
-        !vacanteSeleccionada
-      ) {
+      if (!nombre || !correo || !telefono || !vacanteSeleccionada) {
         return res.status(400).json({ error: "Faltan campos obligatorios." });
       }
 
       const cvFile = req.files?.cvFile?.[0];
+
       if (!cvFile) {
         return res.status(400).json({ error: "Debes adjuntar tu CV en PDF." });
       }
 
       const vacante = vacantes.find((v) => v.id === vacanteSeleccionada);
+
       if (!vacante) {
         return res.status(400).json({ error: "La vacante seleccionada no existe." });
       }
 
       const cvTexto = await extraerTextoPdf(cvFile.path);
-      const analisisIA = await analizarCvConIA(
-        cvTexto,
-        `Vacante elegida: ${vacante.titulo} | Grupo: ${vacante.grupo} | Tipo: ${vacante.tipoVacante}`
-      );
-
-      const sugerenciasIA = sugerirVacantesInteligentes({
-        cvTexto: `
-          ${puestoInteres || ""}
-          ${experiencia || ""}
-          ${habilidades || ""}
-          ${cvTexto}
-        `,
-        perfilRecomendado: analisisIA.perfilRecomendado || tipoVacante,
-        habilidadesDetectadas: analisisIA.habilidadesDetectadas,
-        palabrasClave: analisisIA.palabrasClave
-      });
-
-      const documentos = [];
-      ["ineFile", "curpFile", "domicilioFile"].forEach((key) => {
-        const file = req.files?.[key]?.[0];
-        if (file) {
-          documentos.push({
-            tipo: key,
-            nombre: file.originalname,
-            ruta: `/uploads/${file.filename}`
-          });
-        }
-      });
+      const analisisIA = await analizarCvConIA(cvTexto);
 
       const postulacion = {
         id: Date.now().toString(),
@@ -953,27 +903,23 @@ app.post(
         correo,
         telefono,
         edad,
-        pais,
-        estado,
-        ciudad,
+        pais: pais || vacante.pais,
+        estado: estado || vacante.estado,
+        ciudad: ciudad || vacante.ciudad,
         disponibilidad,
-        tipoVacante,
-        grupoSeleccionado,
+        tipoVacante: tipoVacante || vacante.tipoVacante,
+        grupoSeleccionado: grupoSeleccionado || vacante.grupo,
         vacanteId: vacante.id,
         vacanteTitulo: vacante.titulo,
-        puestoInteres,
+        puestoInteres: puestoInteres || vacante.titulo,
         escolaridad,
         experiencia,
         habilidades,
         cvNombre: cvFile.originalname,
         cvRuta: `/uploads/${cvFile.filename}`,
-        cvTexto,
         resumenIA: analisisIA.resumen,
         habilidadesDetectadas: analisisIA.habilidadesDetectadas,
         perfilRecomendado: analisisIA.perfilRecomendado,
-        observacionesIA: analisisIA.observaciones,
-        sugerenciasIA,
-        documentos,
         estadoSolicitud: "pendiente",
         fechaRegistro: new Date().toISOString()
       };
@@ -988,16 +934,73 @@ app.post(
       });
     } catch (error) {
       console.error("❌ Error guardando postulación:", error);
-      res.status(500).json({
-        error: "No fue posible guardar la postulación."
-      });
+      res.status(500).json({ error: "No fue posible guardar la postulación." });
     }
   }
 );
 
 /* =========================
-   RUTAS PROTEGIDAS ADMIN
+   CHAT PUBLICO
 ========================= */
+app.post("/chat", async (req, res) => {
+  try {
+    const { messages, candidateProfile } = req.body;
+
+    if (!Array.isArray(messages)) {
+      return res.status(400).json({ error: "El campo messages debe ser un arreglo." });
+    }
+
+    const lastMessages = messages.slice(-10);
+
+    const systemPrompt = `
+Eres un asistente profesional de reclutamiento de GA Hospitality.
+
+Ayudas con:
+- vacantes disponibles
+- orientación para candidatos
+- análisis general del CV
+- pasos de postulación
+- consulta de estatus mediante folio
+
+No inventes políticas internas.
+Responde en español, claro, profesional y breve.
+
+Perfil candidato:
+${JSON.stringify(candidateProfile || {}, null, 2)}
+`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-5-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...lastMessages
+      ]
+    });
+
+    const reply = completion.choices?.[0]?.message;
+
+    res.json({
+      reply: {
+        role: "assistant",
+        content: reply?.content || "No pude generar respuesta."
+      }
+    });
+  } catch (error) {
+    console.error("❌ Error chat:", error);
+    res.status(500).json({ error: "Error generando respuesta." });
+  }
+});
+
+/* =========================
+   RUTAS ADMIN PROTEGIDAS
+========================= */
+app.get("/api/admin/me", verifyAdmin, (req, res) => {
+  res.json({
+    ok: true,
+    email: req.adminUser.email
+  });
+});
+
 app.get("/api/postulaciones", verifyAdmin, (req, res) => {
   postulaciones = leerPostulaciones();
   res.json(postulaciones);
@@ -1006,6 +1009,7 @@ app.get("/api/postulaciones", verifyAdmin, (req, res) => {
 app.patch("/api/postulaciones/:id/estado", verifyAdmin, (req, res) => {
   const { id } = req.params;
   const { estado } = req.body;
+
   const estadosValidos = ["pendiente", "aprobado", "rechazado"];
 
   if (!estadosValidos.includes(estado)) {
@@ -1015,11 +1019,14 @@ app.patch("/api/postulaciones/:id/estado", verifyAdmin, (req, res) => {
   postulaciones = leerPostulaciones();
 
   const postulacion = postulaciones.find((p) => p.id === id);
+
   if (!postulacion) {
     return res.status(404).json({ error: "Postulación no encontrada." });
   }
 
   postulacion.estadoSolicitud = estado;
+  postulacion.fechaActualizacion = new Date().toISOString();
+
   guardarPostulaciones(postulaciones);
 
   res.json({
@@ -1030,7 +1037,7 @@ app.patch("/api/postulaciones/:id/estado", verifyAdmin, (req, res) => {
 });
 
 /* =========================
-   CRUD VACANTES PROTEGIDO
+   CRUD VACANTES ADMIN
 ========================= */
 app.post("/api/vacantes", verifyAdmin, (req, res) => {
   vacantes = leerVacantes();
@@ -1047,19 +1054,8 @@ app.post("/api/vacantes", verifyAdmin, (req, res) => {
     requisitos
   } = req.body;
 
-  if (
-    !tipoVacante ||
-    !grupo ||
-    !titulo ||
-    !area ||
-    !pais ||
-    !estado ||
-    !ciudad ||
-    !sucursal ||
-    !Array.isArray(requisitos) ||
-    !requisitos.length
-  ) {
-    return res.status(400).json({ error: "Faltan campos obligatorios para la vacante." });
+  if (!tipoVacante || !grupo || !titulo || !area || !pais || !estado || !ciudad || !sucursal) {
+    return res.status(400).json({ error: "Faltan campos obligatorios." });
   }
 
   const nuevaVacante = {
@@ -1072,7 +1068,7 @@ app.post("/api/vacantes", verifyAdmin, (req, res) => {
     estado,
     ciudad,
     sucursal,
-    requisitos
+    requisitos: Array.isArray(requisitos) ? requisitos : []
   };
 
   vacantes.push(nuevaVacante);
@@ -1095,44 +1091,10 @@ app.put("/api/vacantes/:id", verifyAdmin, (req, res) => {
     return res.status(404).json({ error: "Vacante no encontrada." });
   }
 
-  const {
-    tipoVacante,
-    grupo,
-    titulo,
-    area,
-    pais,
-    estado,
-    ciudad,
-    sucursal,
-    requisitos
-  } = req.body;
-
-  if (
-    !tipoVacante ||
-    !grupo ||
-    !titulo ||
-    !area ||
-    !pais ||
-    !estado ||
-    !ciudad ||
-    !sucursal ||
-    !Array.isArray(requisitos) ||
-    !requisitos.length
-  ) {
-    return res.status(400).json({ error: "Faltan campos obligatorios para actualizar la vacante." });
-  }
-
   vacantes[index] = {
     ...vacantes[index],
-    tipoVacante,
-    grupo,
-    titulo,
-    area,
-    pais,
-    estado,
-    ciudad,
-    sucursal,
-    requisitos
+    ...req.body,
+    id
   };
 
   guardarVacantes(vacantes);
@@ -1155,6 +1117,7 @@ app.delete("/api/vacantes/:id", verifyAdmin, (req, res) => {
   }
 
   const eliminada = vacantes.splice(index, 1)[0];
+
   guardarVacantes(vacantes);
 
   res.json({
@@ -1162,132 +1125,6 @@ app.delete("/api/vacantes/:id", verifyAdmin, (req, res) => {
     message: "Vacante eliminada correctamente.",
     vacante: eliminada
   });
-});
-
-/* =========================
-   CHAT
-========================= */
-app.post("/chat", async (req, res) => {
-  try {
-    const { messages, candidateProfile } = req.body;
-
-    if (!Array.isArray(messages)) {
-      return res.status(400).json({ error: "El campo messages debe ser un arreglo." });
-    }
-
-    const lastMessages = messages.slice(-10);
-
-    const profileText = candidateProfile
-      ? `
-Perfil actual del candidato:
-- Nombre: ${candidateProfile.nombre || "No proporcionado"}
-- Correo: ${candidateProfile.correo || "No proporcionado"}
-- Teléfono: ${candidateProfile.telefono || "No proporcionado"}
-- Edad: ${candidateProfile.edad || "No proporcionado"}
-- País: ${candidateProfile.pais || "No proporcionado"}
-- Estado: ${candidateProfile.estado || "No proporcionado"}
-- Ciudad: ${candidateProfile.ciudad || "No proporcionado"}
-- Disponibilidad: ${candidateProfile.disponibilidad || "No proporcionado"}
-- Tipo de vacante: ${candidateProfile.tipoVacante || "No proporcionado"}
-- Grupo seleccionado: ${candidateProfile.grupoSeleccionado || "No proporcionado"}
-- Vacante elegida: ${candidateProfile.vacanteTitulo || candidateProfile.puestoInteres || "No proporcionado"}
-- Escolaridad: ${candidateProfile.escolaridad || "No proporcionada"}
-- Experiencia: ${candidateProfile.experiencia || "No proporcionada"}
-- Habilidades: ${candidateProfile.habilidades || "No proporcionadas"}
-- CV: ${candidateProfile.cvNombre || "No proporcionado"}
-- Resumen IA del CV: ${candidateProfile.resumenIA || "No disponible"}
-`
-      : "No hay perfil capturado todavía.";
-
-    const systemPrompt = `
-Eres un asistente virtual profesional del departamento de reclutamiento de GA Hospitality.
-
-Ayudas a candidatos con:
-- vacantes operativas y administrativas
-- requisitos de contratación
-- documentos necesarios
-- orientación según su CV
-- sugerencias de vacantes
-- seguimiento inicial de su proceso
-
-Responde:
-- en español
-- claro
-- profesional
-- útil
-- directo
-
-Reglas:
-1. Usa el perfil y el resumen IA del CV para responder mejor.
-2. Si el candidato ya eligió una vacante, enfoca tu respuesta en esa vacante.
-3. Si el CV sugiere mejor ajuste a otra vacante, dilo de forma amable.
-4. Si pregunta por estatus, explícale que use su folio en la sección de consulta.
-5. No inventes políticas internas.
-6. Si pregunta algo fuera de reclutamiento, redirígelo cortésmente.
-
-${profileText}
-`;
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-5-mini",
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...lastMessages,
-      ],
-    });
-
-    const reply = completion.choices?.[0]?.message;
-
-    res.json({
-      reply: {
-        role: "assistant",
-        content: reply?.content || "No pude generar una respuesta en este momento.",
-      },
-    });
-  } catch (err) {
-    console.error("❌ Error al generar respuesta:", err);
-
-    if (err?.code === "insufficient_quota") {
-      return res.status(200).json({
-        reply: {
-          role: "assistant",
-          content: "⚠️ El asistente no está disponible temporalmente por límite de uso de API. Intenta nuevamente en unos minutos.",
-        },
-      });
-    }
-
-    res.status(500).json({
-      error: "Ocurrió un error al generar la respuesta.",
-      detail: err?.message || "Error desconocido",
-    });
-  }
-});
-
-/* =========================
-   RUTAS HTML
-========================= */
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
-
-app.get("/index.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
-
-app.get("/dashboard.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "dashboard.html"));
-});
-
-app.get("/login-admin.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "login-admin.html"));
-});
-
-app.get("/vacantes-admin.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "vacantes-admin.html"));
-});
-
-app.get("/vacantes.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "vacantes.html"));
 });
 
 /* =========================
@@ -1299,14 +1136,16 @@ app.use((err, req, res, next) => {
   }
 
   if (err) {
-    return res.status(400).json({ error: err.message || "Error procesando la solicitud" });
+    return res.status(400).json({
+      error: err.message || "Error procesando la solicitud."
+    });
   }
 
   next();
 });
 
 app.use((req, res) => {
-  res.status(404).json({ error: "Ruta no encontrada" });
+  res.status(404).json({ error: "Ruta no encontrada." });
 });
 
 app.listen(PORT, () => {

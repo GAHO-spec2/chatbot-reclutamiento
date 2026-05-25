@@ -4,6 +4,9 @@ const vacantesResultados = document.getElementById("vacantesResultados");
 const vacantesStatus = document.getElementById("vacantesStatus");
 const vacantesResumenFiltros = document.getElementById("vacantesResumenFiltros");
 
+/* =========================
+   IMÁGENES POR MARCA
+========================= */
 const BRAND_IMAGES = {
   "applebee's": "/img/Applebees.png",
   "ardeo": "/img/ardeo.png",
@@ -14,6 +17,9 @@ const BRAND_IMAGES = {
   "yoko": "/img/yoko.png"
 };
 
+/* =========================
+   HELPERS
+========================= */
 function normalizeText(text = "") {
   return String(text)
     .normalize("NFD")
@@ -33,13 +39,33 @@ function getBrandImage(grupo = "", tipoVacante = "") {
     return BRAND_IMAGES["ga hospitality"];
   }
 
-  if (normalizedGrupo.includes("applebee")) return BRAND_IMAGES["applebee's"];
-  if (normalizedGrupo.includes("ardeo")) return BRAND_IMAGES["ardeo"];
-  if (normalizedGrupo.includes("great american")) return BRAND_IMAGES["great american"];
-  if (normalizedGrupo.includes("little caesar")) return BRAND_IMAGES["little caesars"];
-  if (normalizedGrupo.includes("wendy")) return BRAND_IMAGES["wendy's"];
-  if (normalizedGrupo.includes("yoko")) return BRAND_IMAGES["yoko"];
-  if (normalizedGrupo.includes("ga hospitality")) return BRAND_IMAGES["ga hospitality"];
+  if (normalizedGrupo.includes("applebee")) {
+    return BRAND_IMAGES["applebee's"];
+  }
+
+  if (normalizedGrupo.includes("ardeo")) {
+    return BRAND_IMAGES["ardeo"];
+  }
+
+  if (normalizedGrupo.includes("great american")) {
+    return BRAND_IMAGES["great american"];
+  }
+
+  if (normalizedGrupo.includes("little caesar")) {
+    return BRAND_IMAGES["little caesars"];
+  }
+
+  if (normalizedGrupo.includes("wendy")) {
+    return BRAND_IMAGES["wendy's"];
+  }
+
+  if (normalizedGrupo.includes("yoko")) {
+    return BRAND_IMAGES["yoko"];
+  }
+
+  if (normalizedGrupo.includes("ga hospitality")) {
+    return BRAND_IMAGES["ga hospitality"];
+  }
 
   return BRAND_IMAGES["ga hospitality"];
 }
@@ -61,12 +87,15 @@ function buildSummaryText(filters) {
   if (filters.tipoVacante) {
     parts.push(`Tipo: ${filters.tipoVacante}`);
   }
+
   if (filters.pais) {
     parts.push(`País: ${filters.pais}`);
   }
+
   if (filters.estado) {
     parts.push(`Estado: ${filters.estado}`);
   }
+
   if (filters.ciudad) {
     parts.push(`Ciudad: ${filters.ciudad}`);
   }
@@ -80,16 +109,20 @@ function buildSummaryText(filters) {
 
 function setStatus(message, show = true) {
   if (!vacantesStatus) return;
+
   vacantesStatus.textContent = message;
   vacantesStatus.classList.toggle("hidden", !show);
 }
 
+/* =========================
+   RENDER VACANTES
+========================= */
 function renderVacantes(vacantes = []) {
   if (!vacantesResultados) return;
 
   vacantesResultados.innerHTML = "";
 
-  if (!vacantes.length) {
+  if (!Array.isArray(vacantes) || !vacantes.length) {
     vacantesResultados.innerHTML = `
       <div class="status">
         No se encontraron vacantes con esos filtros.
@@ -108,24 +141,27 @@ function renderVacantes(vacantes = []) {
       <div class="vacante-card__brand">
         <img
           src="${brandImage}"
-          alt="${vacante.grupo}"
+          alt="${vacante.grupo || "GA Hospitality"}"
           class="vacante-card__brand-img"
           onerror="this.src='/img/gaho.png'"
         />
       </div>
 
       <div class="vacante-card__body">
-        <h3>${vacante.titulo}</h3>
-        <p><strong>Tipo:</strong> ${vacante.tipoVacante}</p>
-        <p><strong>Grupo:</strong> ${vacante.grupo}</p>
-        <p><strong>Área:</strong> ${vacante.area}</p>
-        <p><strong>Ubicación:</strong> ${vacante.pais} / ${vacante.estado} / ${vacante.ciudad}</p>
-        <p><strong>Sucursal:</strong> ${vacante.sucursal}</p>
+        <h3>${vacante.titulo || "Vacante disponible"}</h3>
+
+        <p><strong>Tipo:</strong> ${vacante.tipoVacante || "-"}</p>
+        <p><strong>Grupo:</strong> ${vacante.grupo || "-"}</p>
+        <p><strong>Área:</strong> ${vacante.area || "-"}</p>
+        <p><strong>Ubicación:</strong> ${vacante.pais || "-"} / ${vacante.estado || "-"} / ${vacante.ciudad || "-"}</p>
+        <p><strong>Sucursal:</strong> ${vacante.sucursal || "-"}</p>
 
         <div class="tags">
-          ${Array.isArray(vacante.requisitos)
-            ? vacante.requisitos.map((req) => `<span>${req}</span>`).join("")
-            : ""}
+          ${
+            Array.isArray(vacante.requisitos)
+              ? vacante.requisitos.map((req) => `<span>${req}</span>`).join("")
+              : ""
+          }
         </div>
 
         <button class="btn btn--secondary vacante-interest-btn" data-id="${vacante.id}">
@@ -140,12 +176,20 @@ function renderVacantes(vacantes = []) {
   document.querySelectorAll(".vacante-interest-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const vacanteId = btn.dataset.id;
-      const url = `/index.html?interes=${encodeURIComponent(vacanteId)}`;
-      window.location.href = url;
+
+      if (!vacanteId) {
+        alert("No se pudo identificar la vacante.");
+        return;
+      }
+
+      window.location.href = `/index.html?interes=${encodeURIComponent(vacanteId)}`;
     });
   });
 }
 
+/* =========================
+   CARGAR VACANTES FILTRADAS
+========================= */
 async function cargarVacantesFiltradas() {
   const filters = getSearchParams();
 
@@ -158,10 +202,21 @@ async function cargarVacantesFiltradas() {
 
     const params = new URLSearchParams();
 
-    if (filters.tipoVacante) params.set("tipoVacante", filters.tipoVacante);
-    if (filters.pais) params.set("pais", filters.pais);
-    if (filters.estado) params.set("estado", filters.estado);
-    if (filters.ciudad) params.set("ciudad", filters.ciudad);
+    if (filters.tipoVacante) {
+      params.set("tipoVacante", filters.tipoVacante);
+    }
+
+    if (filters.pais) {
+      params.set("pais", filters.pais);
+    }
+
+    if (filters.estado) {
+      params.set("estado", filters.estado);
+    }
+
+    if (filters.ciudad) {
+      params.set("ciudad", filters.ciudad);
+    }
 
     const response = await fetch(`${API_URL}/api/vacantes?${params.toString()}`);
     const data = await response.json();
@@ -178,4 +233,7 @@ async function cargarVacantesFiltradas() {
   }
 }
 
+/* =========================
+   INIT
+========================= */
 cargarVacantesFiltradas();

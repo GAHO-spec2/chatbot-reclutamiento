@@ -3,17 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reclutamiento Inteligente</title>
+
+  <title>Reclutamiento | GA Hospitality</title>
   <meta
     name="description"
-    content="Plataforma de reclutamiento para vacantes operativas y administrativas."
+    content="Plataforma de reclutamiento para consultar vacantes y recibir recomendaciones según el perfil profesional."
   />
+
   <link rel="icon" type="image/png" sizes="32x32" href="/img/icons8-nuevo-empleo-32.png" />
   <link rel="stylesheet" href="styles.css" />
+
   <style>
     html { scroll-behavior: smooth; }
   </style>
 </head>
+
 <body>
   <header class="topbar">
     <div class="topbar__left">
@@ -37,37 +41,27 @@
         <button id="startApplicationBtn" class="btn btn--primary" type="button">
           Analizar mi CV
         </button>
-        <a href="#busqueda-vacantes" class="btn btn--ghost">Buscar vacantes</a>
+
+        <a href="#busqueda-vacantes" class="btn btn--ghost">
+          Buscar vacantes
+        </a>
       </div>
     </div>
   </header>
 
   <main class="container">
-    <section class="card">
+    <section id="busqueda-vacantes" class="card">
       <div class="section-head">
-        <h2>Recomendación de vacantes</h2>
+        <h2>Buscar empleo</h2>
         <p>
-          Inicia desde el asistente, adjunta tu CV en PDF y obtén vacantes relacionadas con tu perfil.
+          Selecciona los filtros de búsqueda y consulta las vacantes disponibles en otra página.
         </p>
       </div>
 
-      <div class="hero__actions">
-        <button id="startApplicationBtnSecondary" class="btn btn--primary" type="button">
-          Comenzar ahora
-        </button>
-      </div>
-    </section>
-
-    <section id="vacantes" class="card">
-      <div class="section-head">
-        <h2>Explorar vacantes</h2>
-        <p>Selecciona tus filtros y consulta las vacantes disponibles en una página separada.</p>
-      </div>
-
-      <form id="vacantesSearchForm" class="form-grid">
+      <div class="form-grid">
         <div class="field">
           <label for="filtroTipo">Tipo</label>
-          <select id="filtroTipo" name="tipoVacante">
+          <select id="filtroTipo">
             <option value="">Todos</option>
             <option value="operativa">Operativa / Restaurante</option>
             <option value="administrativa">Administrativa / Corporativo</option>
@@ -76,7 +70,7 @@
 
         <div class="field">
           <label for="filtroPais">País</label>
-          <select id="filtroPais" name="pais">
+          <select id="filtroPais">
             <option value="">Todos</option>
             <option value="México">México</option>
             <option value="Estados Unidos">Estados Unidos</option>
@@ -85,24 +79,26 @@
 
         <div class="field">
           <label for="filtroEstado">Estado</label>
-          <select id="filtroEstado" name="estado">
+          <select id="filtroEstado">
             <option value="">Todos</option>
           </select>
         </div>
 
         <div class="field">
           <label for="filtroCiudad">Ciudad</label>
-          <select id="filtroCiudad" name="ciudad">
+          <select id="filtroCiudad">
             <option value="">Todas</option>
           </select>
         </div>
 
         <div class="form-actions field--full">
-          <button id="buscarVacantesBtn" type="submit" class="btn btn--primary">
+          <button id="buscarVacantesBtn" class="btn btn--primary" type="button">
             Buscar vacantes
           </button>
         </div>
-      </form>
+      </div>
+
+      <div id="busquedaStatus" class="status hidden"></div>
     </section>
 
     <section id="estatus" class="card">
@@ -116,6 +112,7 @@
           <label for="folioConsulta">Folio de postulación</label>
           <input id="folioConsulta" type="text" placeholder="Ej. 1717600000000" />
         </div>
+
         <div class="form-actions field--full">
           <button id="consultarStatusBtn" type="button" class="btn btn--secondary">
             Consultar estatus
@@ -130,9 +127,11 @@
   <button id="chatbot-toggle" class="chatbot-toggle" aria-label="Abrir chat">
     <span class="chatbot-toggle__ring"></span>
     <span class="chatbot-toggle__ring chatbot-toggle__ring--delay"></span>
+
     <span class="chatbot-toggle__core">
       <img src="/img/icons8-chatgpt-32.png" alt="Asistente" class="chatbot-toggle__img" />
     </span>
+
     <span class="chatbot-toggle__status"></span>
   </button>
 
@@ -142,6 +141,7 @@
         <strong>Asistente de Reclutamiento</strong>
         <p>Vacantes, análisis de CV y orientación personalizada</p>
       </div>
+
       <button id="chatbot-close" class="chatbot-close" aria-label="Cerrar chat">✕</button>
     </div>
 
@@ -151,11 +151,18 @@
       <button id="attachCvBtn" type="button" class="btn btn--secondary">
         Adjuntar CV PDF
       </button>
+
       <input id="chatCvFile" type="file" accept=".pdf,application/pdf" hidden />
     </div>
 
     <form id="chatbot-form" class="chatbot-form">
-      <input id="chatbot-input" type="text" placeholder="Escribe tu respuesta..." autocomplete="off" />
+      <input
+        id="chatbot-input"
+        type="text"
+        placeholder="Escribe tu respuesta..."
+        autocomplete="off"
+      />
+
       <button id="chatbot-send" type="submit">Enviar</button>
     </form>
   </aside>
