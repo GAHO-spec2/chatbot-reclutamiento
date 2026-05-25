@@ -911,10 +911,16 @@ app.put("/api/vacantes/:id", verifyAdmin, (req, res) => {
   }
 
   vacantes[index] = {
-    ...vacantes[index],
-    ...req.body,
-    id
-  };
+  ...vacantes[index],
+  ...req.body,
+  id,
+  lat: req.body.lat ?? vacantes[index].lat ?? null,
+  lng: req.body.lng ?? vacantes[index].lng ?? null,
+  numeroTienda: req.body.numeroTienda || vacantes[index].numeroTienda || "",
+  direccion: req.body.direccion || vacantes[index].direccion || "",
+  googleMapsUrl: req.body.googleMapsUrl || vacantes[index].googleMapsUrl || "",
+  appleMapsUrl: req.body.appleMapsUrl || vacantes[index].appleMapsUrl || ""
+};
 
   guardarVacantes(vacantes);
 
