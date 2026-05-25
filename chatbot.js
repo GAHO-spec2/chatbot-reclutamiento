@@ -455,7 +455,7 @@ function renderMapMarkers(filteredBranches) {
     bounds.push(latLng);
 
     const marker = L.marker(latLng, {
-      icon: createBranchIcon(branch.id === selectedBranchId)
+      icon: createBranchIcon(branch.id === selectedBranchId, branch)
     });
 
     marker.bindPopup(`
@@ -876,5 +876,32 @@ async function init() {
   renderMessages();
   await Promise.all([cargarUbicaciones(), cargarBranchData()]);
 }
+
+function getBrandShortName(branch = {}) {
+  const brand = normalizeText(branch.marca || branch.grupo || "");
+
+  if (brand.includes("wendy")) return "W";
+  if (brand.includes("applebee")) return "A";
+  if (brand.includes("little")) return "LC";
+  if (brand.includes("great")) return "GA";
+  if (brand.includes("ardeo")) return "AR";
+  if (brand.includes("yoko")) return "YK";
+
+  return "GA";
+}
+
+function createBranchIcon(isActive, branch = {}) {
+  const activeClass = isActive ? " is-active" : "";
+  const brandShort = getBrandShortName(branch);
+
+  return L.divIcon({
+    className: "",
+    html: `<div class="branch-pin${activeClass}"><span>${brandShort}</span></div>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 34],
+    popupAnchor: [0, -32]
+  });
+}
+
 
 init();
