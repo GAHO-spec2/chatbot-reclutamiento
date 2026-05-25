@@ -1,46 +1,47 @@
 const API_URL = window.location.origin;
 
-/* =========================
-   ELEMENTOS
-========================= */
-
 const toggle = document.getElementById("chatbot-toggle");
 const closeBtn = document.getElementById("chatbot-close");
 const box = document.getElementById("chatbot-box");
-
 const messagesDiv = document.getElementById("chatbot-messages");
-
 const form = document.getElementById("chatbot-form");
 const input = document.getElementById("chatbot-input");
-
 const attachCvBtn = document.getElementById("attachCvBtn");
 const chatCvFile = document.getElementById("chatCvFile");
-
 const startApplicationBtn = document.getElementById("startApplicationBtn");
-
 const buscarVacantesBtn = document.getElementById("buscarVacantesBtn");
-
 const filtroTipo = document.getElementById("filtroTipo");
 const filtroPais = document.getElementById("filtroPais");
 const filtroEstado = document.getElementById("filtroEstado");
 const filtroCiudad = document.getElementById("filtroCiudad");
-
 const consultarStatusBtn = document.getElementById("consultarStatusBtn");
 const folioConsulta = document.getElementById("folioConsulta");
 const consultaStatusResultado = document.getElementById("consultaStatusResultado");
-
 const chatbotToggle = document.getElementById("chatbot-toggle");
 
-/* =========================
-   VARIABLES
-========================= */
+const branchMarkers = document.getElementById("branchMarkers");
+const branchList = document.getElementById("branchList");
+const branchSearch = document.getElementById("branchSearch");
+const branchBrandFilter = document.getElementById("branchBrandFilter");
+const branchVacancies = document.getElementById("branchVacancies");
+const vacancyBoard = document.getElementById("vacancyBoard");
+const selectedBranchName = document.getElementById("selectedBranchName");
+const selectedBranchAddress = document.getElementById("selectedBranchAddress");
+const selectedBranchMapLink = document.getElementById("selectedBranchMapLink");
+const selectedBranchAppleMapLink = document.getElementById("selectedBranchAppleMapLink");
+const closeBranchVacanciesBtn = document.getElementById("closeBranchVacanciesBtn");
 
 let ubicaciones = {};
+let branches = [];
+let vacancies = [];
+let selectedBranchId = "";
 
 let applicationFlow = {
   active: false,
   mode: "",
-  cvFile: null
+  cvFile: null,
+  selectedVacancy: null,
+  selectedBranch: null
 };
 
 let candidateProfile = {
@@ -51,38 +52,117 @@ let candidateProfile = {
   cvNombre: ""
 };
 
-const BRAND_IMAGES = {
-  "applebee's": "/img/Applebees.png",
-  "ardeo": "/img/ardeo.png",
-  "ga hospitality": "/img/gaho.png",
-  "great american": "/img/greatamerican.png",
-  "little caesars": "/img/littlecaesars.jpg",
-  "wendy's": "/img/wendys.png",
-  "yoko": "/img/yoko.png"
-};
+const DEMO_BRANCHES = [
+  {
+    id: "lc-chihuahua-centro",
+    nombre: "Little Caesars Chihuahua Centro",
+    marca: "Little Caesars",
+    pais: "Mexico",
+    estado: "Chihuahua",
+    ciudad: "Chihuahua",
+    direccion: "Av. Universidad 1301, Centro, Chihuahua",
+    googleMapsUrl: "https://www.google.com/maps/search/?api=1&query=Av.%20Universidad%201301%20Chihuahua",
+    mapX: 48,
+    mapY: 43
+  },
+  {
+    id: "wendys-juarez",
+    nombre: "Wendy's Cd. Juarez",
+    marca: "Wendy's",
+    pais: "Mexico",
+    estado: "Chihuahua",
+    ciudad: "Cd. Juarez",
+    direccion: "Blvd. Tomas Fernandez, Cd. Juarez, Chihuahua",
+    googleMapsUrl: "https://www.google.com/maps/search/?api=1&query=Blvd.%20Tomas%20Fernandez%20Cd.%20Juarez",
+    mapX: 39,
+    mapY: 26
+  },
+  {
+    id: "applebees-monterrey",
+    nombre: "Applebee's Monterrey",
+    marca: "Applebee's",
+    pais: "Mexico",
+    estado: "Nuevo Leon",
+    ciudad: "Monterrey",
+    direccion: "Av. Eugenio Garza Sada, Monterrey, Nuevo Leon",
+    googleMapsUrl: "https://www.google.com/maps/search/?api=1&query=Av.%20Eugenio%20Garza%20Sada%20Monterrey",
+    mapX: 58,
+    mapY: 52
+  },
+  {
+    id: "gaho-corporativo",
+    nombre: "GA Hospitality Corporativo",
+    marca: "GA Hospitality",
+    pais: "Mexico",
+    estado: "Chihuahua",
+    ciudad: "Chihuahua",
+    direccion: "Corporativo GA Hospitality, Chihuahua",
+    googleMapsUrl: "https://www.google.com/maps/search/?api=1&query=GA%20Hospitality%20Chihuahua",
+    mapX: 53,
+    mapY: 38
+  }
+];
+
+const DEMO_VACANCIES = [
+  {
+    id: "vac-barista-juarez",
+    branchId: "wendys-juarez",
+    titulo: "Cajero / Atencion al cliente",
+    tipoVacante: "operativa",
+    horario: "Tiempo completo",
+    sueldo: "$2,700 semanal",
+    descripcion: "Atencion a clientes, cobro, limpieza de area y apoyo en operacion."
+  },
+  {
+    id: "vac-cocina-juarez",
+    branchId: "wendys-juarez",
+    titulo: "Auxiliar de cocina",
+    tipoVacante: "operativa",
+    horario: "Rol de turnos",
+    sueldo: "$2,600 semanal",
+    descripcion: "Preparacion de alimentos, control de calidad y apoyo al equipo de cocina."
+  },
+  {
+    id: "vac-pizzero-chihuahua",
+    branchId: "lc-chihuahua-centro",
+    titulo: "Pizzero",
+    tipoVacante: "operativa",
+    horario: "Medio tiempo",
+    sueldo: "$1,800 semanal",
+    descripcion: "Preparacion de producto, horno, inventario basico y servicio."
+  },
+  {
+    id: "vac-gerente-mty",
+    branchId: "applebees-monterrey",
+    titulo: "Gerente de restaurante",
+    tipoVacante: "operativa",
+    horario: "Tiempo completo",
+    sueldo: "Segun experiencia",
+    descripcion: "Supervision de equipo, indicadores operativos, servicio y administracion."
+  },
+  {
+    id: "vac-rh-corp",
+    branchId: "gaho-corporativo",
+    titulo: "Auxiliar de recursos humanos",
+    tipoVacante: "administrativa",
+    horario: "Lunes a viernes",
+    sueldo: "Segun experiencia",
+    descripcion: "Apoyo en reclutamiento, seguimiento a candidatos y control documental."
+  }
+];
 
 const chatHistory = [
   {
     role: "assistant",
     type: "welcome",
     content:
-      "Hola 👋 Soy tu asistente inteligente de reclutamiento. Analizaré tu CV para recomendarte vacantes acordes a tu perfil.",
+      "Hola. Soy tu asistente inteligente de reclutamiento. Puedo analizar tu CV o ayudarte a postularte a una vacante por sucursal.",
     options: [
-      {
-        label: "Analizar mi CV",
-        value: "analizar_cv"
-      },
-      {
-        label: "Buscar vacantes",
-        value: "buscar_vacantes"
-      }
+      { label: "Analizar mi CV", value: "analizar_cv" },
+      { label: "Buscar sucursal", value: "buscar_sucursal" }
     ]
   }
 ];
-
-/* =========================
-   NORMALIZAR
-========================= */
 
 function normalizeText(text = "") {
   return String(text)
@@ -92,65 +172,134 @@ function normalizeText(text = "") {
     .trim();
 }
 
-/* =========================
-   BURBUJA
-========================= */
+function slugify(text = "") {
+  return normalizeText(text)
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function getBranchIdFromVacancy(vacancy = {}) {
+  if (vacancy.branchId) return vacancy.branchId;
+
+  return slugify(
+    [
+      vacancy.grupo,
+      vacancy.sucursal,
+      vacancy.ciudad,
+      vacancy.estado,
+      vacancy.pais
+    ]
+      .filter(Boolean)
+      .join("-")
+  );
+}
+
+function buildMapQuery(branch = {}) {
+  return [
+    branch.direccion,
+    branch.sucursal,
+    branch.nombre,
+    branch.ciudad,
+    branch.estado,
+    branch.pais
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
+function buildGoogleMapsUrl(branch = {}) {
+  if (branch.googleMapsUrl) return branch.googleMapsUrl;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(buildMapQuery(branch))}`;
+}
+
+function buildAppleMapsUrl(branch = {}) {
+  if (branch.appleMapsUrl) return branch.appleMapsUrl;
+  return `https://maps.apple.com/?q=${encodeURIComponent(buildMapQuery(branch))}`;
+}
+
+function getBranchPosition(index, total) {
+  if (total <= 1) return { mapX: 50, mapY: 50 };
+
+  const cols = Math.ceil(Math.sqrt(total));
+  const row = Math.floor(index / cols);
+  const col = index % cols;
+  const xStep = 70 / Math.max(cols - 1, 1);
+  const rows = Math.ceil(total / cols);
+  const yStep = 58 / Math.max(rows - 1, 1);
+
+  return {
+    mapX: 15 + col * xStep,
+    mapY: 22 + row * yStep
+  };
+}
+
+function normalizeVacancy(vacancy = {}) {
+  return {
+    ...vacancy,
+    branchId: getBranchIdFromVacancy(vacancy)
+  };
+}
+
+function buildBranchesFromVacancies(vacancyList = []) {
+  const byBranch = new Map();
+
+  vacancyList.forEach((vacancy) => {
+    const id = getBranchIdFromVacancy(vacancy);
+
+    if (!id || byBranch.has(id)) return;
+
+    byBranch.set(id, {
+      id,
+      nombre: vacancy.sucursal || `${vacancy.grupo || "Sucursal"} ${vacancy.ciudad || ""}`.trim(),
+      sucursal: vacancy.sucursal || "",
+      marca: vacancy.grupo || "GA Hospitality",
+      pais: vacancy.pais || "",
+      estado: vacancy.estado || "",
+      ciudad: vacancy.ciudad || "",
+      direccion: vacancy.direccion || vacancy.direccionSucursal || "",
+      googleMapsUrl: vacancy.googleMapsUrl || vacancy.mapsUrl || "",
+      appleMapsUrl: vacancy.appleMapsUrl || "",
+      lat: vacancy.lat || vacancy.latitude || "",
+      lng: vacancy.lng || vacancy.longitude || ""
+    });
+  });
+
+  return [...byBranch.values()].map((branch, index, list) => ({
+    ...branch,
+    ...getBranchPosition(index, list.length)
+  }));
+}
 
 function activateListeningState() {
-  if (!chatbotToggle) return;
-  chatbotToggle.classList.add("is-listening");
+  chatbotToggle?.classList.add("is-listening");
 }
 
 function deactivateListeningState() {
-  if (!chatbotToggle) return;
-  chatbotToggle.classList.remove("is-listening");
+  chatbotToggle?.classList.remove("is-listening");
 }
-
-/* =========================
-   CHAT
-========================= */
 
 function openChat() {
   if (!box) return;
-
   box.classList.remove("hidden");
   activateListeningState();
-
-  if (input) {
-    input.focus();
-  }
+  input?.focus();
 }
 
 function closeChat() {
   if (!box) return;
-
   box.classList.add("hidden");
   deactivateListeningState();
 }
 
 function addAssistantText(content) {
-  chatHistory.push({
-    role: "assistant",
-    type: "text",
-    content
-  });
-
+  chatHistory.push({ role: "assistant", type: "text", content });
   renderMessages();
 }
 
 function addUserText(content) {
-  chatHistory.push({
-    role: "user",
-    type: "text",
-    content
-  });
-
+  chatHistory.push({ role: "user", type: "text", content });
   renderMessages();
 }
-
-/* =========================
-   RENDER MENSAJES
-========================= */
 
 function renderMessages() {
   if (!messagesDiv) return;
@@ -164,7 +313,6 @@ function renderMessages() {
     if (m.type === "welcome") {
       const text = document.createElement("div");
       text.textContent = m.content;
-
       wrapper.appendChild(text);
 
       const optionsWrap = document.createElement("div");
@@ -172,22 +320,14 @@ function renderMessages() {
 
       (m.options || []).forEach((opt) => {
         const btn = document.createElement("button");
-
         btn.className = "chat-option-btn";
         btn.textContent = opt.label;
         btn.type = "button";
 
-        btn.addEventListener("click", async () => {
-          if (opt.value === "analizar_cv") {
-            startCvAnalysisFlow();
-          }
-
-          if (opt.value === "buscar_vacantes") {
-            document
-              .getElementById("busqueda-vacantes")
-              ?.scrollIntoView({
-                behavior: "smooth"
-              });
+        btn.addEventListener("click", () => {
+          if (opt.value === "analizar_cv") startCvAnalysisFlow();
+          if (opt.value === "buscar_sucursal") {
+            document.getElementById("postulate-sucursal")?.scrollIntoView({ behavior: "smooth" });
           }
         });
 
@@ -205,452 +345,401 @@ function renderMessages() {
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-/* =========================
-   ANALISIS CV
-========================= */
-
 function startCvAnalysisFlow() {
   applicationFlow.active = true;
   applicationFlow.mode = "cv_analysis";
+  openChat();
+  addAssistantText(
+    "Perfecto. Adjunta tu CV en formato PDF y analizare automaticamente tu experiencia, habilidades y perfil profesional."
+  );
+}
+
+function startVacancyApplication(vacancyId) {
+  const vacancy = vacancies.find((item) => item.id === vacancyId);
+  const branch = branches.find((item) => item.id === vacancy?.branchId);
+
+  if (!vacancy || !branch) return;
+
+  applicationFlow.active = true;
+  applicationFlow.mode = "branch_vacancy_application";
+  applicationFlow.selectedVacancy = vacancy;
+  applicationFlow.selectedBranch = branch;
 
   openChat();
-
   addAssistantText(
-    "Perfecto. Adjunta tu CV en formato PDF y analizaré automáticamente tu experiencia, habilidades y perfil profesional."
+    `Excelente. Iniciaremos tu postulacion para:\n\n${vacancy.titulo}\n${branch.nombre}\n${branch.direccion}\n\nPrimero adjunta tu CV en PDF. Si no lo tienes a la mano, escribe tu nombre completo y telefono para iniciar tu registro.`
   );
 }
 
 async function processCvAnalysisOnly() {
   if (!applicationFlow.cvFile) {
-    addAssistantText(
-      "⚠️ Primero debes adjuntar tu CV en formato PDF."
-    );
+    addAssistantText("Primero debes adjuntar tu CV en formato PDF.");
     return;
   }
 
-  addAssistantText(
-    "⏳ Analizando CV y buscando vacantes relacionadas..."
-  );
+  const vacancy = applicationFlow.selectedVacancy;
+  const branch = applicationFlow.selectedBranch;
+
+  addAssistantText("Analizando CV y preparando tu postulacion...");
 
   const formData = new FormData();
+  formData.append("cvFile", applicationFlow.cvFile);
 
-  formData.append(
-    "cvFile",
-    applicationFlow.cvFile
-  );
+  if (vacancy && branch) {
+    formData.append("vacanteId", vacancy.id);
+    formData.append("sucursalId", branch.id);
+  }
 
   try {
-    const response = await fetch(
-      `${API_URL}/api/analizar-cv`,
-      {
-        method: "POST",
-        body: formData
-      }
-    );
+    const response = await fetch(`${API_URL}/api/analizar-cv`, {
+      method: "POST",
+      body: formData
+    });
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        data.error || "No fue posible analizar el CV."
-      );
+      throw new Error(data.error || "No fue posible analizar el CV.");
     }
 
     const analisis = data.analisis || {};
+    candidateProfile.cvNombre = analisis.cvNombre || "";
+    candidateProfile.resumenIA = analisis.resumenIA || "";
 
-    candidateProfile.cvNombre =
-      analisis.cvNombre || "";
+    addAssistantText(`Analisis completado.\n\nResumen detectado:\n${candidateProfile.resumenIA}`);
 
-    candidateProfile.resumenIA =
-      analisis.resumenIA || "";
-
-    addAssistantText(
-      `✅ Análisis completado.\n\nResumen detectado:\n${candidateProfile.resumenIA}`
-    );
-
-    if (
-      Array.isArray(analisis.sugerenciasIA) &&
-      analisis.sugerenciasIA.length
-    ) {
-      mostrarVacantesIA(
-        analisis.sugerenciasIA
-      );
-    } else {
+    if (vacancy && branch) {
       addAssistantText(
-        "No encontré recomendaciones automáticas en este momento."
+        `Tu CV quedo ligado a la vacante ${vacancy.titulo} en ${branch.nombre}. El siguiente paso es completar tus datos de contacto.`
       );
+      return;
     }
 
+    if (Array.isArray(analisis.sugerenciasIA) && analisis.sugerenciasIA.length) {
+      mostrarVacantesIA(analisis.sugerenciasIA);
+    } else {
+      addAssistantText("No encontre recomendaciones automaticas en este momento.");
+    }
   } catch (error) {
     console.error(error);
-
-    addAssistantText(
-      `⚠️ ${error.message}`
-    );
+    addAssistantText(`${error.message}`);
   }
 }
 
-/* =========================
-   VACANTES IA
-========================= */
-
-function getBrandImage(grupo = "") {
-  const normalized = normalizeText(grupo);
-
-  if (normalized.includes("applebee")) {
-    return BRAND_IMAGES["applebee's"];
-  }
-
-  if (normalized.includes("wendy")) {
-    return BRAND_IMAGES["wendy's"];
-  }
-
-  if (normalized.includes("ardeo")) {
-    return BRAND_IMAGES["ardeo"];
-  }
-
-  if (normalized.includes("great")) {
-    return BRAND_IMAGES["great american"];
-  }
-
-  if (normalized.includes("little")) {
-    return BRAND_IMAGES["little caesars"];
-  }
-
-  if (normalized.includes("yoko")) {
-    return BRAND_IMAGES["yoko"];
-  }
-
-  return BRAND_IMAGES["ga hospitality"];
-}
-
-function mostrarVacantesIA(vacantes = []) {
+function mostrarVacantesIA(recomendaciones = []) {
   const wrapper = document.createElement("div");
+  wrapper.className = "msg assistant";
+  wrapper.textContent = "Estas vacantes podrian adaptarse a tu perfil. Puedes revisarlas en el apartado de sucursales.";
+  messagesDiv.appendChild(wrapper);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
 
-  wrapper.className =
-    "msg assistant";
+async function fetchJsonOrFallback(url, fallback) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("Sin datos");
+    const data = await response.json();
+    return Array.isArray(data) ? data : fallback;
+  } catch (error) {
+    return fallback;
+  }
+}
 
-  const title = document.createElement("div");
+async function cargarBranchData() {
+  vacancies = (await fetchJsonOrFallback(`${API_URL}/api/vacantes`, DEMO_VACANCIES)).map(normalizeVacancy);
+  branches = await fetchJsonOrFallback(`${API_URL}/api/sucursales`, []);
 
-  title.innerHTML =
-    "🎯 Estas vacantes podrían adaptarse a tu perfil:";
+  if (!branches.length) {
+    branches = buildBranchesFromVacancies(vacancies);
+  }
 
-  wrapper.appendChild(title);
+  branches = branches.map((branch, index) => ({
+    ...branch,
+    id: branch.id || slugify(`${branch.marca || branch.grupo} ${branch.sucursal || branch.nombre} ${branch.ciudad}`),
+    nombre: branch.nombre || branch.sucursal || `${branch.marca || "Sucursal"} ${branch.ciudad || ""}`.trim(),
+    marca: branch.marca || branch.grupo || "GA Hospitality",
+    mapX: branch.mapX || getBranchPosition(index, branches.length).mapX,
+    mapY: branch.mapY || getBranchPosition(index, branches.length).mapY
+  }));
 
-  const vacancies = document.createElement("div");
+  const brands = [...new Set(branches.map((branch) => branch.marca).filter(Boolean))].sort();
+  if (branchBrandFilter) {
+    branchBrandFilter.innerHTML = `<option value="">Todas</option>`;
+  }
 
-  vacancies.className =
-    "chat-vacancies";
-
-  vacantes.forEach((vacante) => {
-    const card =
-      document.createElement("div");
-
-    card.className =
-      "chat-vacancy-card";
-
-    card.innerHTML = `
-      <div class="chat-vacancy-card__brand">
-        <img
-          src="${getBrandImage(vacante.grupo)}"
-          class="chat-vacancy-card__brand-img"
-          alt="${vacante.grupo}"
-        />
-      </div>
-
-      <h4>${vacante.titulo}</h4>
-
-      <p><strong>${vacante.grupo}</strong></p>
-
-      <p>
-        ${vacante.ciudad},
-        ${vacante.estado}
-      </p>
-
-      <button
-        class="chat-option-btn"
-        onclick="window.location.href='/vacantes.html'"
-      >
-        Ver vacante
-      </button>
-    `;
-
-    vacancies.appendChild(card);
+  brands.forEach((brand) => {
+    const option = document.createElement("option");
+    option.value = brand;
+    option.textContent = brand;
+    branchBrandFilter?.appendChild(option);
   });
 
-  wrapper.appendChild(vacancies);
-
-  messagesDiv.appendChild(wrapper);
-
-  messagesDiv.scrollTop =
-    messagesDiv.scrollHeight;
+  selectedBranchId = "";
+  renderBranches();
 }
 
-/* =========================
-   UBICACIONES
-========================= */
+function getFilteredBranches() {
+  const search = normalizeText(branchSearch?.value || "");
+  const brand = branchBrandFilter?.value || "";
+
+  return branches.filter((branch) => {
+    const matchesBrand = !brand || branch.marca === brand;
+    const haystack = normalizeText(
+      `${branch.nombre} ${branch.marca} ${branch.ciudad} ${branch.estado} ${branch.direccion}`
+    );
+    return matchesBrand && (!search || haystack.includes(search));
+  });
+}
+
+function renderBranches() {
+  if (!branchMarkers || !branchList) return;
+
+  const filteredBranches = getFilteredBranches();
+  branchMarkers.innerHTML = "";
+  branchList.innerHTML = "";
+
+  filteredBranches.forEach((branch) => {
+    const marker = document.createElement("button");
+    marker.type = "button";
+    marker.className = `branch-marker ${branch.id === selectedBranchId ? "is-active" : ""}`;
+    marker.style.left = `${branch.mapX || 50}%`;
+    marker.style.top = `${branch.mapY || 50}%`;
+    marker.title = branch.nombre;
+    marker.innerHTML = `<span>${getBranchVacancies(branch.id).length}</span>`;
+    marker.addEventListener("click", () => selectBranch(branch.id));
+    branchMarkers.appendChild(marker);
+
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = `branch-item ${branch.id === selectedBranchId ? "is-active" : ""}`;
+    item.innerHTML = `
+      <strong>${branch.nombre}</strong>
+      <span>${branch.marca} - ${branch.ciudad}, ${branch.estado}</span>
+      <span>${branch.direccion}</span>
+    `;
+    item.addEventListener("click", () => selectBranch(branch.id));
+    branchList.appendChild(item);
+  });
+
+  if (!filteredBranches.some((branch) => branch.id === selectedBranchId)) {
+    selectedBranchId = filteredBranches[0]?.id || "";
+  }
+
+  renderSelectedBranch();
+}
+
+function selectBranch(branchId) {
+  selectedBranchId = branchId;
+  renderBranches();
+  vacancyBoard?.classList.remove("hidden");
+  selectedBranchMapLink?.classList.remove("hidden");
+  selectedBranchAppleMapLink?.classList.remove("hidden");
+  vacancyBoard?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function closeBranchVacancies() {
+  selectedBranchId = "";
+  vacancyBoard?.classList.add("hidden");
+  selectedBranchMapLink?.classList.add("hidden");
+  selectedBranchAppleMapLink?.classList.add("hidden");
+  renderBranches();
+}
+
+function getBranchVacancies(branchId) {
+  return vacancies.filter((vacancy) => getBranchIdFromVacancy(vacancy) === branchId);
+}
+
+function renderSelectedBranch() {
+  const branch = branches.find((item) => item.id === selectedBranchId);
+
+  if (!branch || !branchVacancies) {
+    if (branchVacancies) branchVacancies.innerHTML = "";
+    return;
+  }
+
+  const branchJobs = getBranchVacancies(branch.id);
+  selectedBranchName.textContent = branch.nombre;
+  selectedBranchAddress.textContent = [branch.direccion, branch.ciudad, branch.estado]
+    .filter(Boolean)
+    .join(" - ");
+
+  selectedBranchMapLink.href = buildGoogleMapsUrl(branch);
+  selectedBranchAppleMapLink.href = buildAppleMapsUrl(branch);
+
+  branchVacancies.innerHTML = "";
+
+  if (!branchJobs.length) {
+    const empty = document.createElement("div");
+    empty.className = "status";
+    empty.textContent = "Esta sucursal no tiene vacantes activas por ahora.";
+    branchVacancies.appendChild(empty);
+    return;
+  }
+
+  branchJobs.forEach((vacancy) => {
+    const card = document.createElement("article");
+    card.className = "vacancy-card";
+    card.innerHTML = `
+      <div class="vacancy-meta">
+        <span>${vacancy.tipoVacante || "operativa"}</span>
+        <span>${vacancy.area || vacancy.horario || "Area por definir"}</span>
+      </div>
+      <h4>${vacancy.titulo}</h4>
+      <p>${vacancy.descripcion || (Array.isArray(vacancy.requisitos) ? vacancy.requisitos.join(", ") : "Vacante disponible en esta sucursal.")}</p>
+      <p><strong>${vacancy.grupo || vacancy.sueldo || "GA Hospitality"}</strong></p>
+      <button class="btn btn--primary" type="button" data-apply="${vacancy.id}">
+        Aplicar
+      </button>
+    `;
+    branchVacancies.appendChild(card);
+  });
+
+  branchVacancies.querySelectorAll("[data-apply]").forEach((button) => {
+    button.addEventListener("click", () => startVacancyApplication(button.dataset.apply));
+  });
+}
 
 async function cargarUbicaciones() {
   try {
-    const res = await fetch(
-      `${API_URL}/api/ubicaciones`
-    );
-
+    const res = await fetch(`${API_URL}/api/ubicaciones`);
     ubicaciones = await res.json();
   } catch (error) {
-    console.error(
-      "Error ubicaciones:",
-      error
-    );
+    ubicaciones = {
+      Mexico: {
+        Chihuahua: ["Chihuahua", "Cd. Juarez"],
+        "Nuevo Leon": ["Monterrey"]
+      }
+    };
   }
 }
 
 function llenarEstados() {
   const pais = filtroPais.value;
-
-  filtroEstado.innerHTML =
-    `<option value="">Todos</option>`;
-
-  filtroCiudad.innerHTML =
-    `<option value="">Todas</option>`;
+  filtroEstado.innerHTML = `<option value="">Todos</option>`;
+  filtroCiudad.innerHTML = `<option value="">Todas</option>`;
 
   if (!pais || !ubicaciones[pais]) return;
 
-  Object.keys(ubicaciones[pais])
-    .forEach((estado) => {
-      const option =
-        document.createElement("option");
-
-      option.value = estado;
-      option.textContent = estado;
-
-      filtroEstado.appendChild(option);
-    });
+  Object.keys(ubicaciones[pais]).forEach((estado) => {
+    const option = document.createElement("option");
+    option.value = estado;
+    option.textContent = estado;
+    filtroEstado.appendChild(option);
+  });
 }
 
 function llenarCiudades() {
   const pais = filtroPais.value;
   const estado = filtroEstado.value;
+  filtroCiudad.innerHTML = `<option value="">Todas</option>`;
 
-  filtroCiudad.innerHTML =
-    `<option value="">Todas</option>`;
+  if (!pais || !estado || !ubicaciones[pais]?.[estado]) return;
 
-  if (
-    !pais ||
-    !estado ||
-    !ubicaciones[pais]?.[estado]
-  ) return;
-
-  ubicaciones[pais][estado]
-    .forEach((ciudad) => {
-      const option =
-        document.createElement("option");
-
-      option.value = ciudad;
-      option.textContent = ciudad;
-
-      filtroCiudad.appendChild(option);
-    });
+  ubicaciones[pais][estado].forEach((ciudad) => {
+    const option = document.createElement("option");
+    option.value = ciudad;
+    option.textContent = ciudad;
+    filtroCiudad.appendChild(option);
+  });
 }
-
-/* =========================
-   BUSQUEDA VACANTES
-========================= */
 
 function buscarVacantes() {
-  const params =
-    new URLSearchParams({
-      tipoVacante:
-        filtroTipo.value || "",
-      pais:
-        filtroPais.value || "",
-      estado:
-        filtroEstado.value || "",
-      ciudad:
-        filtroCiudad.value || ""
-    });
+  const params = new URLSearchParams({
+    tipoVacante: filtroTipo.value || "",
+    pais: filtroPais.value || "",
+    estado: filtroEstado.value || "",
+    ciudad: filtroCiudad.value || ""
+  });
 
-  window.location.href =
-    `/vacantes.html?${params.toString()}`;
+  window.location.href = `/vacantes.html?${params.toString()}`;
 }
 
-/* =========================
-   ESTATUS
-========================= */
-
 async function consultarEstatus() {
-  const folio =
-    folioConsulta.value.trim();
+  const folio = folioConsulta.value.trim();
 
   if (!folio) {
-    consultaStatusResultado
-      .classList.remove("hidden");
-
-    consultaStatusResultado.textContent =
-      "⚠️ Ingresa un folio.";
-
+    consultaStatusResultado.classList.remove("hidden");
+    consultaStatusResultado.textContent = "Ingresa un folio.";
     return;
   }
 
   try {
-    const res = await fetch(
-      `${API_URL}/api/postulacion/${folio}`
-    );
-
+    const res = await fetch(`${API_URL}/api/postulacion/${folio}`);
     const data = await res.json();
 
     if (!res.ok) {
-      throw new Error(
-        data.error ||
-        "No fue posible consultar."
-      );
+      throw new Error(data.error || "No fue posible consultar.");
     }
 
-    consultaStatusResultado
-      .classList.remove("hidden");
-
-    consultaStatusResultado.textContent =
-      `✅ Estado actual: ${data.estadoSolicitud}`;
+    consultaStatusResultado.classList.remove("hidden");
+    consultaStatusResultado.textContent = `Estado actual: ${data.estadoSolicitud}`;
   } catch (error) {
-    consultaStatusResultado
-      .classList.remove("hidden");
-
-    consultaStatusResultado.textContent =
-      `⚠️ ${error.message}`;
+    consultaStatusResultado.classList.remove("hidden");
+    consultaStatusResultado.textContent = `${error.message}`;
   }
 }
 
-/* =========================
-   EVENTOS
-========================= */
-
-if (toggle) {
-  toggle.addEventListener(
-    "click",
-    openChat
-  );
-}
-
-if (closeBtn) {
-  closeBtn.addEventListener(
-    "click",
-    closeChat
-  );
-}
-
-if (startApplicationBtn) {
-  startApplicationBtn.addEventListener(
-    "click",
-    startCvAnalysisFlow
-  );
-}
-
-if (buscarVacantesBtn) {
-  buscarVacantesBtn.addEventListener(
-    "click",
-    buscarVacantes
-  );
-}
-
-if (filtroPais) {
-  filtroPais.addEventListener(
-    "change",
-    llenarEstados
-  );
-}
-
-if (filtroEstado) {
-  filtroEstado.addEventListener(
-    "change",
-    llenarCiudades
-  );
-}
-
-if (consultarStatusBtn) {
-  consultarStatusBtn.addEventListener(
-    "click",
-    consultarEstatus
-  );
-}
+toggle?.addEventListener("click", openChat);
+closeBtn?.addEventListener("click", closeChat);
+startApplicationBtn?.addEventListener("click", startCvAnalysisFlow);
+buscarVacantesBtn?.addEventListener("click", buscarVacantes);
+filtroPais?.addEventListener("change", llenarEstados);
+filtroEstado?.addEventListener("change", llenarCiudades);
+consultarStatusBtn?.addEventListener("click", consultarEstatus);
+branchSearch?.addEventListener("input", renderBranches);
+branchBrandFilter?.addEventListener("change", renderBranches);
+closeBranchVacanciesBtn?.addEventListener("click", closeBranchVacancies);
 
 if (attachCvBtn && chatCvFile) {
-  attachCvBtn.addEventListener(
-    "click",
-    () => {
-      openChat();
+  attachCvBtn.addEventListener("click", () => {
+    openChat();
 
-      if (!applicationFlow.active) {
-        startCvAnalysisFlow();
-      }
-
-      chatCvFile.click();
+    if (!applicationFlow.active) {
+      startCvAnalysisFlow();
     }
-  );
 
-  chatCvFile.addEventListener(
-    "change",
-    async () => {
-      const file =
-        chatCvFile.files?.[0];
+    chatCvFile.click();
+  });
 
-      if (!file) return;
+  chatCvFile.addEventListener("change", async () => {
+    const file = chatCvFile.files?.[0];
+    if (!file) return;
 
-      const isPdf =
-        file.type ===
-          "application/pdf" ||
-        file.name
-          .toLowerCase()
-          .endsWith(".pdf");
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
 
-      if (!isPdf) {
-        addAssistantText(
-          "⚠️ Solo se permiten archivos PDF."
-        );
-
-        return;
-      }
-
-      applicationFlow.cvFile = file;
-
-      addAssistantText(
-        `✅ CV cargado correctamente:\n${file.name}`
-      );
-
-      await processCvAnalysisOnly();
+    if (!isPdf) {
+      addAssistantText("Solo se permiten archivos PDF.");
+      return;
     }
-  );
+
+    applicationFlow.cvFile = file;
+    addAssistantText(`CV cargado correctamente:\n${file.name}`);
+    await processCvAnalysisOnly();
+  });
 }
 
-if (form) {
-  form.addEventListener(
-    "submit",
-    async (e) => {
-      e.preventDefault();
+form?.addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-      const text =
-        input.value.trim();
+  const text = input.value.trim();
+  if (!text) return;
 
-      if (!text) return;
+  addUserText(text);
+  input.value = "";
 
-      addUserText(text);
+  if (applicationFlow.mode === "branch_vacancy_application") {
+    addAssistantText(
+      "Gracias. Ya registre esta informacion para tu postulacion. Cuando conectemos el backend, aqui se enviara a la ruta de postulaciones con la sucursal y vacante seleccionadas."
+    );
+    return;
+  }
 
-      input.value = "";
-
-      addAssistantText(
-        "Estoy procesando tu mensaje..."
-      );
-    }
-  );
-}
-
-/* =========================
-   INIT
-========================= */
+  addAssistantText("Estoy procesando tu mensaje...");
+});
 
 async function init() {
   renderMessages();
-
-  await cargarUbicaciones();
+  await Promise.all([cargarUbicaciones(), cargarBranchData()]);
 }
 
 init();

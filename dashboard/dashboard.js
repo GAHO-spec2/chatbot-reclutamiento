@@ -266,4 +266,112 @@ auth.onAuthStateChanged(async (user) => {
     console.error("Error obteniendo token:", error);
     window.location.href = "/login-admin.html";
   }
+});  modalNombre.textContent = candidate.nombre || "Sin nombre";
+  modalEstado.textContent = `Estado: ${candidate.estadoSolicitud || "pendiente"}`;
+  modalCiudad.textContent = candidate.ciudad || "-";
+  modalSucursal.textContent = candidate.sucursal || candidate.sucursalNombre || candidate.sucursalId || "-";
+  modalPuesto.textContent = candidate.vacanteTitulo || candidate.puestoInteres || "-";
+  modalEscolaridad.textContent = candidate.escolaridad || "-";
+  modalFecha.textContent = formatFecha(candidate.fechaRegistro);
+  modalDireccion.textContent = candidate.direccion || "No registrada";
+  modalExperiencia.textContent = candidate.experiencia || "No proporcionada";
+  modalHabilidades.textContent = candidate.habilidades || "No proporcionadas";
+  modalCvLink.href = candidate.cvRuta ? `${API_URL}${candidate.cvRuta}` : "#";
+
+  setMapLink(modalGoogleMapsLink, getGoogleMapsUrl(candidate));
+  setMapLink(modalAppleMapsLink, getAppleMapsUrl(candidate));
+
+  modal.classList.remove("hidden");
+
+
+function closeCandidateModal() {
+  modal.classList.add("hidden");
+  selectedCandidate = null;
+}
+
+async function cargarPostulaciones() {
+  try {
+    setStatus("Cargando postulaciones...");
+
+    const res = await fetch(`${API_URL}/api/postulaciones`, {
+      headers: authHeaders()
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || `Error HTTP ${res.status}`);
+
+    postulaciones = data;
+    renderPostulaciones();
+    setStatus("", false);
+  } catch (error) {
+    console.error("Error cargando postulaciones:", error);
+    setStatus(`${error.message || "No fue posible cargar las postulaciones."}`);
+  }
+}
+
+async function actualizarEstado(nuevoEstado) {
+  if (!selectedCandidate?.id) return;
+
+  try {
+    const res = await fetch(`${API_URL}/api/postulaciones/${selectedCandidate.id}/estado`, {
+      method: "PATCH",
+      headers: authHeaders({
+        "Content-Type": "application/json"
+      }),
+      body: JSON.stringify({ estado: nuevoEstado })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "No fue posible actualizar el estado.");
+
+    await cargarPostulaciones();
+    closeCandidateModal();
+    setStatus(`Solicitud marcada como ${nuevoEstado}.`);
+  } catch (error) {
+    console.error("Error actualizando estado:", error);
+    setStatus(`${error.message}`);
+  }
+}
+
+async function cerrarSesion() {
+  try {
+    await auth.signOut();
+    window.location.href = "/login-admin.html";
+  } catch (error) {
+    console.error("Error cerrando sesion:", error);
+    setStatus("No fue posible cerrar sesion.");
+  }
+}
+
+/* =========================
+   EVENTS
+========================= */
+if (refreshBtn) refreshBtn.addEventListener("click", cargarPostulaciones);
+if (logoutBtn) logoutBtn.addEventListener("click", cerrarSesion);
+if (closeModalBtn) closeModalBtn.addEventListener("click", closeCandidateModal);
+if (closeModalBackdrop) closeModalBackdrop.addEventListener("click", closeCandidateModal);
+if (approveBtn) approveBtn.addEventListener("click", () => actualizarEstado("aprobado"));
+if (rejectBtn) rejectBtn.addEventListener("click", () => actualizarEstado("rechazado"));
+
+/* =========================
+   INIT
+========================= */
+async function init() {
+  await cargarPostulaciones();
+}
+
+auth.onAuthStateChanged(async (user) => {
+  if (!user) {
+    window.location.href = "/login-admin.html";
+    return;
+  }
+
+  try {
+    adminToken = await user.getIdToken(true);
+    init();
+  } catch (error) {
+    console.error("Error obteniendo token:", error);
+    window.location.href = "/login-admin.html";
+  }
 });

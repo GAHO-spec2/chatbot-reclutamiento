@@ -20,7 +20,7 @@
 
     <div class="topbar__right">
       <a href="vacantes-admin.html" class="btn btn--secondary">Administrar vacantes</a>
-      <button id="logoutBtn" class="btn btn--primary" type="button">Cerrar sesión</button>
+      <button id="logoutBtn" class="btn btn--primary" type="button">Cerrar sesion</button>
     </div>
   </header>
 
@@ -70,7 +70,7 @@
           <h3 id="modalNombre">Detalle del candidato</h3>
           <p id="modalEstado">Estado: pendiente</p>
         </div>
-        <button id="closeModalBtn" class="chatbot-close">✕</button>
+        <button id="closeModalBtn" class="chatbot-close">x</button>
       </div>
 
       <div class="modal__body">
@@ -80,7 +80,11 @@
             <strong id="modalCiudad">-</strong>
           </div>
           <div class="modal-item">
-            <span>Puesto de interés</span>
+            <span>Sucursal</span>
+            <strong id="modalSucursal">-</strong>
+          </div>
+          <div class="modal-item">
+            <span>Puesto de interes</span>
             <strong id="modalPuesto">-</strong>
           </div>
           <div class="modal-item">
@@ -90,6 +94,15 @@
           <div class="modal-item">
             <span>Fecha de registro</span>
             <strong id="modalFecha">-</strong>
+          </div>
+        </div>
+
+        <div class="modal-section">
+          <h4>Direccion de sucursal</h4>
+          <p id="modalDireccion">-</p>
+          <div class="modal-map-actions">
+            <a id="modalGoogleMapsLink" href="#" target="_blank" class="btn btn--secondary hidden">Google Maps</a>
+            <a id="modalAppleMapsLink" href="#" target="_blank" class="btn btn--secondary hidden">Apple Maps</a>
           </div>
         </div>
 

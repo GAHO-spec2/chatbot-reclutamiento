@@ -19,16 +19,10 @@ const PORT = process.env.PORT || 3000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/* =========================
-   OPENAI
-========================= */
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-/* =========================
-   FIREBASE ADMIN
-========================= */
 if (!admin.apps.length) {
   const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
 
@@ -39,7 +33,7 @@ if (!admin.apps.length) {
       credential: admin.credential.cert(serviceAccount)
     });
   } else {
-    console.warn("⚠️ Firebase Admin no inicializado. Revisa FIREBASE_SERVICE_ACCOUNT_PATH en Render.");
+    console.warn("Firebase Admin no inicializado. Revisa FIREBASE_SERVICE_ACCOUNT_PATH.");
   }
 }
 
@@ -50,6 +44,10 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
 
 async function verifyAdmin(req, res, next) {
   try {
+    if (!admin.apps.length) {
+      return res.status(500).json({ error: "Firebase Admin no esta inicializado." });
+    }
+
     const authHeader = req.headers.authorization || "";
 
     if (!authHeader.startsWith("Bearer ")) {
@@ -58,7 +56,6 @@ async function verifyAdmin(req, res, next) {
 
     const token = authHeader.replace("Bearer ", "");
     const decoded = await admin.auth().verifyIdToken(token);
-
     const email = decoded.email?.toLowerCase();
 
     if (!email || !ADMIN_EMAILS.includes(email)) {
@@ -68,14 +65,11 @@ async function verifyAdmin(req, res, next) {
     req.adminUser = decoded;
     next();
   } catch (error) {
-    console.error("❌ Error verificando admin:", error);
-    return res.status(401).json({ error: "Sesión inválida o expirada." });
+    console.error("Error verificando admin:", error);
+    return res.status(401).json({ error: "Sesion invalida o expirada." });
   }
 }
 
-/* =========================
-   CARPETAS Y ARCHIVOS
-========================= */
 const uploadsDir = path.join(__dirname, "uploads");
 const dataDir = path.join(__dirname, "data");
 
@@ -84,280 +78,206 @@ if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
 
 const postulacionesFile = path.join(dataDir, "postulaciones.json");
 const vacantesFile = path.join(dataDir, "vacantes.json");
+const sucursalesFile = path.join(dataDir, "sucursales.json");
+
+const sucursalesIniciales = [
+  {
+    id: "wendys-las-misiones-ciudad-juarez",
+    nombre: "Wendy's Las Misiones",
+    marca: "Wendy's",
+    pais: "Mexico",
+    estado: "Chihuahua",
+    ciudad: "Ciudad Juarez",
+    sucursal: "Las Misiones",
+    direccion: "Av. Paseo de la Victoria, Ciudad Juarez, Chihuahua",
+    googleMapsUrl: "https://www.google.com/maps/search/?api=1&query=Wendy's%20Las%20Misiones%20Ciudad%20Juarez",
+    appleMapsUrl: "https://maps.apple.com/?q=Wendy's%20Las%20Misiones%20Ciudad%20Juarez",
+    mapX: 36,
+    mapY: 28
+  },
+  {
+    id: "wendys-ejercito-nacional-ciudad-juarez",
+    nombre: "Wendy's Ejercito Nacional",
+    marca: "Wendy's",
+    pais: "Mexico",
+    estado: "Chihuahua",
+    ciudad: "Ciudad Juarez",
+    sucursal: "Ejercito Nacional",
+    direccion: "Av. Ejercito Nacional, Ciudad Juarez, Chihuahua",
+    googleMapsUrl: "https://www.google.com/maps/search/?api=1&query=Wendy's%20Ejercito%20Nacional%20Ciudad%20Juarez",
+    appleMapsUrl: "https://maps.apple.com/?q=Wendy's%20Ejercito%20Nacional%20Ciudad%20Juarez",
+    mapX: 42,
+    mapY: 36
+  },
+  {
+    id: "applebees-tecnologico-ciudad-juarez",
+    nombre: "Applebee's Tecnologico",
+    marca: "Applebee's",
+    pais: "Mexico",
+    estado: "Chihuahua",
+    ciudad: "Ciudad Juarez",
+    sucursal: "Tecnologico",
+    direccion: "Av. Tecnologico, Ciudad Juarez, Chihuahua",
+    googleMapsUrl: "https://www.google.com/maps/search/?api=1&query=Applebee's%20Tecnologico%20Ciudad%20Juarez",
+    appleMapsUrl: "https://maps.apple.com/?q=Applebee's%20Tecnologico%20Ciudad%20Juarez",
+    mapX: 48,
+    mapY: 44
+  },
+  {
+    id: "little-caesars-chihuahua",
+    nombre: "Little Caesars Chihuahua",
+    marca: "Little Caesars",
+    pais: "Mexico",
+    estado: "Chihuahua",
+    ciudad: "Chihuahua",
+    sucursal: "Sucursal Chihuahua",
+    direccion: "Chihuahua, Chihuahua",
+    googleMapsUrl: "https://www.google.com/maps/search/?api=1&query=Little%20Caesars%20Chihuahua",
+    appleMapsUrl: "https://maps.apple.com/?q=Little%20Caesars%20Chihuahua",
+    mapX: 58,
+    mapY: 48
+  },
+  {
+    id: "corporativo-chihuahua",
+    nombre: "Corporativo Chihuahua",
+    marca: "GA Hospitality",
+    pais: "Mexico",
+    estado: "Chihuahua",
+    ciudad: "Chihuahua",
+    sucursal: "Corporativo",
+    direccion: "Chihuahua, Chihuahua",
+    googleMapsUrl: "https://www.google.com/maps/search/?api=1&query=GA%20Hospitality%20Chihuahua",
+    appleMapsUrl: "https://maps.apple.com/?q=GA%20Hospitality%20Chihuahua",
+    mapX: 66,
+    mapY: 58
+  },
+  {
+    id: "little-caesars-guadalajara",
+    nombre: "Little Caesars Guadalajara",
+    marca: "Little Caesars",
+    pais: "Mexico",
+    estado: "Jalisco",
+    ciudad: "Guadalajara",
+    sucursal: "Sucursal Guadalajara",
+    direccion: "Guadalajara, Jalisco",
+    googleMapsUrl: "https://www.google.com/maps/search/?api=1&query=Little%20Caesars%20Guadalajara",
+    appleMapsUrl: "https://maps.apple.com/?q=Little%20Caesars%20Guadalajara",
+    mapX: 54,
+    mapY: 70
+  }
+];
+
+const vacantesIniciales = [
+  {
+    id: "vac-001",
+    sucursalId: "wendys-las-misiones-ciudad-juarez",
+    branchId: "wendys-las-misiones-ciudad-juarez",
+    tipoVacante: "operativa",
+    grupo: "Wendy's",
+    titulo: "Cajero",
+    area: "Operaciones",
+    pais: "Mexico",
+    estado: "Chihuahua",
+    ciudad: "Ciudad Juarez",
+    sucursal: "Las Misiones",
+    requisitos: ["Atencion al cliente", "Manejo basico de caja", "Disponibilidad de horario"]
+  },
+  {
+    id: "vac-002",
+    sucursalId: "wendys-ejercito-nacional-ciudad-juarez",
+    branchId: "wendys-ejercito-nacional-ciudad-juarez",
+    tipoVacante: "operativa",
+    grupo: "Wendy's",
+    titulo: "Despachador",
+    area: "Servicio",
+    pais: "Mexico",
+    estado: "Chihuahua",
+    ciudad: "Ciudad Juarez",
+    sucursal: "Ejercito Nacional",
+    requisitos: ["Rapidez", "Orden", "Trabajo en equipo"]
+  },
+  {
+    id: "vac-003",
+    sucursalId: "applebees-tecnologico-ciudad-juarez",
+    branchId: "applebees-tecnologico-ciudad-juarez",
+    tipoVacante: "operativa",
+    grupo: "Applebee's",
+    titulo: "Hostess",
+    area: "Recepcion",
+    pais: "Mexico",
+    estado: "Chihuahua",
+    ciudad: "Ciudad Juarez",
+    sucursal: "Tecnologico",
+    requisitos: ["Excelente trato al cliente", "Presentacion", "Comunicacion"]
+  },
+  {
+    id: "vac-008",
+    sucursalId: "little-caesars-chihuahua",
+    branchId: "little-caesars-chihuahua",
+    tipoVacante: "operativa",
+    grupo: "Little Caesars",
+    titulo: "Auxiliar de Cocina",
+    area: "Cocina",
+    pais: "Mexico",
+    estado: "Chihuahua",
+    ciudad: "Chihuahua",
+    sucursal: "Sucursal Chihuahua",
+    requisitos: ["Preparacion de alimentos", "Limpieza", "Trabajo bajo presion"]
+  },
+  {
+    id: "vac-101",
+    sucursalId: "corporativo-chihuahua",
+    branchId: "corporativo-chihuahua",
+    tipoVacante: "administrativa",
+    grupo: "RH",
+    titulo: "Auxiliar de Reclutamiento",
+    area: "RH",
+    pais: "Mexico",
+    estado: "Chihuahua",
+    ciudad: "Chihuahua",
+    sucursal: "Corporativo",
+    requisitos: ["Entrevistas", "Seguimiento", "Organizacion"]
+  },
+  {
+    id: "vac-010",
+    sucursalId: "little-caesars-guadalajara",
+    branchId: "little-caesars-guadalajara",
+    tipoVacante: "operativa",
+    grupo: "Little Caesars",
+    titulo: "Cajero",
+    area: "Mostrador",
+    pais: "Mexico",
+    estado: "Jalisco",
+    ciudad: "Guadalajara",
+    sucursal: "Sucursal Guadalajara",
+    requisitos: ["Atencion al cliente", "Caja", "Disponibilidad"]
+  }
+];
 
 if (!fs.existsSync(postulacionesFile)) {
   fs.writeFileSync(postulacionesFile, "[]", "utf-8");
 }
 
-/* =========================
-   VACANTES INICIALES
-========================= */
-const vacantesIniciales = [
-  {
-    id: "vac-001",
-    tipoVacante: "operativa",
-    grupo: "Wendy's",
-    titulo: "Cajero",
-    area: "Operaciones",
-    pais: "México",
-    estado: "Chihuahua",
-    ciudad: "Ciudad Juárez",
-    sucursal: "Las Misiones",
-    requisitos: ["Atención al cliente", "Manejo básico de caja", "Disponibilidad de horario"]
-  },
-  {
-    id: "vac-002",
-    tipoVacante: "operativa",
-    grupo: "Wendy's",
-    titulo: "Despachador",
-    area: "Servicio",
-    pais: "México",
-    estado: "Chihuahua",
-    ciudad: "Ciudad Juárez",
-    sucursal: "Ejército Nacional",
-    requisitos: ["Rapidez", "Orden", "Trabajo en equipo"]
-  },
-  {
-    id: "vac-003",
-    tipoVacante: "operativa",
-    grupo: "Applebee's",
-    titulo: "Hostess",
-    area: "Recepción",
-    pais: "México",
-    estado: "Chihuahua",
-    ciudad: "Ciudad Juárez",
-    sucursal: "Tecnológico",
-    requisitos: ["Excelente trato al cliente", "Presentación", "Comunicación"]
-  },
-  {
-    id: "vac-004",
-    tipoVacante: "operativa",
-    grupo: "Great American",
-    titulo: "Parrillero",
-    area: "Cocina",
-    pais: "México",
-    estado: "Chihuahua",
-    ciudad: "Ciudad Juárez",
-    sucursal: "Central",
-    requisitos: ["Manejo de parrilla", "Cocción de carnes", "Trabajo bajo presión"]
-  },
-  {
-    id: "vac-005",
-    tipoVacante: "operativa",
-    grupo: "Ardeo",
-    titulo: "Chef de Línea",
-    area: "Cocina",
-    pais: "México",
-    estado: "Chihuahua",
-    ciudad: "Ciudad Juárez",
-    sucursal: "Ardeo Central",
-    requisitos: ["Cocina gourmet", "Organización", "Trabajo en equipo"]
-  },
-  {
-    id: "vac-006",
-    tipoVacante: "operativa",
-    grupo: "Yoko",
-    titulo: "Sushero",
-    area: "Cocina",
-    pais: "México",
-    estado: "Chihuahua",
-    ciudad: "Ciudad Juárez",
-    sucursal: "Yoko Norte",
-    requisitos: ["Preparación de sushi", "Limpieza", "Orden"]
-  },
-  {
-    id: "vac-007",
-    tipoVacante: "operativa",
-    grupo: "Wendy's",
-    titulo: "Cajero",
-    area: "Operaciones",
-    pais: "México",
-    estado: "Chihuahua",
-    ciudad: "Chihuahua",
-    sucursal: "Sucursal Chihuahua",
-    requisitos: ["Atención al cliente", "Caja", "Disponibilidad"]
-  },
-  {
-    id: "vac-008",
-    tipoVacante: "operativa",
-    grupo: "Little Caesars",
-    titulo: "Auxiliar de Cocina",
-    area: "Cocina",
-    pais: "México",
-    estado: "Chihuahua",
-    ciudad: "Chihuahua",
-    sucursal: "Sucursal Chihuahua",
-    requisitos: ["Preparación de alimentos", "Limpieza", "Trabajo bajo presión"]
-  },
-  {
-    id: "vac-009",
-    tipoVacante: "operativa",
-    grupo: "Great American",
-    titulo: "Mesero",
-    area: "Piso",
-    pais: "México",
-    estado: "Chihuahua",
-    ciudad: "Chihuahua",
-    sucursal: "Sucursal Chihuahua",
-    requisitos: ["Servicio al cliente", "Presentación", "Trabajo en equipo"]
-  },
-  {
-    id: "vac-010",
-    tipoVacante: "operativa",
-    grupo: "Little Caesars",
-    titulo: "Cajero",
-    area: "Mostrador",
-    pais: "México",
-    estado: "Jalisco",
-    ciudad: "Guadalajara",
-    sucursal: "Sucursal Guadalajara",
-    requisitos: ["Atención al cliente", "Caja", "Disponibilidad"]
-  },
-  {
-    id: "vac-011",
-    tipoVacante: "operativa",
-    grupo: "Applebee's",
-    titulo: "Mesero",
-    area: "Piso",
-    pais: "México",
-    estado: "Jalisco",
-    ciudad: "Guadalajara",
-    sucursal: "Sucursal Guadalajara",
-    requisitos: ["Servicio al cliente", "Trabajo en equipo", "Disponibilidad"]
-  },
-  {
-    id: "vac-012",
-    tipoVacante: "operativa",
-    grupo: "Wendy's",
-    titulo: "Próximamente",
-    area: "Operaciones",
-    pais: "México",
-    estado: "Jalisco",
-    ciudad: "Guadalajara",
-    sucursal: "Próxima apertura",
-    requisitos: ["Vacante próxima a apertura"]
-  },
-  {
-    id: "vac-013",
-    tipoVacante: "operativa",
-    grupo: "Little Caesars",
-    titulo: "Auxiliar de Cocina",
-    area: "Cocina",
-    pais: "México",
-    estado: "Baja California",
-    ciudad: "Mexicali",
-    sucursal: "Sucursal Mexicali",
-    requisitos: ["Preparación de alimentos", "Limpieza", "Trabajo bajo presión"]
-  },
-  {
-    id: "vac-101",
-    tipoVacante: "administrativa",
-    grupo: "RH",
-    titulo: "Auxiliar de Reclutamiento",
-    area: "RH",
-    pais: "México",
-    estado: "Chihuahua",
-    ciudad: "Ciudad Juárez",
-    sucursal: "Corporativo",
-    requisitos: ["Entrevistas", "Seguimiento", "Organización"]
-  },
-  {
-    id: "vac-102",
-    tipoVacante: "administrativa",
-    grupo: "Contabilidad",
-    titulo: "Auxiliar Contable",
-    area: "Contabilidad",
-    pais: "México",
-    estado: "Chihuahua",
-    ciudad: "Chihuahua",
-    sucursal: "Corporativo",
-    requisitos: ["Contabilidad básica", "Excel", "Organización"]
-  },
-  {
-    id: "vac-103",
-    tipoVacante: "administrativa",
-    grupo: "Mercadotecnia",
-    titulo: "Diseñador Jr",
-    area: "Mercadotecnia",
-    pais: "México",
-    estado: "Jalisco",
-    ciudad: "Guadalajara",
-    sucursal: "Corporativo",
-    requisitos: ["Diseño", "Creatividad", "Redes sociales"]
-  },
-  {
-    id: "vac-104",
-    tipoVacante: "administrativa",
-    grupo: "Sistemas",
-    titulo: "Auxiliar de Soporte Técnico",
-    area: "Sistemas",
-    pais: "México",
-    estado: "Chihuahua",
-    ciudad: "Ciudad Juárez",
-    sucursal: "Corporativo",
-    requisitos: ["Soporte técnico", "Redes básicas", "Atención al usuario"]
-  },
-  {
-    id: "vac-105",
-    tipoVacante: "administrativa",
-    grupo: "Monitoreo",
-    titulo: "Analista de Monitoreo",
-    area: "Monitoreo",
-    pais: "México",
-    estado: "Chihuahua",
-    ciudad: "Ciudad Juárez",
-    sucursal: "Corporativo",
-    requisitos: ["Monitoreo", "Atención al detalle", "Reportes"]
-  },
-  {
-    id: "vac-106",
-    tipoVacante: "administrativa",
-    grupo: "Proyectos y Construcción",
-    titulo: "Coordinador de Proyectos",
-    area: "Proyectos y Construcción",
-    pais: "Estados Unidos",
-    estado: "Texas",
-    ciudad: "El Paso",
-    sucursal: "Corporativo",
-    requisitos: ["Planeación", "Seguimiento", "Construcción"]
-  },
-  {
-    id: "vac-107",
-    tipoVacante: "administrativa",
-    grupo: "Capital Humano",
-    titulo: "Generalista de Capital Humano",
-    area: "Capital Humano",
-    pais: "México",
-    estado: "Chihuahua",
-    ciudad: "Ciudad Juárez",
-    sucursal: "Corporativo",
-    requisitos: ["RH", "Administración de personal", "Comunicación"]
-  }
-];
+if (!fs.existsSync(sucursalesFile)) {
+  fs.writeFileSync(sucursalesFile, JSON.stringify(sucursalesIniciales, null, 2), "utf-8");
+}
 
 if (!fs.existsSync(vacantesFile)) {
   fs.writeFileSync(vacantesFile, JSON.stringify(vacantesIniciales, null, 2), "utf-8");
 }
 
-/* =========================
-   HELPERS JSON
-========================= */
 function leerJson(filePath, fallback = []) {
   try {
     const raw = fs.readFileSync(filePath, "utf-8");
     return JSON.parse(raw || JSON.stringify(fallback));
   } catch (error) {
-    console.error(`❌ Error leyendo ${filePath}:`, error);
+    console.error(`Error leyendo ${filePath}:`, error);
     return fallback;
   }
 }
 
 function guardarJson(filePath, data) {
-  try {
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
-  } catch (error) {
-    console.error(`❌ Error guardando ${filePath}:`, error);
-  }
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
 }
 
 function leerPostulaciones() {
@@ -376,41 +296,132 @@ function guardarVacantes(data) {
   guardarJson(vacantesFile, data);
 }
 
-/* =========================
-   MULTER
-========================= */
+function leerSucursales() {
+  return leerJson(sucursalesFile, sucursalesIniciales);
+}
+
+function guardarSucursales(data) {
+  guardarJson(sucursalesFile, data);
+}
+
+function normalizarTexto(texto = "") {
+  return String(texto)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[.'’]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function slugify(texto = "") {
+  return normalizarTexto(texto)
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function crearMapsUrl(query = "") {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
+function crearAppleMapsUrl(query = "") {
+  return `https://maps.apple.com/?q=${encodeURIComponent(query)}`;
+}
+
+function resolverPais(valor = "") {
+  const t = normalizarTexto(valor);
+  if (["mexico", "mx"].includes(t)) return "Mexico";
+  if (["estados unidos", "usa", "us", "eeuu", "eua", "united states"].includes(t)) return "Estados Unidos";
+  return valor;
+}
+
+function resolverEstado(valor = "") {
+  const t = normalizarTexto(valor);
+  if (["chihuahua", "chih"].includes(t)) return "Chihuahua";
+  if (["baja california", "baja", "bc"].includes(t)) return "Baja California";
+  if (["jalisco", "gdl", "guadalajara"].includes(t)) return "Jalisco";
+  if (["texas", "tx"].includes(t)) return "Texas";
+  return valor;
+}
+
+function resolverCiudad(valor = "") {
+  const t = normalizarTexto(valor);
+  if (["juarez", "ciudad juarez", "cd juarez", "cd. juarez", "jrz"].includes(t)) return "Ciudad Juarez";
+  if (["chihuahua", "ciudad chihuahua", "cd chihuahua"].includes(t)) return "Chihuahua";
+  if (["guadalajara", "gdl"].includes(t)) return "Guadalajara";
+  if (["mexicali"].includes(t)) return "Mexicali";
+  if (["el paso", "elpaso"].includes(t)) return "El Paso";
+  return valor;
+}
+
+function resolverGrupo(valor = "") {
+  const t = normalizarTexto(valor);
+  if (["wendys", "wendy"].includes(t)) return "Wendy's";
+  if (["applebees", "applebee"].includes(t)) return "Applebee's";
+  if (t.includes("great")) return "Great American";
+  if (t.includes("little")) return "Little Caesars";
+  if (t.includes("ardeo")) return "Ardeo";
+  if (t.includes("yoko")) return "Yoko";
+  return valor;
+}
+
+function resolverSucursalId(vacante = {}) {
+  if (vacante.sucursalId) return vacante.sucursalId;
+
+  return slugify(
+    [vacante.grupo, vacante.sucursal, vacante.ciudad, vacante.estado, vacante.pais]
+      .filter(Boolean)
+      .join("-")
+  );
+}
+
+function enriquecerVacanteConSucursal(vacante = {}) {
+  const sucursales = leerSucursales();
+  const sucursalId = resolverSucursalId(vacante);
+  const sucursal = sucursales.find((item) => item.id === sucursalId);
+  const query = `${vacante.sucursal || sucursal?.sucursal || ""}, ${vacante.ciudad || sucursal?.ciudad || ""}, ${vacante.estado || sucursal?.estado || ""}, ${vacante.pais || sucursal?.pais || ""}`;
+
+  return {
+    ...vacante,
+    branchId: sucursalId,
+    sucursalId,
+    direccion: vacante.direccion || sucursal?.direccion || "",
+    googleMapsUrl: vacante.googleMapsUrl || sucursal?.googleMapsUrl || crearMapsUrl(query),
+    appleMapsUrl: vacante.appleMapsUrl || sucursal?.appleMapsUrl || crearAppleMapsUrl(query),
+    mapX: sucursal?.mapX,
+    mapY: sucursal?.mapY
+  };
+}
+
+const ubicaciones = {
+  Mexico: {
+    Chihuahua: ["Ciudad Juarez", "Chihuahua"],
+    "Baja California": ["Mexicali"],
+    Jalisco: ["Guadalajara"]
+  },
+  "Estados Unidos": {
+    Texas: ["El Paso"]
+  }
+};
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => {
-    const timestamp = Date.now();
     const safeName = file.originalname.replace(/\s+/g, "_");
-    cb(null, `${timestamp}_${safeName}`);
+    cb(null, `${Date.now()}_${safeName}`);
   }
 });
 
 const fileFilter = (req, file, cb) => {
   const name = file.originalname.toLowerCase();
   const isPdf = file.mimetype === "application/pdf" || name.endsWith(".pdf");
-  const isImage =
-    file.mimetype.startsWith("image/") ||
-    name.endsWith(".jpg") ||
-    name.endsWith(".jpeg") ||
-    name.endsWith(".png");
-
+  const isImage = file.mimetype.startsWith("image/") || name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png");
   const isCvField = file.fieldname === "cvFile";
   const isOptionalDocField = ["ineFile", "curpFile", "domicilioFile"].includes(file.fieldname);
 
-  if (isCvField && !isPdf) {
-    return cb(new Error("El CV debe ser un archivo PDF."));
-  }
-
-  if (isOptionalDocField && !(isPdf || isImage)) {
-    return cb(new Error("Los documentos opcionales deben ser PDF o imagen."));
-  }
-
-  if (!isCvField && !isOptionalDocField) {
-    return cb(new Error("Tipo de archivo no permitido."));
-  }
+  if (isCvField && !isPdf) return cb(new Error("El CV debe ser un archivo PDF."));
+  if (isOptionalDocField && !(isPdf || isImage)) return cb(new Error("Los documentos opcionales deben ser PDF o imagen."));
+  if (!isCvField && !isOptionalDocField) return cb(new Error("Tipo de archivo no permitido."));
 
   cb(null, true);
 };
@@ -421,18 +432,12 @@ const upload = multer({
   limits: { fileSize: 8 * 1024 * 1024 }
 });
 
-/* =========================
-   MIDDLEWARES
-========================= */
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
-  }
-
+  if (req.method === "OPTIONS") return res.sendStatus(200);
   next();
 });
 
@@ -441,196 +446,34 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 app.use("/uploads", express.static(uploadsDir));
 
-let postulaciones = leerPostulaciones();
-let vacantes = leerVacantes();
-
-/* =========================
-   UBICACIONES
-========================= */
-const ubicaciones = {
-  México: {
-    Chihuahua: ["Ciudad Juárez", "Chihuahua"],
-    "Baja California": ["Mexicali"],
-    Jalisco: ["Guadalajara"]
-  },
-  "Estados Unidos": {
-    Texas: ["El Paso"]
-  }
-};
-
-/* =========================
-   TEXTO HELPERS
-========================= */
-function normalizarTexto(texto = "") {
-  return String(texto)
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[.'’]/g, "")
-    .replace(/\b(cd|cd\.|ciudad)\b/g, "ciudad")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function limpiarJsonRespuesta(texto = "") {
-  return String(texto)
-    .replace(/```json/gi, "")
-    .replace(/```/g, "")
-    .trim();
-}
-
-function resolverPais(valor = "") {
-  const t = normalizarTexto(valor);
-
-  const aliases = {
-    México: ["mexico", "méxico", "mx"],
-    "Estados Unidos": ["estados unidos", "usa", "us", "eeuu", "eua", "united states"]
-  };
-
-  for (const [oficial, lista] of Object.entries(aliases)) {
-    if (lista.some((alias) => t === normalizarTexto(alias) || t.includes(normalizarTexto(alias)))) {
-      return oficial;
-    }
-  }
-
-  return valor;
-}
-
-function resolverEstado(valor = "") {
-  const t = normalizarTexto(valor);
-
-  const aliases = {
-    Chihuahua: ["chihuahua", "chih"],
-    "Baja California": ["baja california", "baja", "bc"],
-    Jalisco: ["jalisco", "gdl", "guadalajara"],
-    Texas: ["texas", "tx"]
-  };
-
-  for (const [oficial, lista] of Object.entries(aliases)) {
-    if (lista.some((alias) => t === normalizarTexto(alias) || t.includes(normalizarTexto(alias)))) {
-      return oficial;
-    }
-  }
-
-  return valor;
-}
-
-function resolverCiudad(valor = "") {
-  const t = normalizarTexto(valor);
-
-  const aliases = {
-    "Ciudad Juárez": ["juarez", "ciudad juarez", "cd juarez", "cd. juarez", "jrz"],
-    Chihuahua: ["chihuahua", "ciudad chihuahua", "cd chihuahua"],
-    Guadalajara: ["guadalajara", "gdl"],
-    Mexicali: ["mexicali"],
-    "El Paso": ["el paso", "elpaso", "paso"]
-  };
-
-  for (const [oficial, lista] of Object.entries(aliases)) {
-    if (lista.some((alias) => t === normalizarTexto(alias) || t.includes(normalizarTexto(alias)))) {
-      return oficial;
-    }
-  }
-
-  return valor;
-}
-
-function resolverGrupo(valor = "") {
-  const t = normalizarTexto(valor);
-
-  const aliases = {
-    "Wendy's": ["wendys", "wendy", "wendy's"],
-    "Applebee's": ["applebees", "applebee", "applebee's"],
-    "Great American": ["great american", "great american steakhouse", "great"],
-    Ardeo: ["ardeo"],
-    Yoko: ["yoko"],
-    "Little Caesars": ["little caesars", "little", "caesars", "little caesar"],
-    RH: ["rh", "recursos humanos", "reclutamiento"],
-    Contabilidad: ["contabilidad", "contable"],
-    Mercadotecnia: ["mercadotecnia", "marketing", "mkt"],
-    Sistemas: ["sistemas", "soporte", "soporte tecnico", "it"],
-    Monitoreo: ["monitoreo", "monitorista"],
-    "Proyectos y Construcción": ["proyectos y construccion", "proyectos", "construccion"],
-    "Capital Humano": ["capital humano", "capital", "talento humano"]
-  };
-
-  for (const [oficial, lista] of Object.entries(aliases)) {
-    if (lista.some((alias) => t === normalizarTexto(alias) || t.includes(normalizarTexto(alias)))) {
-      return oficial;
-    }
-  }
-
-  return valor;
-}
-
-/* =========================
-   PDF + IA
-========================= */
 async function extraerTextoPdf(filePath) {
   try {
     const pdfBuffer = fs.readFileSync(filePath);
     const parsed = await pdfParse(pdfBuffer);
     return parsed?.text || "";
   } catch (error) {
-    console.error("❌ Error extrayendo texto del PDF:", error);
+    console.error("Error extrayendo texto del PDF:", error);
     return "";
   }
 }
 
+function limpiarJsonRespuesta(texto = "") {
+  return String(texto).replace(/```json/gi, "").replace(/```/g, "").trim();
+}
+
 function sugerirVacantesBasicas(texto = "", tipoVacante = "") {
   const lower = normalizarTexto(texto);
-  const lista = leerVacantes();
 
-  return lista
+  return leerVacantes()
+    .map(enriquecerVacanteConSucursal)
     .filter((v) => !tipoVacante || v.tipoVacante === tipoVacante)
     .map((v) => {
       let score = 0;
+      const full = normalizarTexto(`${v.titulo} ${v.area} ${v.grupo} ${(v.requisitos || []).join(" ")} ${v.sucursal}`);
 
-      const full = normalizarTexto(
-        `${v.titulo} ${v.area} ${v.grupo} ${v.requisitos.join(" ")} ${v.sucursal}`
-      );
-
-      const keywords = [
-        "cliente",
-        "servicio",
-        "ventas",
-        "caja",
-        "cajero",
-        "cocina",
-        "alimentos",
-        "restaurante",
-        "sushi",
-        "parrilla",
-        "logistica",
-        "importacion",
-        "exportacion",
-        "documental",
-        "facturacion",
-        "almacen",
-        "inventario",
-        "administracion",
-        "administrativo",
-        "excel",
-        "contabilidad",
-        "reclutamiento",
-        "recursos humanos",
-        "rh",
-        "soporte",
-        "sistemas",
-        "tecnico",
-        "marketing",
-        "mercadotecnia",
-        "monitoreo",
-        "proyectos"
-      ];
-
-      keywords.forEach((k) => {
+      ["cliente", "servicio", "ventas", "caja", "cajero", "cocina", "restaurante", "excel", "contabilidad", "reclutamiento", "rh", "sistemas"].forEach((k) => {
         if (lower.includes(k) && full.includes(k)) score += 25;
       });
-
-      if (lower.includes(normalizarTexto(v.titulo))) score += 35;
-      if (lower.includes(normalizarTexto(v.area))) score += 30;
-      if (lower.includes(normalizarTexto(v.grupo))) score += 20;
 
       return { ...v, score };
     })
@@ -640,37 +483,25 @@ function sugerirVacantesBasicas(texto = "", tipoVacante = "") {
 }
 
 async function analizarCvConIA(cvTexto = "") {
-  if (!cvTexto.trim()) {
+  if (!cvTexto.trim() || !process.env.OPENAI_API_KEY) {
     return {
-      resumen: "No fue posible analizar el CV.",
+      resumen: "CV recibido correctamente.",
       habilidadesDetectadas: [],
       perfilRecomendado: "",
-      palabrasClave: []
+      palabrasClave: [],
+      areasCompatibles: []
     };
   }
 
   try {
-    const prompt = `
-Analiza este CV para reclutamiento.
-
-Devuelve SOLO JSON válido con esta estructura:
-{
-  "resumen": "resumen profesional breve",
-  "habilidadesDetectadas": ["..."],
-  "perfilRecomendado": "operativa o administrativa",
-  "palabrasClave": ["..."],
-  "areasCompatibles": ["..."]
-}
-
-CV:
-${cvTexto.slice(0, 12000)}
-`;
-
     const completion = await openai.chat.completions.create({
       model: "gpt-5-mini",
       messages: [
-        { role: "system", content: "Responde únicamente JSON válido, sin markdown." },
-        { role: "user", content: prompt }
+        { role: "system", content: "Responde unicamente JSON valido, sin markdown." },
+        {
+          role: "user",
+          content: `Analiza este CV para reclutamiento y devuelve JSON con resumen, habilidadesDetectadas, perfilRecomendado, palabrasClave y areasCompatibles.\n\nCV:\n${cvTexto.slice(0, 12000)}`
+        }
       ]
     });
 
@@ -679,22 +510,16 @@ ${cvTexto.slice(0, 12000)}
 
     return {
       resumen: parsed.resumen || "CV recibido correctamente.",
-      habilidadesDetectadas: Array.isArray(parsed.habilidadesDetectadas)
-        ? parsed.habilidadesDetectadas
-        : [],
+      habilidadesDetectadas: Array.isArray(parsed.habilidadesDetectadas) ? parsed.habilidadesDetectadas : [],
       perfilRecomendado: parsed.perfilRecomendado || "",
-      palabrasClave: Array.isArray(parsed.palabrasClave)
-        ? parsed.palabrasClave
-        : [],
-      areasCompatibles: Array.isArray(parsed.areasCompatibles)
-        ? parsed.areasCompatibles
-        : []
+      palabrasClave: Array.isArray(parsed.palabrasClave) ? parsed.palabrasClave : [],
+      areasCompatibles: Array.isArray(parsed.areasCompatibles) ? parsed.areasCompatibles : []
     };
   } catch (error) {
-    console.error("❌ Error IA CV:", error);
+    console.error("Error IA CV:", error);
 
     return {
-      resumen: "CV recibido correctamente. El análisis automático no estuvo disponible en este momento.",
+      resumen: "CV recibido correctamente. El analisis automatico no estuvo disponible en este momento.",
       habilidadesDetectadas: [],
       perfilRecomendado: "",
       palabrasClave: [],
@@ -703,36 +528,13 @@ ${cvTexto.slice(0, 12000)}
   }
 }
 
-/* =========================
-   RUTAS HTML
-========================= */
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
+app.get("/index.html", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
+app.get("/vacantes.html", (req, res) => res.sendFile(path.join(__dirname, "vacantes.html")));
+app.get("/login-admin.html", (req, res) => res.sendFile(path.join(__dirname, "login-admin.html")));
+app.get("/dashboard.html", (req, res) => res.sendFile(path.join(__dirname, "dashboard.html")));
+app.get("/vacantes-admin.html", (req, res) => res.sendFile(path.join(__dirname, "vacantes-admin.html")));
 
-app.get("/index.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
-
-app.get("/vacantes.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "vacantes.html"));
-});
-
-app.get("/login-admin.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "login-admin.html"));
-});
-
-app.get("/dashboard.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "dashboard.html"));
-});
-
-app.get("/vacantes-admin.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "vacantes-admin.html"));
-});
-
-/* =========================
-   RUTAS PUBLICAS
-========================= */
 app.get("/health", (req, res) => {
   res.json({
     ok: true,
@@ -745,16 +547,26 @@ app.get("/api/ubicaciones", (req, res) => {
   res.json(ubicaciones);
 });
 
-app.get("/api/vacantes", (req, res) => {
-  vacantes = leerVacantes();
+app.get("/api/sucursales", (req, res) => {
+  const sucursales = leerSucursales();
+  const vacantes = leerVacantes().map(enriquecerVacanteConSucursal);
 
+  res.json(
+    sucursales.map((sucursal) => ({
+      ...sucursal,
+      vacantesActivas: vacantes.filter((v) => v.branchId === sucursal.id).length
+    }))
+  );
+});
+
+app.get("/api/vacantes", (req, res) => {
   const tipoVacante = req.query.tipoVacante ? normalizarTexto(req.query.tipoVacante) : "";
   const pais = req.query.pais ? normalizarTexto(resolverPais(req.query.pais)) : "";
   const estado = req.query.estado ? normalizarTexto(resolverEstado(req.query.estado)) : "";
   const ciudad = req.query.ciudad ? normalizarTexto(resolverCiudad(req.query.ciudad)) : "";
   const grupo = req.query.grupo ? normalizarTexto(resolverGrupo(req.query.grupo)) : "";
 
-  const resultado = vacantes.filter((v) => {
+  const resultado = leerVacantes().filter((v) => {
     const vTipo = normalizarTexto(v.tipoVacante);
     const vPais = normalizarTexto(v.pais);
     const vEstado = normalizarTexto(v.estado);
@@ -770,83 +582,56 @@ app.get("/api/vacantes", (req, res) => {
     );
   });
 
-  res.json(resultado);
+  res.json(resultado.map(enriquecerVacanteConSucursal));
 });
 
 app.get("/api/postulacion/:id", (req, res) => {
-  postulaciones = leerPostulaciones();
-
-  const item = postulaciones.find((p) => p.id === req.params.id);
+  const item = leerPostulaciones().find((p) => p.id === req.params.id);
 
   if (!item) {
-    return res.status(404).json({ error: "Postulación no encontrada." });
+    return res.status(404).json({ error: "Postulacion no encontrada." });
   }
 
-  res.json({
-    id: item.id,
-    estadoSolicitud: item.estadoSolicitud,
-    vacanteTitulo: item.vacanteTitulo,
-    ciudad: item.ciudad,
-    fechaRegistro: item.fechaRegistro
-  });
+  res.json(item);
 });
 
-/* =========================
-   ANALIZAR CV PUBLICO
-========================= */
-app.post(
-  "/api/analizar-cv",
-  upload.fields([{ name: "cvFile", maxCount: 1 }]),
-  async (req, res) => {
-    try {
-      const cvFile = req.files?.cvFile?.[0];
+app.post("/api/analizar-cv", upload.fields([{ name: "cvFile", maxCount: 1 }]), async (req, res) => {
+  try {
+    const cvFile = req.files?.cvFile?.[0];
 
-      if (!cvFile) {
-        return res.status(400).json({ error: "Debes adjuntar tu CV en PDF." });
-      }
-
-      const cvTexto = await extraerTextoPdf(cvFile.path);
-      const analisisIA = await analizarCvConIA(cvTexto);
-
-      let tipoSugerido = "";
-
-      if (normalizarTexto(analisisIA.perfilRecomendado).includes("administr")) {
-        tipoSugerido = "administrativa";
-      }
-
-      if (normalizarTexto(analisisIA.perfilRecomendado).includes("oper")) {
-        tipoSugerido = "operativa";
-      }
-
-      const sugerenciasIA = sugerirVacantesBasicas(
-        `${cvTexto} ${analisisIA.habilidadesDetectadas.join(" ")} ${analisisIA.palabrasClave.join(" ")} ${analisisIA.areasCompatibles.join(" ")}`,
-        tipoSugerido
-      );
-
-      res.json({
-        ok: true,
-        message: "CV analizado correctamente.",
-        analisis: {
-          cvNombre: cvFile.originalname,
-          cvRuta: `/uploads/${cvFile.filename}`,
-          resumenIA: analisisIA.resumen,
-          habilidadesDetectadas: analisisIA.habilidadesDetectadas,
-          perfilRecomendado: analisisIA.perfilRecomendado,
-          palabrasClave: analisisIA.palabrasClave,
-          areasCompatibles: analisisIA.areasCompatibles,
-          sugerenciasIA
-        }
-      });
-    } catch (error) {
-      console.error("❌ Error analizando CV:", error);
-      res.status(500).json({ error: "No fue posible analizar el CV." });
+    if (!cvFile) {
+      return res.status(400).json({ error: "Debes adjuntar tu CV en PDF." });
     }
-  }
-);
 
-/* =========================
-   POSTULACION PUBLICA
-========================= */
+    const cvTexto = await extraerTextoPdf(cvFile.path);
+    const analisisIA = await analizarCvConIA(cvTexto);
+    const tipoSugerido = normalizarTexto(analisisIA.perfilRecomendado).includes("administr") ? "administrativa" : "";
+
+    const sugerenciasIA = sugerirVacantesBasicas(
+      `${cvTexto} ${analisisIA.habilidadesDetectadas.join(" ")} ${analisisIA.palabrasClave.join(" ")} ${analisisIA.areasCompatibles.join(" ")}`,
+      tipoSugerido
+    );
+
+    res.json({
+      ok: true,
+      message: "CV analizado correctamente.",
+      analisis: {
+        cvNombre: cvFile.originalname,
+        cvRuta: `/uploads/${cvFile.filename}`,
+        resumenIA: analisisIA.resumen,
+        habilidadesDetectadas: analisisIA.habilidadesDetectadas,
+        perfilRecomendado: analisisIA.perfilRecomendado,
+        palabrasClave: analisisIA.palabrasClave,
+        areasCompatibles: analisisIA.areasCompatibles,
+        sugerenciasIA
+      }
+    });
+  } catch (error) {
+    console.error("Error analizando CV:", error);
+    res.status(500).json({ error: "No fue posible analizar el CV." });
+  }
+});
+
 app.post(
   "/api/postulacion",
   upload.fields([
@@ -857,22 +642,16 @@ app.post(
   ]),
   async (req, res) => {
     try {
-      postulaciones = leerPostulaciones();
-      vacantes = leerVacantes();
+      const postulaciones = leerPostulaciones();
+      const vacantes = leerVacantes().map(enriquecerVacanteConSucursal);
 
       const {
         nombre,
         correo,
         telefono,
         edad,
-        pais,
-        estado,
-        ciudad,
         disponibilidad,
-        tipoVacante,
-        grupoSeleccionado,
         vacanteSeleccionada,
-        puestoInteres,
         escolaridad,
         experiencia,
         habilidades
@@ -903,15 +682,20 @@ app.post(
         correo,
         telefono,
         edad,
-        pais: pais || vacante.pais,
-        estado: estado || vacante.estado,
-        ciudad: ciudad || vacante.ciudad,
+        pais: vacante.pais,
+        estado: vacante.estado,
+        ciudad: vacante.ciudad,
+        sucursal: vacante.sucursal,
+        sucursalId: vacante.sucursalId,
+        direccion: vacante.direccion,
+        googleMapsUrl: vacante.googleMapsUrl,
+        appleMapsUrl: vacante.appleMapsUrl,
         disponibilidad,
-        tipoVacante: tipoVacante || vacante.tipoVacante,
-        grupoSeleccionado: grupoSeleccionado || vacante.grupo,
+        tipoVacante: vacante.tipoVacante,
+        grupoSeleccionado: vacante.grupo,
         vacanteId: vacante.id,
         vacanteTitulo: vacante.titulo,
-        puestoInteres: puestoInteres || vacante.titulo,
+        puestoInteres: vacante.titulo,
         escolaridad,
         experiencia,
         habilidades,
@@ -929,19 +713,16 @@ app.post(
 
       res.json({
         ok: true,
-        message: "Postulación recibida correctamente.",
+        message: "Postulacion recibida correctamente.",
         postulacion
       });
     } catch (error) {
-      console.error("❌ Error guardando postulación:", error);
-      res.status(500).json({ error: "No fue posible guardar la postulación." });
+      console.error("Error guardando postulacion:", error);
+      res.status(500).json({ error: "No fue posible guardar la postulacion." });
     }
   }
 );
 
-/* =========================
-   CHAT PUBLICO
-========================= */
 app.post("/chat", async (req, res) => {
   try {
     const { messages, candidateProfile } = req.body;
@@ -950,50 +731,38 @@ app.post("/chat", async (req, res) => {
       return res.status(400).json({ error: "El campo messages debe ser un arreglo." });
     }
 
-    const lastMessages = messages.slice(-10);
-
-    const systemPrompt = `
-Eres un asistente profesional de reclutamiento de GA Hospitality.
-
-Ayudas con:
-- vacantes disponibles
-- orientación para candidatos
-- análisis general del CV
-- pasos de postulación
-- consulta de estatus mediante folio
-
-No inventes políticas internas.
-Responde en español, claro, profesional y breve.
-
-Perfil candidato:
-${JSON.stringify(candidateProfile || {}, null, 2)}
-`;
+    if (!process.env.OPENAI_API_KEY) {
+      return res.json({
+        reply: {
+          role: "assistant",
+          content: "Puedo ayudarte con vacantes y postulaciones. El chat IA aun no tiene API key configurada."
+        }
+      });
+    }
 
     const completion = await openai.chat.completions.create({
       model: "gpt-5-mini",
       messages: [
-        { role: "system", content: systemPrompt },
-        ...lastMessages
+        {
+          role: "system",
+          content: `Eres un asistente profesional de reclutamiento de GA Hospitality. Responde en espanol, claro y breve.\nPerfil candidato:\n${JSON.stringify(candidateProfile || {}, null, 2)}`
+        },
+        ...messages.slice(-10)
       ]
     });
 
-    const reply = completion.choices?.[0]?.message;
-
     res.json({
-      reply: {
+      reply: completion.choices?.[0]?.message || {
         role: "assistant",
-        content: reply?.content || "No pude generar respuesta."
+        content: "No pude generar respuesta."
       }
     });
   } catch (error) {
-    console.error("❌ Error chat:", error);
+    console.error("Error chat:", error);
     res.status(500).json({ error: "Error generando respuesta." });
   }
 });
 
-/* =========================
-   RUTAS ADMIN PROTEGIDAS
-========================= */
 app.get("/api/admin/me", verifyAdmin, (req, res) => {
   res.json({
     ok: true,
@@ -1002,26 +771,23 @@ app.get("/api/admin/me", verifyAdmin, (req, res) => {
 });
 
 app.get("/api/postulaciones", verifyAdmin, (req, res) => {
-  postulaciones = leerPostulaciones();
-  res.json(postulaciones);
+  res.json(leerPostulaciones());
 });
 
 app.patch("/api/postulaciones/:id/estado", verifyAdmin, (req, res) => {
   const { id } = req.params;
   const { estado } = req.body;
-
   const estadosValidos = ["pendiente", "aprobado", "rechazado"];
 
   if (!estadosValidos.includes(estado)) {
-    return res.status(400).json({ error: "Estado no válido." });
+    return res.status(400).json({ error: "Estado no valido." });
   }
 
-  postulaciones = leerPostulaciones();
-
+  const postulaciones = leerPostulaciones();
   const postulacion = postulaciones.find((p) => p.id === id);
 
   if (!postulacion) {
-    return res.status(404).json({ error: "Postulación no encontrada." });
+    return res.status(404).json({ error: "Postulacion no encontrada." });
   }
 
   postulacion.estadoSolicitud = estado;
@@ -1036,11 +802,8 @@ app.patch("/api/postulaciones/:id/estado", verifyAdmin, (req, res) => {
   });
 });
 
-/* =========================
-   CRUD VACANTES ADMIN
-========================= */
 app.post("/api/vacantes", verifyAdmin, (req, res) => {
-  vacantes = leerVacantes();
+  const vacantes = leerVacantes();
 
   const {
     tipoVacante,
@@ -1051,6 +814,10 @@ app.post("/api/vacantes", verifyAdmin, (req, res) => {
     estado,
     ciudad,
     sucursal,
+    sucursalId,
+    direccion,
+    googleMapsUrl,
+    appleMapsUrl,
     requisitos
   } = req.body;
 
@@ -1058,8 +825,13 @@ app.post("/api/vacantes", verifyAdmin, (req, res) => {
     return res.status(400).json({ error: "Faltan campos obligatorios." });
   }
 
+  const finalSucursalId = sucursalId || slugify(`${grupo} ${sucursal} ${ciudad} ${estado} ${pais}`);
+  const query = `${direccion || sucursal}, ${ciudad}, ${estado}, ${pais}`;
+
   const nuevaVacante = {
     id: `vac-${Date.now()}`,
+    sucursalId: finalSucursalId,
+    branchId: finalSucursalId,
     tipoVacante,
     grupo,
     titulo,
@@ -1068,7 +840,15 @@ app.post("/api/vacantes", verifyAdmin, (req, res) => {
     estado,
     ciudad,
     sucursal,
-    requisitos: Array.isArray(requisitos) ? requisitos : []
+    direccion: direccion || "",
+    googleMapsUrl: googleMapsUrl || crearMapsUrl(query),
+    appleMapsUrl: appleMapsUrl || crearAppleMapsUrl(query),
+    requisitos: Array.isArray(requisitos)
+      ? requisitos
+      : String(requisitos || "")
+          .split("\n")
+          .map((item) => item.trim())
+          .filter(Boolean)
   };
 
   vacantes.push(nuevaVacante);
@@ -1082,8 +862,7 @@ app.post("/api/vacantes", verifyAdmin, (req, res) => {
 });
 
 app.put("/api/vacantes/:id", verifyAdmin, (req, res) => {
-  vacantes = leerVacantes();
-
+  const vacantes = leerVacantes();
   const { id } = req.params;
   const index = vacantes.findIndex((v) => v.id === id);
 
@@ -1107,8 +886,7 @@ app.put("/api/vacantes/:id", verifyAdmin, (req, res) => {
 });
 
 app.delete("/api/vacantes/:id", verifyAdmin, (req, res) => {
-  vacantes = leerVacantes();
-
+  const vacantes = leerVacantes();
   const { id } = req.params;
   const index = vacantes.findIndex((v) => v.id === id);
 
@@ -1127,9 +905,6 @@ app.delete("/api/vacantes/:id", verifyAdmin, (req, res) => {
   });
 });
 
-/* =========================
-   ERRORES
-========================= */
 app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     return res.status(400).json({ error: err.message });
@@ -1149,5 +924,5 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ Servidor escuchando en http://localhost:${PORT}`);
+  console.log(`Servidor escuchando en http://localhost:${PORT}`);
 });

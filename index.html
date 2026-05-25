@@ -12,10 +12,6 @@
 
   <link rel="icon" type="image/png" sizes="32x32" href="/img/icons8-nuevo-empleo-32.png" />
   <link rel="stylesheet" href="styles.css" />
-
-  <style>
-    html { scroll-behavior: smooth; }
-  </style>
 </head>
 
 <body>
@@ -42,14 +38,79 @@
           Analizar mi CV
         </button>
 
-        <a href="#busqueda-vacantes" class="btn btn--ghost">
-          Buscar vacantes
+        <a href="#postulate-sucursal" class="btn btn--ghost">
+          Postularme por sucursal
         </a>
       </div>
     </div>
   </header>
 
   <main class="container">
+    <section id="postulate-sucursal" class="card branch-card">
+      <div class="section-head section-head--split">
+        <div>
+          <h2>Busca la sucursal más cercana para postularte</h2>
+          <p>
+            Selecciona una sucursal en el mapa, revisa sus vacantes disponibles y empieza tu
+            postulación directamente con el asistente.
+          </p>
+        </div>
+
+        <div class="branch-map-actions">
+          <a id="selectedBranchMapLink" class="btn btn--ghost hidden" href="#" target="_blank" rel="noopener">
+            Google Maps
+          </a>
+
+          <a id="selectedBranchAppleMapLink" class="btn btn--ghost hidden" href="#" target="_blank" rel="noopener">
+            Apple Maps
+          </a>
+        </div>
+      </div>
+
+      <div class="branch-layout">
+        <div class="branch-map" aria-label="Mapa de sucursales">
+          <div class="branch-map__grid"></div>
+          <div id="branchMarkers" class="branch-map__markers"></div>
+        </div>
+
+        <div class="branch-panel">
+          <div class="branch-filters">
+            <div class="field">
+              <label for="branchSearch">Buscar sucursal</label>
+              <input id="branchSearch" type="search" placeholder="Ciudad, marca o dirección" />
+            </div>
+
+            <div class="field">
+              <label for="branchBrandFilter">Marca</label>
+              <select id="branchBrandFilter">
+                <option value="">Todas</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="branchList" class="branch-list"></div>
+        </div>
+      </div>
+
+      <div id="vacancyBoard" class="vacancy-board hidden">
+        <div class="vacancy-board__head">
+          <div>
+            <span class="eyebrow">Vacantes disponibles</span>
+            <h3 id="selectedBranchName">Selecciona una sucursal</h3>
+          </div>
+
+          <div class="vacancy-board__tools">
+            <p id="selectedBranchAddress"></p>
+            <button id="closeBranchVacanciesBtn" class="chatbot-close" type="button" aria-label="Cerrar vacantes">
+              x
+            </button>
+          </div>
+        </div>
+
+        <div id="branchVacancies" class="branch-vacancies"></div>
+      </div>
+    </section>
+
     <section id="busqueda-vacantes" class="card">
       <div class="section-head">
         <h2>Buscar empleo</h2>
@@ -142,7 +203,7 @@
         <p>Vacantes, análisis de CV y orientación personalizada</p>
       </div>
 
-      <button id="chatbot-close" class="chatbot-close" aria-label="Cerrar chat">✕</button>
+      <button id="chatbot-close" class="chatbot-close" aria-label="Cerrar chat">x</button>
     </div>
 
     <div id="chatbot-messages" class="chatbot-messages"></div>
