@@ -71,7 +71,7 @@ async function loginAdmin() {
     setStatus("✅ Acceso correcto. Redirigiendo...", "success");
 
     setTimeout(() => {
-      window.location.href = "/dashboard.html";
+      window.location.href = "dashboard.html";
     }, 800);
 
   } catch (error) {
@@ -121,6 +121,6 @@ if (loginBtn) {
 auth.onAuthStateChanged((user) => {
   if (user) {
     // Ya tiene sesión → lo mandamos directo al dashboard
-    window.location.href = "/dashboard.html";
+    window.location.href = "dashboard.html";
   }
 });

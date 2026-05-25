@@ -24,16 +24,16 @@ const openai = new OpenAI({
 });
 
 if (!admin.apps.length) {
-  const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
-
-  if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
-    const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf-8"));
+  try {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount)
     });
-  } else {
-    console.warn("Firebase Admin no inicializado. Revisa FIREBASE_SERVICE_ACCOUNT_PATH.");
+
+    console.log("Firebase Admin inicializado correctamente.");
+  } catch (error) {
+    console.error("Firebase Admin no inicializado:", error.message);
   }
 }
 
