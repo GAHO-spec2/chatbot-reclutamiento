@@ -37,6 +37,11 @@ if (!admin.apps.length) {
   }
 }
 
+const db = admin.apps.length ? admin.firestore() : null;
+
+const VACANTES_COLLECTION = "vacantes";
+const POSTULACIONES_COLLECTION = "postulaciones";
+
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
   .split(",")
   .map((email) => email.trim().toLowerCase())
@@ -280,20 +285,113 @@ function guardarJson(filePath, data) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
 }
 
-function leerPostulaciones() {
-  return leerJson(postulacionesFile, []);
+async function leerPostulaciones() {
+  if (!db) return leerJson(postulacionesFile, []);
+
+  const snapshot = await db.collection(POSTULACIONES_COLLECTION).orderBy("fechaRegistro", "desc").get();
+
+  return snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data()
+  }));
 }
 
-function guardarPostulaciones(data) {
-  guardarJson(postulacionesFile, data);
+async function guardarPostulacion(postulacion) {
+  if (!db) {
+    const postulaciones = leerJson(postulacionesFile, []);
+    postulaciones.push(postulacion);
+    guardarJson(postulacionesFile, postulaciones);
+    return;
+  }
+
+  await db.collection(POSTULACIONES_COLLECTION).doc(postulacion.id).set(postulacion);
 }
 
-function leerVacantes() {
-  return leerJson(vacantesFile, vacantesIniciales);
+async function actualizarPostulacion(id, data) {
+  if (!db) {
+    const postulaciones = leerJson(postulacionesFile, []);
+    const index = postulaciones.findIndex((p) => p.id === id);
+
+    if (index !== -1) {
+      postulaciones[index] = {
+        ...postulaciones[index],
+        ...data
+      };
+
+      guardarJson(postulacionesFile, postulaciones);
+    }
+
+    return;
+  }
+
+  await db.collection(POSTULACIONES_COLLECTION).doc(id).update(data);
 }
 
-function guardarVacantes(data) {
-  guardarJson(vacantesFile, data);
+async function leerVacantes() {
+  if (!db) return leerJson(vacantesFile, vacantesIniciales);
+
+  const snapshot = await db.collection(VACANTES_COLLECTION).get();
+
+  if (snapshot.empty) {
+    const batch = db.batch();
+
+    vacantesIniciales.forEach((vacante) => {
+      const ref = db.collection(VACANTES_COLLECTION).doc(vacante.id);
+      batch.set(ref, vacante);
+    });
+
+    await batch.commit();
+
+    return vacantesIniciales;
+  }
+
+  return snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+}
+
+async function guardarVacante(vacante) {
+  if (!db) {
+    const vacantes = leerJson(vacantesFile, []);
+    vacantes.push(vacante);
+    guardarJson(vacantesFile, vacantes);
+    return;
+  }
+
+  await db.collection(VACANTES_COLLECTION).doc(vacante.id).set(vacante);
+}
+
+async function actualizarVacante(id, data) {
+  if (!db) {
+    const vacantes = leerJson(vacantesFile, []);
+    const index = vacantes.findIndex((v) => v.id === id);
+
+    if (index !== -1) {
+      vacantes[index] = {
+        ...vacantes[index],
+        ...data,
+        id
+      };
+
+      guardarJson(vacantesFile, vacantes);
+    }
+
+    return;
+  }
+
+  await db.collection(VACANTES_COLLECTION).doc(id).set(data, { merge: true });
+}
+
+async function eliminarVacanteFirestore(id) {
+  if (!db) {
+    const vacantes = leerJson(vacantesFile, []);
+    const filtradas = vacantes.filter((v) => v.id !== id);
+    guardarJson(vacantesFile, filtradas);
+    return;
+  }
+
+  await db.collection(VACANTES_COLLECTION).doc(id).delete();
 }
 
 function leerSucursales() {
@@ -543,15 +641,15 @@ async function extraerTextoPdf(filePath) {
     return "";
   }
 }
-
 function limpiarJsonRespuesta(texto = "") {
   return String(texto).replace(/```json/gi, "").replace(/```/g, "").trim();
 }
 
-function sugerirVacantesBasicas(texto = "", tipoVacante = "") {
+async function sugerirVacantesBasicas(texto = "", tipoVacante = "") {
   const lower = normalizarTexto(texto);
+  const vacantes = await leerVacantes();
 
-  return leerVacantes()
+  return vacantes
     .map(enriquecerVacanteConSucursal)
     .filter((v) => !tipoVacante || v.tipoVacante === tipoVacante)
     .map((v) => {
@@ -626,6 +724,7 @@ app.get("/health", (req, res) => {
   res.json({
     ok: true,
     service: "chatbot-reclutamiento",
+    firestore: Boolean(db),
     timestamp: new Date().toISOString()
   });
 });
@@ -634,88 +733,106 @@ app.get("/api/ubicaciones", (req, res) => {
   res.json(ubicaciones);
 });
 
-app.get("/api/sucursales", (req, res) => {
-  const vacantes = leerVacantes().map(enriquecerVacanteConSucursal);
-  const bySucursal = new Map();
+app.get("/api/sucursales", async (req, res) => {
+  try {
+    const vacantes = (await leerVacantes()).map(enriquecerVacanteConSucursal);
+    const bySucursal = new Map();
 
-  vacantes.forEach((vacante) => {
-    const id = vacante.sucursalId || vacante.branchId || resolverSucursalId(vacante);
+    vacantes.forEach((vacante) => {
+      const id = vacante.sucursalId || vacante.branchId || resolverSucursalId(vacante);
 
-    if (!id) return;
+      if (!id) return;
 
-    if (!bySucursal.has(id)) {
-      bySucursal.set(id, {
-        id,
-        nombre: vacante.sucursal || `${vacante.grupo || "Sucursal"} ${vacante.ciudad || ""}`.trim(),
-        marca: vacante.grupo || "GA Hospitality",
-        pais: vacante.pais || "",
-        estado: vacante.estado || "",
-        ciudad: vacante.ciudad || "",
-        sucursal: vacante.sucursal || "",
-        numeroTienda: vacante.numeroTienda || "",
-        direccion: vacante.direccion || "",
-        googleMapsUrl: vacante.googleMapsUrl || "",
-        appleMapsUrl: vacante.appleMapsUrl || "",
-        lat: vacante.lat ?? null,
-        lng: vacante.lng ?? null,
-        vacantesActivas: 0
-      });
-    }
+      if (!bySucursal.has(id)) {
+        bySucursal.set(id, {
+          id,
+          nombre: vacante.sucursal || `${vacante.grupo || "Sucursal"} ${vacante.ciudad || ""}`.trim(),
+          marca: vacante.grupo || "GA Hospitality",
+          pais: vacante.pais || "",
+          estado: vacante.estado || "",
+          ciudad: vacante.ciudad || "",
+          sucursal: vacante.sucursal || "",
+          numeroTienda: vacante.numeroTienda || "",
+          direccion: vacante.direccion || "",
+          googleMapsUrl: vacante.googleMapsUrl || "",
+          appleMapsUrl: vacante.appleMapsUrl || "",
+          lat: vacante.lat ?? null,
+          lng: vacante.lng ?? null,
+          vacantesActivas: 0
+        });
+      }
 
-    const sucursal = bySucursal.get(id);
-    sucursal.vacantesActivas += 1;
+      const sucursal = bySucursal.get(id);
+      sucursal.vacantesActivas += 1;
 
-    if (!sucursal.numeroTienda && vacante.numeroTienda) sucursal.numeroTienda = vacante.numeroTienda;
-    if (!sucursal.direccion && vacante.direccion) sucursal.direccion = vacante.direccion;
-    if (!sucursal.googleMapsUrl && vacante.googleMapsUrl) sucursal.googleMapsUrl = vacante.googleMapsUrl;
-    if (!sucursal.appleMapsUrl && vacante.appleMapsUrl) sucursal.appleMapsUrl = vacante.appleMapsUrl;
+      if (!sucursal.numeroTienda && vacante.numeroTienda) sucursal.numeroTienda = vacante.numeroTienda;
+      if (!sucursal.direccion && vacante.direccion) sucursal.direccion = vacante.direccion;
+      if (!sucursal.googleMapsUrl && vacante.googleMapsUrl) sucursal.googleMapsUrl = vacante.googleMapsUrl;
+      if (!sucursal.appleMapsUrl && vacante.appleMapsUrl) sucursal.appleMapsUrl = vacante.appleMapsUrl;
 
-    if ((sucursal.lat === null || sucursal.lat === undefined) && vacante.lat !== null && vacante.lat !== undefined) {
-      sucursal.lat = vacante.lat;
-    }
+      if ((sucursal.lat === null || sucursal.lat === undefined) && vacante.lat !== null && vacante.lat !== undefined) {
+        sucursal.lat = vacante.lat;
+      }
 
-    if ((sucursal.lng === null || sucursal.lng === undefined) && vacante.lng !== null && vacante.lng !== undefined) {
-      sucursal.lng = vacante.lng;
-    }
-  });
+      if ((sucursal.lng === null || sucursal.lng === undefined) && vacante.lng !== null && vacante.lng !== undefined) {
+        sucursal.lng = vacante.lng;
+      }
+    });
 
-  res.json(Array.from(bySucursal.values()));
-});
-
-app.get("/api/vacantes", (req, res) => {
-  const tipoVacante = req.query.tipoVacante ? normalizarTexto(req.query.tipoVacante) : "";
-  const pais = req.query.pais ? normalizarTexto(resolverPais(req.query.pais)) : "";
-  const estado = req.query.estado ? normalizarTexto(resolverEstado(req.query.estado)) : "";
-  const ciudad = req.query.ciudad ? normalizarTexto(resolverCiudad(req.query.ciudad)) : "";
-  const grupo = req.query.grupo ? normalizarTexto(resolverGrupo(req.query.grupo)) : "";
-
-  const resultado = leerVacantes().filter((v) => {
-    const vTipo = normalizarTexto(v.tipoVacante);
-    const vPais = normalizarTexto(v.pais);
-    const vEstado = normalizarTexto(v.estado);
-    const vCiudad = normalizarTexto(v.ciudad);
-    const vGrupo = normalizarTexto(v.grupo);
-
-    return (
-      (!tipoVacante || vTipo === tipoVacante) &&
-      (!pais || vPais.includes(pais) || pais.includes(vPais)) &&
-      (!estado || vEstado.includes(estado) || estado.includes(vEstado)) &&
-      (!ciudad || vCiudad.includes(ciudad) || ciudad.includes(vCiudad)) &&
-      (!grupo || vGrupo.includes(grupo) || grupo.includes(vGrupo))
-    );
-  });
-
-  res.json(resultado.map(enriquecerVacanteConSucursal));
-});
-
-app.get("/api/postulacion/:id", (req, res) => {
-  const item = leerPostulaciones().find((p) => p.id === req.params.id);
-
-  if (!item) {
-    return res.status(404).json({ error: "Postulacion no encontrada." });
+    res.json(Array.from(bySucursal.values()));
+  } catch (error) {
+    console.error("Error cargando sucursales:", error);
+    res.status(500).json({ error: "No fue posible cargar sucursales." });
   }
+});
 
-  res.json(item);
+app.get("/api/vacantes", async (req, res) => {
+  try {
+    const tipoVacante = req.query.tipoVacante ? normalizarTexto(req.query.tipoVacante) : "";
+    const pais = req.query.pais ? normalizarTexto(resolverPais(req.query.pais)) : "";
+    const estado = req.query.estado ? normalizarTexto(resolverEstado(req.query.estado)) : "";
+    const ciudad = req.query.ciudad ? normalizarTexto(resolverCiudad(req.query.ciudad)) : "";
+    const grupo = req.query.grupo ? normalizarTexto(resolverGrupo(req.query.grupo)) : "";
+
+    const vacantes = await leerVacantes();
+
+    const resultado = vacantes.filter((v) => {
+      const vTipo = normalizarTexto(v.tipoVacante);
+      const vPais = normalizarTexto(v.pais);
+      const vEstado = normalizarTexto(v.estado);
+      const vCiudad = normalizarTexto(v.ciudad);
+      const vGrupo = normalizarTexto(v.grupo);
+
+      return (
+        (!tipoVacante || vTipo === tipoVacante) &&
+        (!pais || vPais.includes(pais) || pais.includes(vPais)) &&
+        (!estado || vEstado.includes(estado) || estado.includes(vEstado)) &&
+        (!ciudad || vCiudad.includes(ciudad) || ciudad.includes(vCiudad)) &&
+        (!grupo || vGrupo.includes(grupo) || grupo.includes(vGrupo))
+      );
+    });
+
+    res.json(resultado.map(enriquecerVacanteConSucursal));
+  } catch (error) {
+    console.error("Error cargando vacantes:", error);
+    res.status(500).json({ error: "No fue posible cargar vacantes." });
+  }
+});
+
+app.get("/api/postulacion/:id", async (req, res) => {
+  try {
+    const postulaciones = await leerPostulaciones();
+    const item = postulaciones.find((p) => p.id === req.params.id);
+
+    if (!item) {
+      return res.status(404).json({ error: "Postulacion no encontrada." });
+    }
+
+    res.json(item);
+  } catch (error) {
+    console.error("Error consultando postulacion:", error);
+    res.status(500).json({ error: "No fue posible consultar la postulacion." });
+  }
 });
 
 app.post("/api/analizar-cv", upload.fields([{ name: "cvFile", maxCount: 1 }]), async (req, res) => {
@@ -730,7 +847,7 @@ app.post("/api/analizar-cv", upload.fields([{ name: "cvFile", maxCount: 1 }]), a
     const analisisIA = await analizarCvConIA(cvTexto);
     const tipoSugerido = normalizarTexto(analisisIA.perfilRecomendado).includes("administr") ? "administrativa" : "";
 
-    const sugerenciasIA = sugerirVacantesBasicas(
+    const sugerenciasIA = await sugerirVacantesBasicas(
       `${cvTexto} ${analisisIA.habilidadesDetectadas.join(" ")} ${analisisIA.palabrasClave.join(" ")} ${analisisIA.areasCompatibles.join(" ")}`,
       tipoSugerido
     );
@@ -765,8 +882,7 @@ app.post(
   ]),
   async (req, res) => {
     try {
-      const postulaciones = leerPostulaciones();
-      const vacantes = leerVacantes().map(enriquecerVacanteConSucursal);
+      const vacantes = (await leerVacantes()).map(enriquecerVacanteConSucursal);
 
       const {
         nombre,
@@ -831,8 +947,7 @@ app.post(
         fechaRegistro: new Date().toISOString()
       };
 
-      postulaciones.push(postulacion);
-      guardarPostulaciones(postulaciones);
+      await guardarPostulacion(postulacion);
 
       res.json({
         ok: true,
@@ -893,42 +1008,56 @@ app.get("/api/admin/me", verifyAdmin, (req, res) => {
   });
 });
 
-app.get("/api/postulaciones", verifyAdmin, (req, res) => {
-  res.json(leerPostulaciones());
+app.get("/api/postulaciones", verifyAdmin, async (req, res) => {
+  try {
+    const postulaciones = await leerPostulaciones();
+    res.json(postulaciones);
+  } catch (error) {
+    console.error("Error cargando postulaciones:", error);
+    res.status(500).json({ error: "No fue posible cargar postulaciones." });
+  }
 });
 
-app.patch("/api/postulaciones/:id/estado", verifyAdmin, (req, res) => {
-  const { id } = req.params;
-  const { estado } = req.body;
-  const estadosValidos = ["pendiente", "aprobado", "rechazado"];
+app.patch("/api/postulaciones/:id/estado", verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estado } = req.body;
+    const estadosValidos = ["pendiente", "aprobado", "rechazado"];
 
-  if (!estadosValidos.includes(estado)) {
-    return res.status(400).json({ error: "Estado no valido." });
+    if (!estadosValidos.includes(estado)) {
+      return res.status(400).json({ error: "Estado no valido." });
+    }
+
+    const postulaciones = await leerPostulaciones();
+    const postulacion = postulaciones.find((p) => p.id === id);
+
+    if (!postulacion) {
+      return res.status(404).json({ error: "Postulacion no encontrada." });
+    }
+
+    const data = {
+      estadoSolicitud: estado,
+      fechaActualizacion: new Date().toISOString()
+    };
+
+    await actualizarPostulacion(id, data);
+
+    res.json({
+      ok: true,
+      message: "Estado actualizado correctamente.",
+      postulacion: {
+        ...postulacion,
+        ...data
+      }
+    });
+  } catch (error) {
+    console.error("Error actualizando postulacion:", error);
+    res.status(500).json({ error: "No fue posible actualizar la postulacion." });
   }
-
-  const postulaciones = leerPostulaciones();
-  const postulacion = postulaciones.find((p) => p.id === id);
-
-  if (!postulacion) {
-    return res.status(404).json({ error: "Postulacion no encontrada." });
-  }
-
-  postulacion.estadoSolicitud = estado;
-  postulacion.fechaActualizacion = new Date().toISOString();
-
-  guardarPostulaciones(postulaciones);
-
-  res.json({
-    ok: true,
-    message: "Estado actualizado correctamente.",
-    postulacion
-  });
 });
 
 app.post("/api/vacantes", verifyAdmin, async (req, res) => {
   try {
-    const vacantes = leerVacantes();
-
     const {
       tipoVacante,
       grupo,
@@ -977,13 +1106,13 @@ app.post("/api/vacantes", verifyAdmin, async (req, res) => {
       requisitos: Array.isArray(requisitos)
         ? requisitos
         : String(requisitos || "")
-            .split("\n")
+            .split(",")
             .map((item) => item.trim())
-            .filter(Boolean)
+            .filter(Boolean),
+      fechaCreacion: new Date().toISOString()
     };
 
-    vacantes.push(nuevaVacante);
-    guardarVacantes(vacantes);
+    await guardarVacante(nuevaVacante);
 
     res.json({
       ok: true,
@@ -998,59 +1127,71 @@ app.post("/api/vacantes", verifyAdmin, async (req, res) => {
 
 app.put("/api/vacantes/:id", verifyAdmin, async (req, res) => {
   try {
-    const vacantes = leerVacantes();
+    const vacantes = await leerVacantes();
     const { id } = req.params;
-    const index = vacantes.findIndex((v) => v.id === id);
+    const actual = vacantes.find((v) => v.id === id);
 
-    if (index === -1) {
+    if (!actual) {
       return res.status(404).json({ error: "Vacante no encontrada." });
     }
 
-    const actual = vacantes[index];
     const body = req.body || {};
-
-    const latFinal =
-      body.lat !== null && body.lat !== undefined && body.lat !== ""
-        ? Number(body.lat)
-        : actual.lat ?? null;
-
-    const lngFinal =
-      body.lng !== null && body.lng !== undefined && body.lng !== ""
-        ? Number(body.lng)
-        : actual.lng ?? null;
+    const merged = {
+      ...actual,
+      ...body,
+      id
+    };
 
     const finalSucursalId =
       body.sucursalId ||
       body.branchId ||
       actual.sucursalId ||
       actual.branchId ||
-      resolverSucursalId({
-        ...actual,
-        ...body
-      });
+      resolverSucursalId(merged);
 
-    const query = `${body.direccion || actual.direccion || body.sucursal || actual.sucursal || ""}, ${body.ciudad || actual.ciudad || ""}, ${body.estado || actual.estado || ""}, ${body.pais || actual.pais || ""}`;
+    const query = construirConsultaDireccion({
+      direccion: merged.direccion,
+      sucursal: merged.sucursal,
+      ciudad: merged.ciudad,
+      estado: merged.estado,
+      pais: merged.pais
+    });
 
-    vacantes[index] = {
-      ...actual,
-      ...body,
-      id,
+    const coords = await resolverCoordenadas({
+      direccion: merged.direccion,
+      sucursal: merged.sucursal,
+      ciudad: merged.ciudad,
+      estado: merged.estado,
+      pais: merged.pais,
+      lat: merged.lat,
+      lng: merged.lng
+    });
+
+    const vacanteActualizada = {
+      ...merged,
       sucursalId: finalSucursalId,
       branchId: finalSucursalId,
-      numeroTienda: body.numeroTienda || actual.numeroTienda || "",
-      direccion: body.direccion || actual.direccion || "",
-      googleMapsUrl: body.googleMapsUrl || actual.googleMapsUrl || crearMapsUrl(query),
-      appleMapsUrl: body.appleMapsUrl || actual.appleMapsUrl || crearAppleMapsUrl(query),
-      lat: Number.isFinite(latFinal) ? latFinal : null,
-      lng: Number.isFinite(lngFinal) ? lngFinal : null
+      numeroTienda: merged.numeroTienda || "",
+      direccion: merged.direccion || "",
+      googleMapsUrl: merged.googleMapsUrl || crearMapsUrl(query),
+      appleMapsUrl: merged.appleMapsUrl || crearAppleMapsUrl(query),
+      lat: coords.lat,
+      lng: coords.lng,
+      requisitos: Array.isArray(merged.requisitos)
+        ? merged.requisitos
+        : String(merged.requisitos || "")
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean),
+      fechaActualizacion: new Date().toISOString()
     };
 
-    guardarVacantes(vacantes);
+    await actualizarVacante(id, vacanteActualizada);
 
     res.json({
       ok: true,
       message: "Vacante actualizada correctamente.",
-      vacante: vacantes[index]
+      vacante: vacanteActualizada
     });
   } catch (error) {
     console.error("Error actualizando vacante:", error);
@@ -1060,24 +1201,27 @@ app.put("/api/vacantes/:id", verifyAdmin, async (req, res) => {
   }
 });
 
-app.delete("/api/vacantes/:id", verifyAdmin, (req, res) => {
-  const vacantes = leerVacantes();
-  const { id } = req.params;
-  const index = vacantes.findIndex((v) => v.id === id);
+app.delete("/api/vacantes/:id", verifyAdmin, async (req, res) => {
+  try {
+    const vacantes = await leerVacantes();
+    const { id } = req.params;
+    const eliminada = vacantes.find((v) => v.id === id);
 
-  if (index === -1) {
-    return res.status(404).json({ error: "Vacante no encontrada." });
+    if (!eliminada) {
+      return res.status(404).json({ error: "Vacante no encontrada." });
+    }
+
+    await eliminarVacanteFirestore(id);
+
+    res.json({
+      ok: true,
+      message: "Vacante eliminada correctamente.",
+      vacante: eliminada
+    });
+  } catch (error) {
+    console.error("Error eliminando vacante:", error);
+    res.status(500).json({ error: "No fue posible eliminar la vacante." });
   }
-
-  const eliminada = vacantes.splice(index, 1)[0];
-
-  guardarVacantes(vacantes);
-
-  res.json({
-    ok: true,
-    message: "Vacante eliminada correctamente.",
-    vacante: eliminada
-  });
 });
 
 app.use((err, req, res, next) => {
