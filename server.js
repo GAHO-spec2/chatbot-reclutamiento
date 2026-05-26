@@ -1089,6 +1089,42 @@ app.patch("/api/postulaciones/:id/estado", verifyAdmin, async (req, res) => {
   }
 });
 
+async function buscarDatosSucursalExistente(data = {}) {
+  const vacantes = await leerVacantes();
+
+  const sucursalId = data.sucursalId || data.branchId || resolverSucursalId(data);
+
+  let existente = vacantes.find((v) => {
+    return (
+      v.sucursalId === sucursalId ||
+      v.branchId === sucursalId
+    );
+  });
+
+  if (!existente) {
+    existente = vacantes.find((v) => {
+      return (
+        normalizarTexto(v.grupo) === normalizarTexto(data.grupo) &&
+        normalizarTexto(v.sucursal) === normalizarTexto(data.sucursal) &&
+        normalizarTexto(v.ciudad) === normalizarTexto(data.ciudad)
+      );
+    });
+  }
+
+  if (!existente) return null;
+
+  return {
+    sucursalId: existente.sucursalId || existente.branchId || sucursalId,
+    branchId: existente.branchId || existente.sucursalId || sucursalId,
+    numeroTienda: existente.numeroTienda || "",
+    direccion: existente.direccion || "",
+    googleMapsUrl: existente.googleMapsUrl || "",
+    appleMapsUrl: existente.appleMapsUrl || "",
+    lat: existente.lat ?? null,
+    lng: existente.lng ?? null
+  };
+}
+
 app.post("/api/vacantes", verifyAdmin, async (req, res) => {
   try {
     const {
@@ -1115,8 +1151,42 @@ app.post("/api/vacantes", verifyAdmin, async (req, res) => {
     }
 
     const finalSucursalId = sucursalId || slugify(`${grupo} ${sucursal} ${ciudad} ${estado} ${pais}`);
-    const query = construirConsultaDireccion({ direccion, sucursal, ciudad, estado, pais });
-    const coords = await resolverCoordenadas({ direccion, sucursal, ciudad, estado, pais, lat, lng });
+
+    const datosSucursalExistente = await buscarDatosSucursalExistente({
+      sucursalId: finalSucursalId,
+      branchId: finalSucursalId,
+      grupo,
+      sucursal,
+      ciudad,
+      estado,
+      pais
+    });
+
+    const direccionFinal = direccion || datosSucursalExistente?.direccion || "";
+    const numeroTiendaFinal = numeroTienda || datosSucursalExistente?.numeroTienda || "";
+    const googleMapsUrlFinal = googleMapsUrl || datosSucursalExistente?.googleMapsUrl || "";
+    const appleMapsUrlFinal = appleMapsUrl || datosSucursalExistente?.appleMapsUrl || "";
+
+    const latEntrada = lat ?? datosSucursalExistente?.lat ?? null;
+    const lngEntrada = lng ?? datosSucursalExistente?.lng ?? null;
+
+    const query = construirConsultaDireccion({
+      direccion: direccionFinal,
+      sucursal,
+      ciudad,
+      estado,
+      pais
+    });
+
+    const coords = await resolverCoordenadas({
+      direccion: direccionFinal,
+      sucursal,
+      ciudad,
+      estado,
+      pais,
+      lat: latEntrada,
+      lng: lngEntrada
+    });
 
     const nuevaVacante = {
       id: `vac-${Date.now()}`,
@@ -1130,10 +1200,10 @@ app.post("/api/vacantes", verifyAdmin, async (req, res) => {
       estado,
       ciudad,
       sucursal,
-      numeroTienda: numeroTienda || "",
-      direccion: direccion || "",
-      googleMapsUrl: googleMapsUrl || crearMapsUrl(query),
-      appleMapsUrl: appleMapsUrl || crearAppleMapsUrl(query),
+      numeroTienda: numeroTiendaFinal,
+      direccion: direccionFinal,
+      googleMapsUrl: googleMapsUrlFinal || crearMapsUrl(query),
+      appleMapsUrl: appleMapsUrlFinal || crearAppleMapsUrl(query),
       lat: coords.lat,
       lng: coords.lng,
       requisitos: Array.isArray(requisitos)
