@@ -731,14 +731,31 @@ app.get("/vacantes.html", (req, res) => res.sendFile(path.join(__dirname, "vacan
 app.get("/login-admin.html", (req, res) => res.sendFile(path.join(__dirname, "login-admin.html")));
 app.get("/dashboard.html", (req, res) => res.sendFile(path.join(__dirname, "dashboard.html")));
 app.get("/vacantes-admin.html", (req, res) => res.sendFile(path.join(__dirname, "vacantes-admin.html")));
+app.get("/health", async (req, res) => {
+  try {
+    let firestoreTest = false;
 
-app.get("/health", (req, res) => {
-  res.json({
-    ok: true,
-    service: "chatbot-reclutamiento",
-    firestore: Boolean(db),
-    timestamp: new Date().toISOString()
-  });
+    if (db) {
+      await db.collection("_health").limit(1).get();
+      firestoreTest = true;
+    }
+
+    res.json({
+      ok: true,
+      service: "chatbot-reclutamiento",
+      firestore: Boolean(db),
+      firestoreTest,
+      projectId: admin.apps.length ? admin.app().options.projectId : null,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      firestore: Boolean(db),
+      projectId: admin.apps.length ? admin.app().options.projectId : null,
+      error: error.message
+    });
+  }
 });
 
 app.get("/api/ubicaciones", (req, res) => {
