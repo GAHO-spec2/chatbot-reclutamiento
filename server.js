@@ -28,9 +28,9 @@ if (!admin.apps.length) {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
-
+  credential: admin.credential.cert(serviceAccount),
+  projectId: serviceAccount.project_id
+});
     console.log("Firebase Admin inicializado correctamente.");
   } catch (error) {
     console.error("Firebase Admin no inicializado:", error.message);
@@ -38,6 +38,11 @@ if (!admin.apps.length) {
 }
 
 const db = admin.apps.length ? admin.firestore() : null;
+if (db) {
+  db.settings({
+    ignoreUndefinedProperties: true
+  });
+}
 
 const VACANTES_COLLECTION = "vacantes";
 const POSTULACIONES_COLLECTION = "postulaciones";
