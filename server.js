@@ -1007,45 +1007,42 @@ app.put("/api/vacantes/:id", verifyAdmin, async (req, res) => {
     }
 
     const actual = vacantes[index];
-    const merged = {
-      ...actual,
-      ...req.body,
-      id
-    };
+    const body = req.body || {};
 
-    const ciudadKey = normalizarTexto(data.ciudad || "");
+    const latFinal =
+      body.lat !== null && body.lat !== undefined && body.lat !== ""
+        ? Number(body.lat)
+        : actual.lat ?? null;
 
-    if (coordenadasBaseCiudad[ciudadKey]) {
-      return coordenadasBaseCiudad[ciudadKey];
-    }
-    const coords = await resolverCoordenadas({
-      direccion: merged.direccion,
-      sucursal: merged.sucursal,
-      ciudad: merged.ciudad,
-      estado: merged.estado,
-      pais: merged.pais,
-      lat: merged.lat,
-      lng: merged.lng
-    });
+    const lngFinal =
+      body.lng !== null && body.lng !== undefined && body.lng !== ""
+        ? Number(body.lng)
+        : actual.lng ?? null;
 
-    const query = construirConsultaDireccion({
-      direccion: merged.direccion,
-      sucursal: merged.sucursal,
-      ciudad: merged.ciudad,
-      estado: merged.estado,
-      pais: merged.pais
-    });
+    const finalSucursalId =
+      body.sucursalId ||
+      body.branchId ||
+      actual.sucursalId ||
+      actual.branchId ||
+      resolverSucursalId({
+        ...actual,
+        ...body
+      });
+
+    const query = `${body.direccion || actual.direccion || body.sucursal || actual.sucursal || ""}, ${body.ciudad || actual.ciudad || ""}, ${body.estado || actual.estado || ""}, ${body.pais || actual.pais || ""}`;
 
     vacantes[index] = {
-      ...merged,
-      branchId: merged.sucursalId || merged.branchId || resolverSucursalId(merged),
-      sucursalId: merged.sucursalId || merged.branchId || resolverSucursalId(merged),
-      numeroTienda: merged.numeroTienda || "",
-      direccion: merged.direccion || "",
-      googleMapsUrl: merged.googleMapsUrl || crearMapsUrl(query),
-      appleMapsUrl: merged.appleMapsUrl || crearAppleMapsUrl(query),
-      lat: coords.lat,
-      lng: coords.lng
+      ...actual,
+      ...body,
+      id,
+      sucursalId: finalSucursalId,
+      branchId: finalSucursalId,
+      numeroTienda: body.numeroTienda || actual.numeroTienda || "",
+      direccion: body.direccion || actual.direccion || "",
+      googleMapsUrl: body.googleMapsUrl || actual.googleMapsUrl || crearMapsUrl(query),
+      appleMapsUrl: body.appleMapsUrl || actual.appleMapsUrl || crearAppleMapsUrl(query),
+      lat: Number.isFinite(latFinal) ? latFinal : null,
+      lng: Number.isFinite(lngFinal) ? lngFinal : null
     };
 
     guardarVacantes(vacantes);
@@ -1057,7 +1054,9 @@ app.put("/api/vacantes/:id", verifyAdmin, async (req, res) => {
     });
   } catch (error) {
     console.error("Error actualizando vacante:", error);
-    res.status(500).json({ error: "No fue posible actualizar la vacante." });
+    res.status(500).json({
+      error: error.message || "No fue posible actualizar la vacante."
+    });
   }
 });
 
