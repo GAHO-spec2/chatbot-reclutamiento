@@ -60,7 +60,7 @@ let candidateProfile = {
 const DEFAULT_CENTER = [23.6345, -102.5528];
 const DEFAULT_ZOOM = 5;
 
-const chatHistory = [
+let chatHistory = [
   {
     role: "assistant",
     type: "welcome",
@@ -280,6 +280,11 @@ function startCvAnalysisFlow() {
   );
 }
 
+function resetChatHistory() {
+  chatHistory = [];
+  renderMessages();
+}
+
 function startVacancyApplication(vacancyId) {
   const vacancy = vacancies.find((item) => item.id === vacancyId);
   const branch = branches.find((item) => item.id === getBranchIdFromVacancy(vacancy || {}));
@@ -288,13 +293,28 @@ function startVacancyApplication(vacancyId) {
 
   applicationFlow.active = true;
   applicationFlow.mode = "branch_vacancy_application";
+  applicationFlow.cvFile = null;
   applicationFlow.selectedVacancy = vacancy;
   applicationFlow.selectedBranch = branch;
 
+  resetChatHistory();
   openChat();
+
   addAssistantText(
-    `Excelente. Iniciaremos tu postulación para:\n\n${vacancy.titulo}\n${branch.nombre}\n${branch.direccion || ""}\n\nPrimero adjunta tu CV en PDF.`
+    `Excelente. Iniciaremos tu postulación para:\n\n${vacancy.titulo}\n${branch.nombre}\n${branch.direccion || ""}\n\nAdjunta tu CV en PDF o imagen para continuar.`
   );
+
+  if (input) {
+    input.placeholder = "Escribe tu nombre, teléfono o dudas...";
+  }
+
+  if (chatCvFile) {
+    chatCvFile.setAttribute("accept", ".pdf,.jpg,.jpeg,.png,application/pdf,image/*");
+  }
+
+  if (attachCvBtn) {
+    attachCvBtn.textContent = "Adjuntar CV";
+  }
 }
 
 async function processCvAnalysisOnly() {
@@ -870,12 +890,20 @@ if (attachCvBtn && chatCvFile) {
 
     if (!file) return;
 
-    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+   const name = file.name.toLowerCase();
 
-    if (!isPdf) {
-      addAssistantText("Solo se permiten archivos PDF.");
-      return;
-    }
+const isValidFile =
+  file.type === "application/pdf" ||
+  file.type.startsWith("image/") ||
+  name.endsWith(".pdf") ||
+  name.endsWith(".jpg") ||
+  name.endsWith(".jpeg") ||
+  name.endsWith(".png");
+
+if (!isValidFile) {
+  addAssistantText("Solo se permiten archivos PDF o imágenes JPG/PNG.");
+  return;
+}
 
     applicationFlow.cvFile = file;
     addAssistantText(`CV cargado correctamente:\n${file.name}`);

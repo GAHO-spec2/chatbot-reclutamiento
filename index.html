@@ -5,26 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <title>Reclutamiento | GA Hospitality</title>
+
   <meta
     name="description"
     content="Plataforma de reclutamiento para consultar vacantes y recibir recomendaciones según el perfil profesional."
   />
 
-  <link rel="icon" type="image/png" sizes="32x32" href="img/icons8-nuevo-empleo-32.png" />
+  <link
+    rel="icon"
+    type="image/png"
+    sizes="32x32"
+    href="img/icons8-nuevo-empleo-32.png"
+  />
 
-  <!-- Leaflet mapa real -->
+  <!-- Leaflet -->
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   />
 
-  <link rel="stylesheet" href="styles.css?v=4" />
+  <link rel="stylesheet" href="styles.css?v=5" />
 </head>
 
 <body>
+
+  <!-- TOPBAR -->
   <header class="topbar">
     <div class="topbar__left">
-      <img src="img/gaho.png" alt="GA Hospitality" class="corporativo-logo" />
+      <img
+        src="img/gaho.png"
+        alt="GA Hospitality"
+        class="corporativo-logo"
+      />
+
       <div>
         <h2>GA Hospitality</h2>
         <p>Plataforma de reclutamiento</p>
@@ -32,16 +45,22 @@
     </div>
   </header>
 
+  <!-- HERO -->
   <header class="hero">
     <div class="hero__content hero__content--compact">
       <h1>Encuentra oportunidades acorde a tu perfil</h1>
+
       <p>
-        Comparte tu currículum y recibe recomendaciones de vacantes según tu experiencia,
-        habilidades y enfoque profesional.
+        Comparte tu currículum y recibe recomendaciones de vacantes según tu
+        experiencia, habilidades y enfoque profesional.
       </p>
 
       <div class="hero__actions">
-        <button id="startApplicationBtn" class="btn btn--primary" type="button">
+        <button
+          id="startApplicationBtn"
+          class="btn btn--primary"
+          type="button"
+        >
           Analizar mi CV
         </button>
 
@@ -52,105 +71,176 @@
     </div>
   </header>
 
+  <!-- MAIN -->
   <main class="container">
+
+    <!-- MAPA -->
     <section id="postulate-sucursal" class="card branch-card">
+
       <div class="section-head section-head--split">
+
         <div>
           <span class="eyebrow">Mapa de sucursales</span>
+
           <h2>Busca la tienda más cercana para postularte</h2>
+
           <p>
-            Usa tu ubicación o explora el mapa para encontrar sucursales disponibles,
-            revisar vacantes activas e iniciar tu postulación.
+            Usa tu ubicación o explora el mapa para encontrar sucursales
+            disponibles, revisar vacantes activas e iniciar tu postulación.
           </p>
         </div>
 
         <div class="branch-map-actions">
-          <button id="useMyLocationBtn" class="btn btn--primary" type="button">
+
+          <button
+            id="useMyLocationBtn"
+            class="btn btn--primary"
+            type="button"
+          >
             Usar mi ubicación
           </button>
 
-          <a id="selectedBranchMapLink" class="btn btn--ghost hidden" href="#" target="_blank" rel="noopener">
+          <a
+            id="selectedBranchMapLink"
+            class="btn btn--ghost hidden"
+            href="#"
+            target="_blank"
+            rel="noopener"
+          >
             Google Maps
           </a>
 
-          <a id="selectedBranchAppleMapLink" class="btn btn--ghost hidden" href="#" target="_blank" rel="noopener">
+          <a
+            id="selectedBranchAppleMapLink"
+            class="btn btn--ghost hidden"
+            href="#"
+            target="_blank"
+            rel="noopener"
+          >
             Apple Maps
           </a>
+
         </div>
       </div>
 
       <div class="branch-layout branch-layout--real">
-        <div class="branch-map branch-map--real" aria-label="Mapa interactivo de sucursales">
+
+        <!-- MAPA -->
+        <div
+          class="branch-map branch-map--real"
+          aria-label="Mapa interactivo de sucursales"
+        >
           <div id="realBranchMap"></div>
         </div>
 
+        <!-- PANEL -->
         <div class="branch-panel">
+
           <div class="branch-filters">
+
             <div class="field">
               <label for="branchSearch">Buscar sucursal</label>
-              <input id="branchSearch" type="search" placeholder="Ciudad, marca, tienda o dirección" />
+
+              <input
+                id="branchSearch"
+                type="search"
+                placeholder="Ciudad, marca, tienda o dirección"
+              />
             </div>
 
             <div class="field">
               <label for="branchBrandFilter">Marca</label>
+
               <select id="branchBrandFilter">
                 <option value="">Todas</option>
               </select>
             </div>
+
           </div>
 
           <div id="branchList" class="branch-list"></div>
+
         </div>
       </div>
 
+      <!-- VENTANA FLOTANTE -->
       <div id="vacancyBoard" class="vacancy-board hidden">
+
         <div class="vacancy-board__head">
+
           <div>
             <span class="eyebrow">Vacantes disponibles</span>
-            <h3 id="selectedBranchName">Selecciona una sucursal</h3>
+
+            <h3 id="selectedBranchName">
+              Selecciona una sucursal
+            </h3>
           </div>
 
           <div class="vacancy-board__tools">
+
             <p id="selectedBranchAddress"></p>
-            <button id="closeBranchVacanciesBtn" class="chatbot-close" type="button" aria-label="Cerrar vacantes">
+
+            <button
+              id="closeBranchVacanciesBtn"
+              class="chatbot-close"
+              type="button"
+              aria-label="Cerrar vacantes"
+            >
               x
             </button>
+
           </div>
         </div>
 
         <div id="branchVacancies" class="branch-vacancies"></div>
+
       </div>
+
     </section>
 
+    <!-- BUSCADOR -->
     <section id="busqueda-vacantes" class="card">
+
       <div class="section-head">
         <h2>Buscar empleo</h2>
+
         <p>
           Selecciona los filtros de búsqueda y consulta las vacantes disponibles.
         </p>
       </div>
 
       <div class="form-grid">
+
         <div class="field">
           <label for="filtroTipo">Tipo</label>
+
           <select id="filtroTipo">
             <option value="">Todos</option>
-            <option value="operativa">Operativa / Restaurante</option>
-            <option value="administrativa">Administrativa / Corporativo</option>
+            <option value="operativa">
+              Operativa / Restaurante
+            </option>
+
+            <option value="administrativa">
+              Administrativa / Corporativo
+            </option>
           </select>
         </div>
 
         <div class="field">
           <label for="filtroPais">País</label>
+
           <select id="filtroPais">
             <option value="">Todos</option>
             <option value="Mexico">México</option>
-            <option value="Estados Unidos">Estados Unidos</option>
+            <option value="Estados Unidos">
+              Estados Unidos
+            </option>
           </select>
         </div>
 
         <div class="field">
           <label for="filtroEstado">Estado</label>
+
           <select id="filtroEstado">
             <option value="">Todos</option>
           </select>
@@ -158,76 +248,141 @@
 
         <div class="field">
           <label for="filtroCiudad">Ciudad</label>
+
           <select id="filtroCiudad">
             <option value="">Todas</option>
           </select>
         </div>
 
         <div class="form-actions field--full">
-          <button id="buscarVacantesBtn" class="btn btn--primary" type="button">
+
+          <button
+            id="buscarVacantesBtn"
+            class="btn btn--primary"
+            type="button"
+          >
             Buscar vacantes
           </button>
+
         </div>
       </div>
 
       <div id="busquedaStatus" class="status hidden"></div>
+
     </section>
 
+    <!-- ESTATUS -->
     <section id="estatus" class="card">
+
       <div class="section-head">
         <h2>Consultar estatus de mi solicitud</h2>
-        <p>Ingresa tu folio de postulación para revisar tu estado actual.</p>
+
+        <p>
+          Ingresa tu folio de postulación para revisar tu estado actual.
+        </p>
       </div>
 
       <div class="form-grid">
+
         <div class="field field--full">
-          <label for="folioConsulta">Folio de postulación</label>
-          <input id="folioConsulta" type="text" placeholder="Ej. 1717600000000" />
+
+          <label for="folioConsulta">
+            Folio de postulación
+          </label>
+
+          <input
+            id="folioConsulta"
+            type="text"
+            placeholder="Ej. 1717600000000"
+          />
+
         </div>
 
         <div class="form-actions field--full">
-          <button id="consultarStatusBtn" type="button" class="btn btn--secondary">
+
+          <button
+            id="consultarStatusBtn"
+            type="button"
+            class="btn btn--secondary"
+          >
             Consultar estatus
           </button>
+
         </div>
       </div>
 
       <div id="consultaStatusResultado" class="status hidden"></div>
+
     </section>
+
   </main>
 
-  <button id="chatbot-toggle" class="chatbot-toggle" aria-label="Abrir chat">
+  <!-- BOTON CHAT -->
+  <button
+    id="chatbot-toggle"
+    class="chatbot-toggle"
+    aria-label="Abrir chat"
+  >
+
     <span class="chatbot-toggle__ring"></span>
+
     <span class="chatbot-toggle__ring chatbot-toggle__ring--delay"></span>
 
     <span class="chatbot-toggle__core">
-      <img src="img/icons8-chatgpt-32.png" alt="Asistente" class="chatbot-toggle__img" />
+
+      <img
+        src="img/icons8-chatgpt-32.png"
+        alt="Asistente"
+        class="chatbot-toggle__img"
+      />
+
     </span>
 
     <span class="chatbot-toggle__status"></span>
+
   </button>
 
+  <!-- CHATBOT -->
   <aside id="chatbot-box" class="chatbot-box hidden">
+
+    <!-- HEADER -->
     <div class="chatbot-header">
+
       <div>
         <strong>Asistente de Reclutamiento</strong>
-        <p>Vacantes, análisis de CV y orientación personalizada</p>
+
+        <p>
+          Vacantes, análisis de CV y orientación personalizada
+        </p>
       </div>
 
-      <button id="chatbot-close" class="chatbot-close" aria-label="Cerrar chat">x</button>
-    </div>
-
-    <div id="chatbot-messages" class="chatbot-messages"></div>
-
-    <div class="chatbot-upload-bar">
-      <button id="attachCvBtn" type="button" class="btn btn--secondary">
-        Adjuntar CV PDF
+      <button
+        id="chatbot-close"
+        class="chatbot-close"
+        aria-label="Cerrar chat"
+      >
+        x
       </button>
 
-      <input id="chatCvFile" type="file" accept=".pdf,application/pdf" hidden />
     </div>
 
+    <!-- MENSAJES -->
+    <div id="chatbot-messages" class="chatbot-messages"></div>
+
+    <!-- FORM -->
     <form id="chatbot-form" class="chatbot-form">
+
+      <!-- BOTON ARCHIVO -->
+      <button
+        id="attachCvBtn"
+        type="button"
+        class="btn btn--secondary"
+        title="Adjuntar CV"
+      >
+        Adjuntar CV
+      </button>
+
+      <!-- INPUT -->
       <input
         id="chatbot-input"
         type="text"
@@ -235,11 +390,30 @@
         autocomplete="off"
       />
 
-      <button id="chatbot-send" type="submit">Enviar</button>
+      <!-- ENVIAR -->
+      <button
+        id="chatbot-send"
+        type="submit"
+      >
+        Enviar
+      </button>
+
     </form>
+
+    <!-- FILE INPUT -->
+    <input
+      id="chatCvFile"
+      type="file"
+      accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/*"
+      hidden
+    />
+
   </aside>
 
+  <!-- SCRIPTS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="chatbot.js?v=4"></script>
+
+  <script src="chatbot.js?v=5"></script>
+
 </body>
 </html>
