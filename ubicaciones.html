@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Ubicaciones | GA Hospitality</title>
+
+  <meta
+    name="description"
+    content="Encuentra vacantes por ubicación en GA Hospitality."
+  />
+
+  <link
+    rel="icon"
+    type="image/png"
+    sizes="32x32"
+    href="img/icons8-nuevo-empleo-32.png"
+  />
+
+  <!-- LEAFLET -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <link rel="stylesheet" href="ubicaciones.css?v=1" />
+</head>
+
+<body>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+
+    <div class="topbar__left">
+
+      <a href="index.html" class="back-btn">
+        ← Regresar
+      </a>
+
+      <img
+        src="img/gaho.png"
+        alt="GA Hospitality"
+        class="corporativo-logo"
+      />
+
+      <div>
+        <h2>GA Hospitality</h2>
+        <p>Mapa inteligente de vacantes</p>
+      </div>
+
+    </div>
+
+  </header>
+
+  <!-- HERO -->
+  <section class="location-hero">
+
+    <div class="location-hero__content">
+
+      <span class="eyebrow">
+        Búsqueda inteligente
+      </span>
+
+      <h1>
+        Encuentra vacantes cerca de ti
+      </h1>
+
+      <p>
+        Explora el mapa interactivo de sucursales, filtra por ciudad,
+        marca o estado y encuentra oportunidades laborales cercanas.
+      </p>
+
+      <div class="location-hero__actions">
+
+        <button
+          id="useMyLocationBtn"
+          class="btn btn--primary"
+          type="button"
+        >
+          Usar mi ubicación
+        </button>
+
+        <button
+          id="findNearestBtn"
+          class="btn btn--secondary"
+          type="button"
+        >
+          Sucursal más cercana
+        </button>
+
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- MAIN -->
+  <main class="container">
+
+    <section class="map-layout">
+
+      <!-- SIDEBAR -->
+      <aside class="map-sidebar">
+
+        <div class="sidebar-head">
+
+          <h2>Buscar sucursales</h2>
+
+          <p>
+            Filtra ubicaciones y explora vacantes disponibles.
+          </p>
+
+        </div>
+
+        <!-- FILTROS -->
+        <div class="map-filters">
+
+          <div class="field">
+            <label for="branchSearch">
+              Buscar sucursal
+            </label>
+
+            <input
+              id="branchSearch"
+              type="search"
+              placeholder="Marca, ciudad o dirección"
+            />
+          </div>
+
+          <div class="field">
+            <label for="branchBrandFilter">
+              Marca
+            </label>
+
+            <select id="branchBrandFilter">
+              <option value="">Todas</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="branchCountryFilter">
+              País
+            </label>
+
+            <select id="branchCountryFilter">
+              <option value="">Todos</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="branchStateFilter">
+              Estado
+            </label>
+
+            <select id="branchStateFilter">
+              <option value="">Todos</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="branchCityFilter">
+              Ciudad
+            </label>
+
+            <select id="branchCityFilter">
+              <option value="">Todas</option>
+            </select>
+          </div>
+
+        </div>
+
+        <!-- LISTA -->
+        <div id="branchList" class="branch-list"></div>
+
+      </aside>
+
+      <!-- MAPA -->
+      <section class="map-area">
+
+        <div id="realBranchMap"></div>
+
+        <!-- PANEL FLOTANTE -->
+        <div id="vacancyBoard" class="vacancy-board hidden">
+
+          <div class="vacancy-board__head">
+
+            <div>
+
+              <span class="eyebrow">
+                Vacantes disponibles
+              </span>
+
+              <h3 id="selectedBranchName">
+                Selecciona una sucursal
+              </h3>
+
+            </div>
+
+            <div class="vacancy-board__tools">
+
+              <p id="selectedBranchAddress"></p>
+
+              <button
+                id="closeBranchVacanciesBtn"
+                class="chatbot-close"
+                type="button"
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+
+            </div>
+
+          </div>
+
+          <!-- BOTONES MAPAS -->
+          <div class="vacancy-map-links">
+
+            <a
+              id="selectedBranchMapLink"
+              class="btn btn--ghost hidden"
+              href="#"
+              target="_blank"
+              rel="noopener"
+            >
+              Google Maps
+            </a>
+
+            <a
+              id="selectedBranchAppleMapLink"
+              class="btn btn--ghost hidden"
+              href="#"
+              target="_blank"
+              rel="noopener"
+            >
+              Apple Maps
+            </a>
+
+          </div>
+
+          <!-- VACANTES -->
+          <div id="branchVacancies" class="branch-vacancies"></div>
+
+        </div>
+
+      </section>
+
+    </section>
+
+  </main>
+
+  <!-- SCRIPTS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script src="ubicaciones.js?v=1"></script>
+
+</body>
+</html>
