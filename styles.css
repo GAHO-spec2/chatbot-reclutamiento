@@ -9,7 +9,6 @@
   --text: #f5f5f5;
   --muted: #b8b8b8;
   --primary: #ffffff;
-  --primary-2: #d9d9d9;
   --success: #35ff8a;
   --shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
   --radius: 22px;
@@ -150,13 +149,6 @@ body {
   gap: 18px;
 }
 
-.branch-map-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
 .section-head h2 {
   margin: 0 0 8px;
   font-size: 1.6rem;
@@ -294,15 +286,111 @@ select option {
 }
 
 /* =========================
+   HERO BUSCADOR TIPO STARBUCKS
+========================= */
+.store-search-hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 360px;
+  overflow: hidden;
+  border-radius: 26px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.04);
+  box-shadow: var(--shadow);
+}
+
+.store-search-hero__image {
+  position: relative;
+  min-height: 360px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0.02)),
+    radial-gradient(circle at 50% 50%, rgba(53,255,138,0.24), transparent 24%),
+    repeating-linear-gradient(35deg, rgba(255,255,255,0.14) 0 4px, transparent 4px 54px),
+    linear-gradient(135deg, #122019, #1b2f25);
+  display: grid;
+  place-items: center;
+}
+
+.store-search-hero__image::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent 48%, rgba(255,255,255,0.08) 49%, transparent 50%),
+    linear-gradient(0deg, transparent 48%, rgba(255,255,255,0.08) 49%, transparent 50%);
+  background-size: 92px 92px;
+  opacity: 0.55;
+}
+
+.store-search-hero__pin {
+  position: relative;
+  width: 190px;
+  height: 190px;
+  border-radius: 50% 50% 50% 12px;
+  transform: rotate(-45deg);
+  background: linear-gradient(135deg, #ffffff, #d7d7d7);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 28px 60px rgba(0,0,0,0.45);
+  z-index: 2;
+}
+
+.store-search-hero__pin img {
+  width: 104px;
+  height: 104px;
+  object-fit: contain;
+  transform: rotate(45deg);
+  border-radius: 24px;
+  background: #000000;
+  padding: 12px;
+}
+
+.store-search-hero__content {
+  padding: 44px;
+  background:
+    radial-gradient(circle at top right, rgba(53,255,138,0.10), transparent 34%),
+    linear-gradient(135deg, rgba(18,18,18,0.96), rgba(10,10,10,0.98));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.store-search-hero__content h2 {
+  margin: 12px 0 18px;
+  max-width: 560px;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.store-search-hero__content p {
+  margin: 0 0 28px;
+  max-width: 560px;
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+/* =========================
    MAPA SUCURSALES
 ========================= */
 .branch-card {
   padding: 0;
+  position: relative;
 }
 
 .branch-card > .section-head,
 .branch-card > .vacancy-board {
   padding: 30px;
+}
+
+.branch-map-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .branch-layout {
@@ -421,13 +509,35 @@ select option {
 
 .branch-filters {
   display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
   margin-bottom: 16px;
+}
+
+.branch-filters .field:first-child,
+.branch-filters .field:nth-child(4) {
+  grid-column: 1 / -1;
 }
 
 .branch-list {
   display: grid;
   gap: 10px;
+  max-height: 620px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.branch-list::-webkit-scrollbar,
+.vacancy-board::-webkit-scrollbar,
+.chatbot-messages::-webkit-scrollbar {
+  width: 8px;
+}
+
+.branch-list::-webkit-scrollbar-thumb,
+.vacancy-board::-webkit-scrollbar-thumb,
+.chatbot-messages::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.16);
+  border-radius: 999px;
 }
 
 .branch-item {
@@ -471,6 +581,23 @@ select option {
 /* =========================
    VACANTES POR SUCURSAL
 ========================= */
+.vacancy-board {
+  position: absolute;
+  left: 50%;
+  top: 54%;
+  transform: translate(-50%, -50%);
+  width: min(760px, calc(100% - 48px));
+  max-height: 78%;
+  overflow-y: auto;
+  z-index: 800;
+  padding: 26px;
+  border-radius: 24px;
+  background: rgba(12, 12, 12, 0.96);
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 30px 90px rgba(0,0,0,0.70);
+  backdrop-filter: blur(14px);
+}
+
 .vacancy-board__head {
   display: flex;
   align-items: flex-start;
@@ -500,7 +627,7 @@ select option {
 
 .branch-vacancies {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 14px;
 }
 
@@ -766,6 +893,24 @@ select option {
    RESPONSIVE
 ========================= */
 @media (max-width: 980px) {
+  .store-search-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .store-search-hero__image {
+    min-height: 280px;
+  }
+
+  .store-search-hero__pin {
+    width: 150px;
+    height: 150px;
+  }
+
+  .store-search-hero__pin img {
+    width: 82px;
+    height: 82px;
+  }
+
   .branch-layout,
   .branch-vacancies {
     grid-template-columns: 1fr;
@@ -784,6 +929,14 @@ select option {
   .hero__content,
   .card {
     padding: 22px;
+  }
+
+  .store-search-hero__content {
+    padding: 30px 22px;
+  }
+
+  .store-search-hero__content h2 {
+    font-size: 2rem;
   }
 
   .branch-card {
@@ -807,6 +960,21 @@ select option {
 
   .branch-map-actions .btn {
     width: 100%;
+  }
+
+  .branch-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .branch-filters .field {
+    grid-column: 1 / -1;
+  }
+
+  .vacancy-board {
+    width: calc(100% - 24px);
+    top: 50%;
+    max-height: 82%;
+    padding: 20px;
   }
 
   .vacancy-board__head p,
@@ -859,46 +1027,5 @@ select option {
 
   .chat-option-btn {
     width: 100%;
-  }
-}
-
-/*NUEVAS FUCNIONES */
-
-
-.branch-card {
-  position: relative;
-}
-
-.vacancy-board {
-  position: absolute;
-  left: 50%;
-  top: 54%;
-  transform: translate(-50%, -50%);
-  width: min(760px, calc(100% - 48px));
-  max-height: 78%;
-  overflow-y: auto;
-  z-index: 800;
-  padding: 26px;
-  border-radius: 24px;
-  background: rgba(12, 12, 12, 0.96);
-  border: 1px solid rgba(255,255,255,0.14);
-  box-shadow: 0 30px 90px rgba(0,0,0,0.70);
-  backdrop-filter: blur(14px);
-}
-
-.vacancy-board__head {
-  margin-bottom: 18px;
-}
-
-.branch-vacancies {
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-}
-
-@media (max-width: 780px) {
-  .vacancy-board {
-    width: calc(100% - 24px);
-    top: 50%;
-    max-height: 82%;
-    padding: 20px;
   }
 }

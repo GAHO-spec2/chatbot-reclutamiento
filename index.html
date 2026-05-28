@@ -64,15 +64,39 @@
           Analizar mi CV
         </button>
 
-        <a href="#postulate-sucursal" class="btn btn--ghost">
-          Postularme por sucursal
-        </a>
+        <a href="#busca-sucursal-visual" class="btn btn--ghost">
+  Postularme por sucursal
+</a>
       </div>
     </div>
   </header>
 
   <!-- MAIN -->
   <main class="container">
+
+    <!-- SECCIÓN VISUAL TIPO STARBUCKS -->
+<section id="busca-sucursal-visual" class="store-search-hero">
+  <div class="store-search-hero__image">
+    <div class="store-search-hero__pin">
+      <img src="img/gaho.png" alt="GA Hospitality" />
+    </div>
+  </div>
+
+  <div class="store-search-hero__content">
+    <span class="eyebrow">Ubicaciones disponibles</span>
+
+    <h2>Busca la tienda más cercana para postularte</h2>
+
+    <p>
+      Usa nuestro mapa interactivo para encontrar sucursales disponibles,
+      revisar vacantes activas y enviar tu solicitud en la ubicación de tu preferencia.
+    </p>
+
+    <a href="#postulate-sucursal" class="btn btn--primary">
+      Postúlate aquí
+    </a>
+  </div>
+</section>
 
     <!-- MAPA -->
     <section id="postulate-sucursal" class="card branch-card">
@@ -137,6 +161,26 @@
         <div class="branch-panel">
 
           <div class="branch-filters">
+            <div class="field">
+            <label for="branchCountryFilter">País</label>
+            <select id="branchCountryFilter">
+              <option value="">Todos</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="branchStateFilter">Estado</label>
+            <select id="branchStateFilter">
+              <option value="">Todos</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="branchCityFilter">Ciudad</label>
+            <select id="branchCityFilter">
+              <option value="">Todas</option>
+            </select>
+          </div>
 
             <div class="field">
               <label for="branchSearch">Buscar sucursal</label>
