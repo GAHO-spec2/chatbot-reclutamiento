@@ -736,3 +736,16 @@ select option {
     width: 100%;
   }
 }
+
+#dotted-surface-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+body {
+  background: radial-gradient(circle at top, #102033 0%, #050816 45%, #020617 100%);
+  min-height: 100vh;
+}
