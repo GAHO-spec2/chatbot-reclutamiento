@@ -250,6 +250,16 @@ async function consultarEstatus() {
   }
 }
 
+function toggleChat() {
+  if (!box) return;
+
+  if (box.classList.contains("hidden")) {
+    openChat();
+  } else {
+    closeChat();
+  }
+}
+
 if (toggle) {
   toggle.addEventListener("click", toggleChat);
 }

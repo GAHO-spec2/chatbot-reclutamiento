@@ -1123,36 +1123,61 @@ textarea:focus {
     padding: 30px 22px;
   }
 }
-
 /* =========================
-   FIX FINAL CHATBOT APP
+   FIX DEFINITIVO CHATBOT
 ========================= */
 
 .chatbot-box {
-  right: 22px !important;
-  bottom: 112px !important;
-  width: min(430px, calc(100vw - 32px)) !important;
-  height: min(640px, calc(100vh - 150px)) !important;
-  max-height: calc(100vh - 150px) !important;
+  position: fixed !important;
+  right: 24px !important;
+  bottom: 118px !important;
+  width: 390px !important;
+  height: 560px !important;
+  max-height: 560px !important;
   border-radius: 28px !important;
   overflow: hidden !important;
   z-index: 1190 !important;
 }
 
 .chatbot-messages {
+  flex: 1 !important;
   min-height: 0 !important;
   overflow-y: auto !important;
 }
 
 .chatbot-form {
   flex-shrink: 0 !important;
+  display: grid !important;
+  grid-template-columns: 50px 1fr 88px !important;
+  align-items: center !important;
+  gap: 10px !important;
 }
 
+#attachCvBtn {
+  width: 50px !important;
+  height: 50px !important;
+  padding: 0 !important;
+  font-size: 0 !important;
+  border-radius: 18px !important;
+}
+
+#attachCvBtn::before {
+  content: "📎";
+  font-size: 22px;
+}
+
+#chatbot-send {
+  height: 50px !important;
+}
+
+/* Botón abierto como X roja */
 .chatbot-toggle.is-open {
-  background: #ff1f1f !important;
-  border-radius: 50%;
+  width: 72px !important;
+  height: 72px !important;
+  background: #ff1717 !important;
+  border-radius: 50% !important;
   animation: none !important;
-  box-shadow: 0 18px 40px rgba(255, 31, 31, 0.32);
+  box-shadow: 0 18px 42px rgba(255, 23, 23, 0.36) !important;
 }
 
 .chatbot-toggle.is-open .chatbot-toggle__ring,
@@ -1179,23 +1204,33 @@ textarea:focus {
   transform: rotate(-45deg);
 }
 
+/* Laptop / pantalla baja */
+@media (max-height: 720px) {
+  .chatbot-box {
+    height: calc(100vh - 138px) !important;
+    max-height: calc(100vh - 138px) !important;
+    bottom: 104px !important;
+  }
+}
+
+/* Celular */
 @media (max-width: 780px) {
   .chatbot-box {
     left: 12px !important;
     right: 12px !important;
     bottom: 96px !important;
     width: auto !important;
-    height: calc(100vh - 125px) !important;
-    max-height: calc(100vh - 125px) !important;
+    height: calc(100vh - 122px) !important;
+    max-height: calc(100vh - 122px) !important;
     border-radius: 24px !important;
   }
 
   .chatbot-form {
-    grid-template-columns: 46px 1fr auto !important;
-    padding: 12px !important;
+    grid-template-columns: 48px 1fr 76px !important;
   }
 
   #chatbot-send {
-    padding: 0 14px !important;
+    padding: 0 12px !important;
   }
 }
+
