@@ -55,6 +55,11 @@ function openChat() {
   box.classList.remove("hidden");
   activateListeningState();
 
+  if (chatbotToggle) {
+    chatbotToggle.classList.add("is-open");
+    chatbotToggle.setAttribute("aria-label", "Cerrar chat");
+  }
+
   if (input) input.focus();
 }
 
@@ -63,6 +68,21 @@ function closeChat() {
 
   box.classList.add("hidden");
   deactivateListeningState();
+
+  if (chatbotToggle) {
+    chatbotToggle.classList.remove("is-open");
+    chatbotToggle.setAttribute("aria-label", "Abrir chat");
+  }
+}
+
+function toggleChat() {
+  if (!box) return;
+
+  if (box.classList.contains("hidden")) {
+    openChat();
+  } else {
+    closeChat();
+  }
 }
 
 function renderMessages() {
@@ -231,7 +251,7 @@ async function consultarEstatus() {
 }
 
 if (toggle) {
-  toggle.addEventListener("click", openChat);
+  toggle.addEventListener("click", toggleChat);
 }
 
 if (closeBtn) {

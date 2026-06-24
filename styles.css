@@ -1123,3 +1123,79 @@ textarea:focus {
     padding: 30px 22px;
   }
 }
+
+/* =========================
+   FIX FINAL CHATBOT APP
+========================= */
+
+.chatbot-box {
+  right: 22px !important;
+  bottom: 112px !important;
+  width: min(430px, calc(100vw - 32px)) !important;
+  height: min(640px, calc(100vh - 150px)) !important;
+  max-height: calc(100vh - 150px) !important;
+  border-radius: 28px !important;
+  overflow: hidden !important;
+  z-index: 1190 !important;
+}
+
+.chatbot-messages {
+  min-height: 0 !important;
+  overflow-y: auto !important;
+}
+
+.chatbot-form {
+  flex-shrink: 0 !important;
+}
+
+.chatbot-toggle.is-open {
+  background: #ff1f1f !important;
+  border-radius: 50%;
+  animation: none !important;
+  box-shadow: 0 18px 40px rgba(255, 31, 31, 0.32);
+}
+
+.chatbot-toggle.is-open .chatbot-toggle__ring,
+.chatbot-toggle.is-open .chatbot-toggle__core,
+.chatbot-toggle.is-open .chatbot-toggle__status {
+  display: none !important;
+}
+
+.chatbot-toggle.is-open::before,
+.chatbot-toggle.is-open::after {
+  content: "";
+  position: absolute;
+  width: 30px;
+  height: 4px;
+  border-radius: 999px;
+  background: #ffffff;
+}
+
+.chatbot-toggle.is-open::before {
+  transform: rotate(45deg);
+}
+
+.chatbot-toggle.is-open::after {
+  transform: rotate(-45deg);
+}
+
+@media (max-width: 780px) {
+  .chatbot-box {
+    left: 12px !important;
+    right: 12px !important;
+    bottom: 96px !important;
+    width: auto !important;
+    height: calc(100vh - 125px) !important;
+    max-height: calc(100vh - 125px) !important;
+    border-radius: 24px !important;
+  }
+
+  .chatbot-form {
+    grid-template-columns: 46px 1fr auto !important;
+    padding: 12px !important;
+  }
+
+  #chatbot-send {
+    padding: 0 14px !important;
+  }
+}
