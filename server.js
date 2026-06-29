@@ -47,7 +47,6 @@ if (db) {
 const VACANTES_COLLECTION = "vacantes";
 const POSTULACIONES_COLLECTION = "postulaciones";
 const ENTREVISTAS_COLLECTION = "entrevistas";
-const entrevistasFile = path.join(dataDir, "entrevistas.json");
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
   .split(",")
@@ -91,6 +90,7 @@ if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
 const postulacionesFile = path.join(dataDir, "postulaciones.json");
 const vacantesFile = path.join(dataDir, "vacantes.json");
 const sucursalesFile = path.join(dataDir, "sucursales.json");
+const entrevistasFile = path.join(dataDir, "entrevistas.json");
 
 const sucursalesIniciales = [
   {
