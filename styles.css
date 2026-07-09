@@ -1099,3 +1099,174 @@ body {
   font-feature-settings: "liga" 1, "kern" 1;
   text-rendering: geometricPrecision;
 }
+/* =========================
+   VENTANA DE BIENVENIDA DEL CHATBOT
+========================= */
+
+.chatbot-welcome-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  animation: welcomeFadeIn 0.5s ease;
+  padding: 20px;
+}
+
+.chatbot-welcome-overlay.hidden {
+  display: none;
+}
+
+@keyframes welcomeFadeIn {
+  0% { opacity: 0; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.chatbot-welcome-card {
+  background: linear-gradient(145deg, rgba(25, 25, 25, 0.98), rgba(10, 10, 10, 0.99));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 28px;
+  padding: 32px 28px;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  animation: welcomeCardPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes welcomeCardPop {
+  0% { opacity: 0; transform: scale(0.8) translateY(20px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.chatbot-welcome-avatar {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+
+.chatbot-welcome-avatar img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
+.chatbot-welcome-status {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #35ff8a;
+  border: 3px solid #0a0a0a;
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.chatbot-welcome-title {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 8px;
+  letter-spacing: -0.02em;
+}
+
+.chatbot-welcome-text {
+  font-size: 0.95rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0 0 18px;
+}
+
+.chatbot-welcome-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 22px;
+}
+
+.chatbot-welcome-features span {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  color: #9adfff;
+}
+
+.chatbot-welcome-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ffffff, #d8d8d8);
+  color: #050505;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 24px rgba(255, 255, 255, 0.15);
+}
+
+.chatbot-welcome-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(255, 255, 255, 0.25);
+}
+
+.chatbot-welcome-btn:active {
+  transform: translateY(0);
+}
+
+/* =========================
+   RESPONSIVE PARA BIENVENIDA
+========================= */
+
+@media (max-width: 480px) {
+  .chatbot-welcome-card {
+    padding: 24px 20px;
+    max-width: 320px;
+  }
+
+  .chatbot-welcome-avatar {
+    width: 64px;
+    height: 64px;
+  }
+
+  .chatbot-welcome-avatar img {
+    width: 34px;
+    height: 34px;
+  }
+
+  .chatbot-welcome-title {
+    font-size: 1.2rem;
+  }
+
+  .chatbot-welcome-text {
+    font-size: 0.9rem;
+  }
+
+  .chatbot-welcome-features span {
+    font-size: 11px;
+    padding: 5px 12px;
+  }
+}

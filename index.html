@@ -168,7 +168,34 @@
       <button id="chatbot-close" class="chatbot-close" aria-label="Cerrar chat">✕</button>
     </div>
 
-    <!-- ✅ BARRA DE PROGRESO AGREGADA AQUÍ -->
+    <!-- ✅ VENTANA DE BIENVENIDA -->
+    <div id="chatbot-welcome-overlay" class="chatbot-welcome-overlay">
+      <div class="chatbot-welcome-card">
+        <div class="chatbot-welcome-avatar">
+          <img src="img/icons8-chatgpt-32.png" alt="Asistente" />
+          <span class="chatbot-welcome-status"></span>
+        </div>
+        
+        <h3 class="chatbot-welcome-title">👋 ¡Hola! Yo puedo ayudarte</h3>
+        
+        <p class="chatbot-welcome-text">
+          Soy tu asistente de reclutamiento. Puedo analizar tu CV, 
+          recomendarte vacantes y ayudarte con tu postulación.
+        </p>
+        
+        <div class="chatbot-welcome-features">
+          <span>📄 Analizar CV</span>
+          <span>📍 Buscar ubicaciones</span>
+          <span>🎯 Recomendaciones</span>
+        </div>
+        
+        <button id="chatbot-welcome-btn" class="chatbot-welcome-btn">
+          Comenzar conversación →
+        </button>
+      </div>
+    </div>
+
+    <!-- ✅ BARRA DE PROGRESO -->
     <div class="chatbot-progress-container">
       <div class="chatbot-progress-bar" id="chatbot-progress"></div>
     </div>

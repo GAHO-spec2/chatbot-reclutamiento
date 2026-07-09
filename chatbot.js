@@ -56,9 +56,30 @@ let chatHistory = [
   }
 ];
 
-/* =========================
-   FUNCIONES DE UTILERÍA
-========================= */
+// =========================
+// VENTANA DE BIENVENIDA
+// =========================
+
+let welcomeShown = false;
+
+function showWelcomeOverlay() {
+  const overlay = document.getElementById('chatbot-welcome-overlay');
+  if (overlay && !welcomeShown) {
+    overlay.classList.remove('hidden');
+    welcomeShown = true;
+  }
+}
+
+function hideWelcomeOverlay() {
+  const overlay = document.getElementById('chatbot-welcome-overlay');
+  if (overlay) {
+    overlay.classList.add('hidden');
+  }
+}
+
+// =========================
+// FUNCIONES DE UTILERÍA
+// =========================
 
 function isValidEmail(email) {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -149,6 +170,13 @@ function openChat() {
   }
 
   if (input) input.focus();
+  
+  // Mostrar bienvenida SOLO si no hay mensajes previos
+  if (chatHistory.length <= 1) {
+    setTimeout(showWelcomeOverlay, 400);
+  } else {
+    hideWelcomeOverlay();
+  }
 }
 
 function closeChat() {
@@ -938,6 +966,19 @@ async function handleFreeText(text) {
 /* =========================
    EVENTOS
 ========================= */
+
+// Evento para el botón de bienvenida
+document.addEventListener('DOMContentLoaded', () => {
+  const welcomeBtn = document.getElementById('chatbot-welcome-btn');
+  if (welcomeBtn) {
+    welcomeBtn.addEventListener('click', () => {
+      hideWelcomeOverlay();
+      if (input) {
+        setTimeout(() => input.focus(), 300);
+      }
+    });
+  }
+});
 
 if (toggle) {
   toggle.addEventListener("click", toggleChat);
