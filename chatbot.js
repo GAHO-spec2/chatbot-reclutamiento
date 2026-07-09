@@ -46,20 +46,68 @@ let chatHistory = [
   {
     role: "assistant",
     type: "welcome",
-    content:
-      "Hola. Soy tu asistente inteligente de reclutamiento. Puedo analizar tu CV, recomendarte vacantes o ayudarte con tu postulación.",
+    content: "👋 ¡Hola! Soy tu asistente de reclutamiento inteligente. Estoy aquí para ayudarte a encontrar la oportunidad perfecta para ti. ¿Qué te gustaría hacer hoy?",
     options: [
-      { label: "Analizar mi CV", value: "analizar_cv" },
-      { label: "Buscar vacantes por ubicación", value: "buscar_ubicacion" },
-      { label: "¿Qué vacante me recomiendas?", value: "recomendar_vacantes" }
+      { label: "📄 Analizar mi CV", value: "analizar_cv" },
+      { label: "📍 Buscar por ubicación", value: "buscar_ubicacion" },
+      { label: "🎯 Recomendaciones personalizadas", value: "recomendar_vacantes" },
+      { label: "📋 Consultar estatus", value: "consultar_estatus" }
     ]
   }
 ];
 
 /* =========================
-   BURBUJA CHAT
+   FUNCIONES DE UTILERÍA
 ========================= */
 
+function isValidEmail(email) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
+}
+
+function showTypingIndicator() {
+  const indicator = document.createElement("div");
+  indicator.className = "msg assistant typing-indicator";
+  indicator.innerHTML = `
+    <div class="typing-dots">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  `;
+  messagesDiv.appendChild(indicator);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  return indicator;
+}
+
+function updateProgressBar(progress) {
+  const progressBar = document.getElementById("chatbot-progress");
+  if (progressBar) {
+    progressBar.style.width = `${progress}%`;
+    progressBar.textContent = `${progress}%`;
+  }
+}
+
+function showProgressStep(currentStep, totalSteps = 6) {
+  const progress = Math.round((currentStep / totalSteps) * 100);
+  const stepNames = [
+    "Nombre",
+    "Correo", 
+    "Teléfono",
+    "Disponibilidad",
+    "Experiencia",
+    "CV y Envío"
+  ];
+  
+  const progressMessage = `📋 Paso ${currentStep} de ${totalSteps}: ${stepNames[currentStep - 1] || "Completando..."}`;
+  
+  addAssistantText(`🔄 ${progressMessage}`);
+  updateProgressBar(progress);
+}
+
+/* =========================
+   BURBUJA CHAT
+========================= */
 
 function buscarVacantesDesdeFiltros() {
   const tipoVacante = filtroTipo?.value || "";
@@ -198,7 +246,7 @@ function handleFaqResponse(text = "") {
     t.includes("papeles")
   ) {
     addAssistantText(
-      "Para iniciar tu postulación normalmente necesitas tu CV actualizado. Dependiendo del proceso, el equipo de reclutamiento podría solicitar identificación oficial, CURP, comprobante de domicilio u otros documentos después de revisar tu perfil."
+      "📋 Para iniciar tu postulación normalmente necesitas tu CV actualizado. Dependiendo del proceso, el equipo de reclutamiento podría solicitar identificación oficial, CURP, comprobante de domicilio u otros documentos después de revisar tu perfil."
     );
     return true;
   }
@@ -210,12 +258,12 @@ function handleFaqResponse(text = "") {
     t.includes("mi primer trabajo")
   ) {
     addAssistantText(
-      "Sí puedes postularte aunque no tengas experiencia. Para perfiles sin experiencia, puedo ayudarte a buscar vacantes operativas, atención al cliente, cocina, apoyo general o puestos donde se valore la actitud, disponibilidad y ganas de aprender."
+      "💪 ¡Sí puedes postularte aunque no tengas experiencia! Para perfiles sin experiencia, puedo ayudarte a buscar vacantes operativas, atención al cliente, cocina, apoyo general o puestos donde se valore la actitud, disponibilidad y ganas de aprender."
     );
 
     addOptions("Puedes continuar con:", [
-      { label: "Buscar vacantes por ubicación", value: "buscar_ubicacion" },
-      { label: "Analizar mi CV", value: "analizar_cv" }
+      { label: "📍 Buscar vacantes por ubicación", value: "buscar_ubicacion" },
+      { label: "📄 Analizar mi CV", value: "analizar_cv" }
     ]);
 
     return true;
@@ -229,7 +277,7 @@ function handleFaqResponse(text = "") {
     t.includes("disponibilidad")
   ) {
     addAssistantText(
-      "Puedes indicar tu disponibilidad durante la postulación. Algunas vacantes pueden requerir tiempo completo, pero el equipo de reclutamiento revisará tu disponibilidad y te orientará si existe una opción compatible."
+      "⏰ Puedes indicar tu disponibilidad durante la postulación. Algunas vacantes pueden requerir tiempo completo, pero el equipo de reclutamiento revisará tu disponibilidad y te orientará si existe una opción compatible."
     );
     return true;
   }
@@ -243,11 +291,11 @@ function handleFaqResponse(text = "") {
     t.includes("png")
   ) {
     addAssistantText(
-      "Adjunta tu CV en PDF para analizar tu experiencia, habilidades y perfil profesional."
+      "📎 Adjunta tu CV en PDF para analizar tu experiencia, habilidades y perfil profesional."
     );
 
     addOptions("¿Deseas cargar tu CV ahora?", [
-      { label: "Analizar mi CV", value: "analizar_cv" }
+      { label: "📄 Analizar mi CV", value: "analizar_cv" }
     ]);
 
     return true;
@@ -260,7 +308,7 @@ function handleFaqResponse(text = "") {
     t.includes("folio")
   ) {
     addAssistantText(
-      "Cuando tu postulación se envía correctamente, el sistema te muestra un folio. Guarda ese folio porque con él puedes consultar el estatus de tu solicitud."
+      "🔑 Cuando tu postulación se envía correctamente, el sistema te muestra un folio. Guarda ese folio porque con él puedes consultar el estatus de tu solicitud."
     );
     return true;
   }
@@ -274,11 +322,11 @@ function handleFaqResponse(text = "") {
     t.includes("el paso")
   ) {
     addAssistantText(
-      "Puedo ayudarte a buscar vacantes por ciudad o sucursal. La forma más clara es usar el mapa de ubicaciones para ver las sucursales disponibles y sus vacantes activas."
+      "📍 Puedo ayudarte a buscar vacantes por ciudad o sucursal. La forma más clara es usar el mapa de ubicaciones para ver las sucursales disponibles y sus vacantes activas."
     );
 
     addOptions("Continuar con búsqueda por ubicación:", [
-      { label: "Abrir mapa de ubicaciones", value: "buscar_ubicacion" }
+      { label: "📍 Abrir mapa de ubicaciones", value: "buscar_ubicacion" }
     ]);
 
     return true;
@@ -291,11 +339,11 @@ function handleFaqResponse(text = "") {
     t.includes("direccion")
   ) {
     addAssistantText(
-      "Puedes revisar las ubicaciones disponibles en el mapa de sucursales. Ahí podrás seleccionar la sucursal que te interese y ver vacantes relacionadas."
+      "📍 Puedes revisar las ubicaciones disponibles en el mapa de sucursales. Ahí podrás seleccionar la sucursal que te interese y ver vacantes relacionadas."
     );
 
     addOptions("Abrir mapa:", [
-      { label: "Buscar vacantes por ubicación", value: "buscar_ubicacion" }
+      { label: "📍 Buscar vacantes por ubicación", value: "buscar_ubicacion" }
     ]);
 
     return true;
@@ -359,7 +407,7 @@ function renderMessages() {
 
         const btn = document.createElement("button");
         btn.className = "chat-option-btn";
-        btn.textContent = "Me interesa";
+        btn.textContent = "💼 Me interesa";
         btn.type = "button";
 
         btn.addEventListener("click", () => {
@@ -455,7 +503,7 @@ function handleOption(value, label = "") {
 
   if (value === "consultar_estatus") {
     addAssistantText(
-      "Para consultar tu estatus, escribe tu folio en la sección 'Consultar estatus de mi solicitud'."
+      "🔑 Para consultar tu estatus, escribe tu folio en la sección 'Consultar estatus de mi solicitud'."
     );
     return;
   }
@@ -480,7 +528,7 @@ function startCvAnalysisFlow() {
   openChat();
 
   addAssistantText(
-    "Perfecto. Adjunta tu CV en PDF o imagen JPG/PNG para analizar tu experiencia, habilidades y perfil profesional."
+    "📎 Perfecto. Adjunta tu CV en PDF o imagen JPG/PNG para analizar tu experiencia, habilidades y perfil profesional."
   );
 
   if (input) {
@@ -492,17 +540,22 @@ function startCvAnalysisFlow() {
   }
 
   if (attachCvBtn) {
-    attachCvBtn.textContent = "Adjuntar CV";
+    attachCvBtn.textContent = "📎 Adjuntar CV";
   }
 }
 
 async function processCvAnalysisOnly() {
   if (!applicationFlow.cvFile) {
-    addAssistantText("Primero debes adjuntar tu CV en PDF o imagen.");
+    addAssistantText("⚠️ Primero debes adjuntar tu CV en PDF o imagen.");
     return;
   }
 
-  addAssistantText("Analizando CV y buscando vacantes relacionadas...");
+  const indicator = showTypingIndicator();
+  
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  indicator.remove();
+  
+  addAssistantText("🔍 Analizando tu CV y buscando las mejores oportunidades para ti...");
 
   const formData = new FormData();
   formData.append("cvFile", applicationFlow.cvFile);
@@ -537,31 +590,31 @@ async function processCvAnalysisOnly() {
     candidateProfile.suggestedVacancies = sugerencias;
 
     addAssistantText(
-      `Análisis completado.\n\nResumen detectado:\n${candidateProfile.resumenIA || "CV recibido correctamente."}`
+      `✅ Análisis completado.\n\n📝 Resumen detectado:\n${candidateProfile.resumenIA || "CV recibido correctamente."}`
     );
 
     if (sugerencias.length) {
       addVacancyCards(
-        "Con base en tu CV, estas vacantes podrían adaptarse mejor a tu perfil:",
+        "🎯 Con base en tu CV, estas vacantes podrían adaptarse mejor a tu perfil:",
         sugerencias
       );
 
       addOptions("Puedes seleccionar una vacante o seguir explorando opciones:", [
-        { label: "Buscar por ubicación", value: "buscar_ubicacion" },
-        { label: "Ver recomendaciones otra vez", value: "recomendar_vacantes" }
+        { label: "📍 Buscar por ubicación", value: "buscar_ubicacion" },
+        { label: "🎯 Ver recomendaciones otra vez", value: "recomendar_vacantes" }
       ]);
     } else {
       addAssistantText(
-        "No encontré una coincidencia directa con las vacantes actuales. Aun así, puedes buscar por ubicación o revisar vacantes disponibles."
+        "😅 No encontré una coincidencia directa con las vacantes actuales. Aun así, puedes buscar por ubicación o revisar vacantes disponibles."
       );
 
       addOptions("¿Cómo deseas continuar?", [
-        { label: "Buscar vacantes por ubicación", value: "buscar_ubicacion" }
+        { label: "📍 Buscar vacantes por ubicación", value: "buscar_ubicacion" }
       ]);
     }
   } catch (error) {
     console.error("Error analizando CV:", error);
-    addAssistantText(error.message || "Ocurrió un error al analizar el CV.");
+    addAssistantText(`❌ ${error.message || "Ocurrió un error al analizar el CV."}`);
   }
 }
 
@@ -570,12 +623,12 @@ function showCvRecommendations() {
 
   if (!candidateProfile.resumenIA && !sugerencias.length) {
     addAssistantText(
-      "Para recomendarte vacantes de forma precisa, primero necesito analizar tu CV."
+      "📄 Para recomendarte vacantes de forma precisa, primero necesito analizar tu CV."
     );
 
     addOptions("Puedes comenzar aquí:", [
-      { label: "Analizar mi CV", value: "analizar_cv" },
-      { label: "Buscar por ubicación", value: "buscar_ubicacion" }
+      { label: "📄 Analizar mi CV", value: "analizar_cv" },
+      { label: "📍 Buscar por ubicación", value: "buscar_ubicacion" }
     ]);
 
     return;
@@ -583,18 +636,18 @@ function showCvRecommendations() {
 
   if (sugerencias.length) {
     addVacancyCards(
-      "Según el análisis de tu CV, estas vacantes son las que más podrían interesarte:",
+      "🎯 Según el análisis de tu CV, estas vacantes son las que más podrían interesarte:",
       sugerencias
     );
     return;
   }
 
   addAssistantText(
-    "Ya tengo el análisis de tu CV, pero no encontré vacantes con coincidencia directa. Te recomiendo buscar por ubicación para revisar opciones disponibles."
+    "🔍 Ya tengo el análisis de tu CV, pero no encontré vacantes con coincidencia directa. Te recomiendo buscar por ubicación para revisar opciones disponibles."
   );
 
   addOptions("Puedes continuar aquí:", [
-    { label: "Buscar vacantes por ubicación", value: "buscar_ubicacion" }
+    { label: "📍 Buscar vacantes por ubicación", value: "buscar_ubicacion" }
   ]);
 }
 
@@ -618,12 +671,14 @@ function startApplicationFromVacancy(vacante) {
   };
 
   addAssistantText(
-    `Perfecto. Iniciaremos tu postulación para:\n\n${vacante.titulo}\n${vacante.grupo || ""}\n${vacante.sucursal || ""}\n${vacante.ciudad || ""}${vacante.estado ? ", " + vacante.estado : ""}\n\nPara continuar, dime tu nombre completo.`
+    `✨ Perfecto. Iniciaremos tu postulación para:\n\n📌 ${vacante.titulo}\n🏢 ${vacante.grupo || ""}\n📍 ${vacante.sucursal || ""}\n🌎 ${vacante.ciudad || ""}${vacante.estado ? ", " + vacante.estado : ""}\n\n📝 Para continuar, dime tu nombre completo.`
   );
 
   if (input) {
     input.placeholder = "Escribe tu nombre completo...";
   }
+  
+  showProgressStep(1);
 }
 
 async function handleApplicationFlow(text) {
@@ -632,30 +687,43 @@ async function handleApplicationFlow(text) {
       applicationFlow.data.nombre = text;
       candidateProfile.nombre = text;
       applicationFlow.step = 2;
-      addAssistantText("Gracias. Ahora compárteme tu correo electrónico.");
-      if (input) input.placeholder = "Correo electrónico...";
+      showProgressStep(2);
+      addAssistantText("📧 ¡Excelente! Ahora compárteme tu correo electrónico.");
+      if (input) input.placeholder = "correo@ejemplo.com...";
       break;
 
     case 2:
+      if (!isValidEmail(text)) {
+        addAssistantText("❌ El correo electrónico no parece válido. ¿Podrías verificarlo? (ejemplo: nombre@dominio.com)");
+        return;
+      }
       applicationFlow.data.correo = text;
       candidateProfile.correo = text;
       applicationFlow.step = 3;
-      addAssistantText("Perfecto. Ahora compárteme tu número de teléfono.");
-      if (input) input.placeholder = "Teléfono...";
+      showProgressStep(3);
+      addAssistantText("📱 Perfecto. Ahora compárteme tu número de teléfono.");
+      if (input) input.placeholder = "10 dígitos...";
       break;
 
     case 3:
+      const phoneClean = text.replace(/[\s\-()]/g, '');
+      if (phoneClean.length < 10) {
+        addAssistantText("❌ El número de teléfono debe tener al menos 10 dígitos. ¿Podrías revisarlo?");
+        return;
+      }
       applicationFlow.data.telefono = text;
       candidateProfile.telefono = text;
       applicationFlow.step = 4;
-      addAssistantText("¿Cuál es tu disponibilidad? Ejemplo: tiempo completo, medio tiempo o fines de semana.");
+      showProgressStep(4);
+      addAssistantText("⏰ ¿Cuál es tu disponibilidad para trabajar? Ejemplo: tiempo completo, medio tiempo o fines de semana.");
       if (input) input.placeholder = "Disponibilidad...";
       break;
 
     case 4:
       applicationFlow.data.disponibilidad = text;
       applicationFlow.step = 5;
-      addAssistantText("Cuéntame brevemente tu experiencia laboral o habilidades principales.");
+      showProgressStep(5);
+      addAssistantText("💼 Cuéntame brevemente tu experiencia laboral o habilidades principales.");
       if (input) input.placeholder = "Experiencia o habilidades...";
       break;
 
@@ -663,13 +731,14 @@ async function handleApplicationFlow(text) {
       applicationFlow.data.experiencia = text;
       applicationFlow.data.habilidades = text;
       applicationFlow.step = 6;
+      showProgressStep(6);
 
       if (applicationFlow.cvFile) {
-        addOptions("Ya tengo tu CV cargado. ¿Deseas enviar tu postulación?", [
-          { label: "Enviar postulación", value: "enviar_postulacion" }
+        addOptions("✅ Ya tengo tu CV cargado. ¿Deseas enviar tu postulación?", [
+          { label: "🚀 Enviar postulación", value: "enviar_postulacion" }
         ]);
       } else {
-        addAssistantText("Muy bien. Ahora adjunta tu CV para enviar tu postulación.");
+        addAssistantText("📎 Muy bien. Ahora adjunta tu CV para enviar tu postulación.");
       }
 
       if (input) input.placeholder = "Adjunta tu CV o escribe una duda...";
@@ -685,12 +754,12 @@ async function submitApplicationFromChat() {
   const vacante = applicationFlow.selectedVacancy;
 
   if (!vacante) {
-    addAssistantText("Primero necesitas seleccionar una vacante.");
+    addAssistantText("⚠️ Primero necesitas seleccionar una vacante.");
     return;
   }
 
   if (!applicationFlow.cvFile) {
-    addAssistantText("Antes de enviar tu postulación, adjunta tu CV en PDF o imagen.");
+    addAssistantText("⚠️ Antes de enviar tu postulación, adjunta tu CV en PDF o imagen.");
     return;
   }
 
@@ -698,7 +767,7 @@ async function submitApplicationFromChat() {
   const missingField = requiredFields.find((field) => !applicationFlow.data[field]);
 
   if (missingField) {
-    addAssistantText("Antes de enviar, necesito completar tus datos principales: nombre, correo y teléfono.");
+    addAssistantText("⚠️ Antes de enviar, necesito completar tus datos principales: nombre, correo y teléfono.");
     return;
   }
 
@@ -711,7 +780,11 @@ async function submitApplicationFromChat() {
   formData.append("cvFile", applicationFlow.cvFile);
 
   try {
-    addAssistantText("Enviando tu postulación...");
+    const indicator = showTypingIndicator();
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    indicator.remove();
+    
+    addAssistantText("📤 Enviando tu postulación...");
 
     const response = await fetch(`${API_URL}/api/postulacion`, {
       method: "POST",
@@ -730,17 +803,23 @@ async function submitApplicationFromChat() {
     applicationFlow.mode = "";
     applicationFlow.step = 0;
 
-    addAssistantText(
-      `Tu postulación fue enviada correctamente.\n\nVacante: ${postulacion.vacanteTitulo || vacante.titulo}\nFolio: ${postulacion.id}\n\nGuarda tu folio para consultar el estatus de tu solicitud.`
-    );
+    addAssistantText(`🎉 ¡Felicidades! Tu postulación fue enviada exitosamente!
+    
+📋 Vacante: ${postulacion.vacanteTitulo || vacante.titulo}
+🔑 Folio: ${postulacion.id}
 
-    addOptions("¿Deseas hacer algo más?", [
-      { label: "Consultar estatus", value: "consultar_estatus" },
-      { label: "Buscar otra vacante", value: "buscar_ubicacion" }
+⚠️ **Importante**: Guarda tu folio para consultar el estatus de tu solicitud.
+
+📧 Recibirás un correo de confirmación en los próximos minutos.`);
+
+    addOptions("¿Qué te gustaría hacer ahora?", [
+      { label: "🔍 Consultar estatus", value: "consultar_estatus" },
+      { label: "📍 Buscar otra vacante", value: "buscar_ubicacion" },
+      { label: "🎯 Ver recomendaciones", value: "recomendar_vacantes" }
     ]);
   } catch (error) {
     console.error("Error enviando postulación:", error);
-    addAssistantText(error.message || "No fue posible enviar tu postulación.");
+    addAssistantText(`❌ ${error.message || "No fue posible enviar tu postulación."}`);
   }
 }
 
@@ -755,7 +834,7 @@ async function consultarEstatus() {
 
   if (!folio) {
     consultaStatusResultado.classList.remove("hidden");
-    consultaStatusResultado.textContent = "Ingresa un folio.";
+    consultaStatusResultado.textContent = "⚠️ Ingresa un folio.";
     return;
   }
 
@@ -768,10 +847,10 @@ async function consultarEstatus() {
     }
 
     consultaStatusResultado.classList.remove("hidden");
-    consultaStatusResultado.textContent = `Estado actual: ${data.estadoSolicitud}`;
+    consultaStatusResultado.textContent = `📊 Estado actual: ${data.estadoSolicitud}`;
   } catch (error) {
     consultaStatusResultado.classList.remove("hidden");
-    consultaStatusResultado.textContent = error.message || "No fue posible consultar.";
+    consultaStatusResultado.textContent = `❌ ${error.message || "No fue posible consultar."}`;
   }
 }
 
@@ -807,11 +886,11 @@ async function handleFreeText(text) {
 
   if (userWantsLocation(text)) {
     addAssistantText(
-      "Claro. Puedes buscar vacantes por ubicación en nuestro mapa de sucursales."
+      "📍 Claro. Puedes buscar vacantes por ubicación en nuestro mapa de sucursales."
     );
 
     addOptions("Continuar con búsqueda por ubicación:", [
-      { label: "Abrir mapa de ubicaciones", value: "buscar_ubicacion" }
+      { label: "📍 Abrir mapa de ubicaciones", value: "buscar_ubicacion" }
     ]);
 
     return;
@@ -819,40 +898,40 @@ async function handleFreeText(text) {
 
   if (userWantsStatus(text)) {
     addAssistantText(
-      "Para consultar tu estatus, usa tu folio en la sección 'Consultar estatus de mi solicitud'."
+      "🔑 Para consultar tu estatus, usa tu folio en la sección 'Consultar estatus de mi solicitud'."
     );
     return;
   }
 
   if (normalized.includes("hola") || normalized.includes("buenas")) {
-    addOptions("Hola. ¿Cómo deseas continuar?", [
-      { label: "Analizar mi CV", value: "analizar_cv" },
-      { label: "Buscar vacantes por ubicación", value: "buscar_ubicacion" },
-      { label: "¿Qué vacante me recomiendas?", value: "recomendar_vacantes" }
+    addOptions("👋 Hola. ¿Cómo deseas continuar?", [
+      { label: "📄 Analizar mi CV", value: "analizar_cv" },
+      { label: "📍 Buscar vacantes por ubicación", value: "buscar_ubicacion" },
+      { label: "🎯 Recomendaciones personalizadas", value: "recomendar_vacantes" }
     ]);
     return;
   }
 
   if (candidateProfile.resumenIA) {
     addAssistantText(
-      "Puedo ayudarte con recomendaciones basadas en tu CV. Si quieres, escribe: 'qué vacante se adapta a mi perfil' o selecciona una opción."
+      "🎯 Puedo ayudarte con recomendaciones basadas en tu CV. Si quieres, escribe: 'qué vacante se adapta a mi perfil' o selecciona una opción."
     );
 
     addOptions("Opciones disponibles:", [
-      { label: "Ver vacantes recomendadas", value: "recomendar_vacantes" },
-      { label: "Buscar por ubicación", value: "buscar_ubicacion" }
+      { label: "🎯 Ver vacantes recomendadas", value: "recomendar_vacantes" },
+      { label: "📍 Buscar por ubicación", value: "buscar_ubicacion" }
     ]);
 
     return;
   }
 
   addAssistantText(
-    "Puedo ayudarte a analizar tu CV, recomendarte vacantes, buscar oportunidades por ubicación o resolver dudas del proceso."
+    "🤖 Puedo ayudarte a analizar tu CV, recomendarte vacantes, buscar oportunidades por ubicación o resolver dudas del proceso."
   );
 
   addOptions("Selecciona una opción:", [
-    { label: "Analizar mi CV", value: "analizar_cv" },
-    { label: "Buscar vacantes por ubicación", value: "buscar_ubicacion" }
+    { label: "📄 Analizar mi CV", value: "analizar_cv" },
+    { label: "📍 Buscar vacantes por ubicación", value: "buscar_ubicacion" }
   ]);
 }
 
@@ -889,31 +968,30 @@ if (attachCvBtn && chatCvFile) {
 
   chatCvFile.addEventListener("change", async () => {
     const file = chatCvFile.files && chatCvFile.files[0];
-
     if (!file) return;
 
     const name = file.name.toLowerCase();
-
-    const isValidFile =
-      file.type === "application/pdf" ||
-      file.type.startsWith("image/") ||
-      name.endsWith(".pdf") ||
-      name.endsWith(".jpg") ||
-      name.endsWith(".jpeg") ||
-      name.endsWith(".png");
+    const isValidFile = file.type === "application/pdf" || 
+                       file.type.startsWith("image/") ||
+                       name.endsWith(".pdf") || 
+                       name.endsWith(".jpg") || 
+                       name.endsWith(".jpeg") || 
+                       name.endsWith(".png");
 
     if (!isValidFile) {
-      addAssistantText("Solo se permiten archivos PDF o imágenes JPG/PNG.");
+      addAssistantText("❌ Solo se permiten archivos PDF o imágenes JPG/PNG.");
       return;
     }
 
+    const fileSize = (file.size / 1024 / 1024).toFixed(2);
+    addAssistantText(`✅ CV cargado correctamente!\n📄 ${file.name} (${fileSize} MB)`);
+
     applicationFlow.cvFile = file;
 
-    addAssistantText(`CV cargado correctamente:\n${file.name}`);
-
     if (applicationFlow.mode === "application") {
-      addOptions("CV recibido. ¿Deseas enviar tu postulación ahora?", [
-        { label: "Enviar postulación", value: "enviar_postulacion" }
+      addAssistantText("🎯 ¡Perfecto! Ahora tienes todo listo para postularte.");
+      addOptions("¿Listo para enviar tu postulación?", [
+        { label: "🚀 Enviar postulación", value: "enviar_postulacion" }
       ]);
       return;
     }
@@ -957,7 +1035,7 @@ async function revisarAplicacionDesdeUrl() {
 
     if (!vacante) {
       openChat();
-      addAssistantText("No pude encontrar la vacante seleccionada. Puedes buscar otra vacante desde ubicaciones.");
+      addAssistantText("❌ No pude encontrar la vacante seleccionada. Puedes buscar otra vacante desde ubicaciones.");
       return;
     }
 

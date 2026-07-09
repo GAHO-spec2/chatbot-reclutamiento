@@ -20,6 +20,7 @@
     </div>
 
     <div class="topbar__right">
+      <a href="entrevistas.html" class="btn btn--secondary">Entrevistas</a>
       <a href="vacantes-admin.html" class="btn btn--secondary">Administrar vacantes</a>
       <button id="logoutBtn" class="btn btn--primary" type="button">Cerrar sesion</button>
     </div>
@@ -122,13 +123,93 @@
           <a id="modalCvLink" href="#" target="_blank" class="btn btn--secondary">Ver CV PDF</a>
         </div>
       </div>
-
+      
       <div class="modal__footer">
-        <button id="approveBtn" class="btn btn--primary">Aprobar</button>
-        <button id="rejectBtn" class="btn btn--secondary">Rechazar</button>
-      </div>
+  <button id="scheduleInterviewBtn" class="btn btn--primary">
+    Agendar entrevista
+  </button>
+
+  <button id="approveBtn" class="btn btn--primary">
+    Aprobar
+  </button>
+
+  <button id="rejectBtn" class="btn btn--secondary">
+    Rechazar
+  </button>
+</div>
+
+      
     </div>
   </div>
+  
+  <div id="interviewModal" class="modal hidden">
+  <div class="modal__backdrop" id="closeInterviewBackdrop"></div>
+
+  <div class="modal__content">
+    <div class="modal__header">
+      <div>
+        <h3>Agendar entrevista</h3>
+        <p>Programa la entrevista del candidato.</p>
+      </div>
+
+      <button id="closeInterviewBtn" class="chatbot-close">
+        x
+      </button>
+    </div>
+
+    <div class="modal__body">
+
+      <div class="form-grid">
+
+        <div class="field">
+          <label>Fecha</label>
+          <input type="date" id="interviewDate">
+        </div>
+
+        <div class="field">
+          <label>Hora</label>
+          <input type="time" id="interviewTime">
+        </div>
+
+        <div class="field">
+          <label>Reclutador</label>
+          <input
+            type="text"
+            id="interviewRecruiter"
+            placeholder="Nombre del reclutador">
+        </div>
+
+        <div class="field">
+          <label>Tipo</label>
+
+          <select id="interviewType">
+            <option value="presencial">Presencial</option>
+            <option value="videollamada">Videollamada</option>
+            <option value="telefonica">Telefónica</option>
+          </select>
+        </div>
+
+        <div class="field field--full">
+          <label>Comentarios</label>
+
+         <textarea id="interviewComments" placeholder="Indicaciones adicionales para el candidato"></textarea>
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="modal__footer">
+      <button
+        id="saveInterviewBtn"
+        class="btn btn--primary">
+
+        Guardar entrevista
+      </button>
+    </div>
+
+  </div>
+</div>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>

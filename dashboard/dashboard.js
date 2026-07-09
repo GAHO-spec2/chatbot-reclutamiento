@@ -1,4 +1,5 @@
 const API_URL = "https://chatbot-reclutamiento-cl32.onrender.com";
+
 /* =========================
    FIREBASE AUTH
 ========================= */
@@ -53,6 +54,17 @@ const modalAppleMapsLink = document.getElementById("modalAppleMapsLink");
 
 const approveBtn = document.getElementById("approveBtn");
 const rejectBtn = document.getElementById("rejectBtn");
+const scheduleInterviewBtn = document.getElementById("scheduleInterviewBtn");
+
+const interviewModal = document.getElementById("interviewModal");
+const closeInterviewBtn = document.getElementById("closeInterviewBtn");
+const closeInterviewBackdrop = document.getElementById("closeInterviewBackdrop");
+const interviewDate = document.getElementById("interviewDate");
+const interviewTime = document.getElementById("interviewTime");
+const interviewRecruiter = document.getElementById("interviewRecruiter");
+const interviewType = document.getElementById("interviewType");
+const interviewComments = document.getElementById("interviewComments");
+const saveInterviewBtn = document.getElementById("saveInterviewBtn");
 
 let postulaciones = [];
 let selectedCandidate = null;
@@ -70,7 +82,6 @@ function formatFecha(fechaIso) {
   if (!fechaIso) return "-";
 
   const date = new Date(fechaIso);
-
   if (isNaN(date.getTime())) return "-";
 
   return date.toLocaleString("es-MX", {
@@ -84,7 +95,15 @@ function formatFecha(fechaIso) {
 
 function getEstadoClass(estado) {
   if (estado === "aprobado") return "estado estado--aprobado";
-  if (estado === "rechazado") return "estado estado--rechazado";
+
+  if (estado === "rechazado") {
+    return "estado estado--rechazado";
+  }
+
+  if (estado === "entrevista_agendada") {
+    return "estado estado--entrevista";
+  }
+
   return "estado estado--pendiente";
 }
 
@@ -136,7 +155,7 @@ function getAppleMapsUrl(candidate) {
 function updateStats() {
   const total = postulaciones.length;
   const pendientes = postulaciones.filter(p => p.estadoSolicitud === "pendiente").length;
-  const aprobados = postulaciones.filter(p => p.estadoSolicitud === "aprobado").length;
+  const aprobados = postulaciones.filter(p => p.estadoSolicitud === "aprobado" || p.estadoSolicitud === "entrevista_agendada").length;
   const rechazados = postulaciones.filter(p => p.estadoSolicitud === "rechazado").length;
 
   if (statTotal) statTotal.textContent = total;
@@ -184,6 +203,7 @@ function renderPostulaciones() {
         <p><strong>Grupo:</strong> ${postulacion.grupoSeleccionado || "-"}</p>
         <p><strong>Tipo:</strong> ${postulacion.tipoVacante || "-"}</p>
         <p><strong>CV:</strong> ${postulacion.cvNombre || "No disponible"}</p>
+        ${postulacion.fechaEntrevista ? `<p><strong>Entrevista:</strong> ${postulacion.fechaEntrevista} ${postulacion.horaEntrevista || ""}</p>` : ""}
       </div>
 
       <div class="dashboard-card__actions">
@@ -208,7 +228,7 @@ function renderPostulaciones() {
 }
 
 /* =========================
-   MODAL
+   MODAL CANDIDATO
 ========================= */
 function openCandidateModal(candidate) {
   selectedCandidate = candidate;
@@ -225,18 +245,12 @@ function openCandidateModal(candidate) {
   modalHabilidades.textContent = candidate.habilidades || "No proporcionadas";
 
   if (candidate.cvRuta) {
-    if (candidate.cvRuta) {
-  if (candidate.cvRuta.startsWith("http")) {
-    modalCvLink.href = candidate.cvRuta;
-  } else {
-    modalCvLink.href = `${API_URL}${candidate.cvRuta}`;
-  }
+    if (candidate.cvRuta.startsWith("http")) {
+      modalCvLink.href = candidate.cvRuta;
+    } else {
+      modalCvLink.href = `${API_URL}${candidate.cvRuta}`;
+    }
 
-  modalCvLink.classList.remove("hidden");
-} else {
-  modalCvLink.href = "#";
-  modalCvLink.classList.add("hidden");
-}
     modalCvLink.classList.remove("hidden");
   } else {
     modalCvLink.href = "#";
@@ -252,6 +266,95 @@ function openCandidateModal(candidate) {
 function closeCandidateModal() {
   modal.classList.add("hidden");
   selectedCandidate = null;
+}
+
+/* =========================
+   MODAL ENTREVISTA
+========================= */
+function openInterviewModal() {
+  if (!selectedCandidate) {
+    setStatus("⚠️ Primero selecciona un candidato.");
+    return;
+  }
+
+  if (interviewDate) interviewDate.value = "";
+  if (interviewTime) interviewTime.value = "";
+  if (interviewRecruiter) interviewRecruiter.value = "";
+  if (interviewType) interviewType.value = "presencial";
+  if (interviewComments) interviewComments.value = "";
+
+  interviewModal.classList.remove("hidden");
+}
+
+function closeInterviewModal() {
+  interviewModal.classList.add("hidden");
+}
+
+async function guardarEntrevista() {
+  if (!selectedCandidate?.id) {
+    setStatus("⚠️ No hay candidato seleccionado.");
+    return;
+  }
+
+  const fecha = interviewDate?.value || "";
+  const hora = interviewTime?.value || "";
+  const reclutador = interviewRecruiter?.value.trim() || "";
+  const tipo = interviewType?.value || "presencial";
+  const comentarios = interviewComments?.value.trim() || "";
+
+  if (!fecha || !hora) {
+    setStatus("⚠️ Selecciona fecha y hora para la entrevista.");
+    return;
+  }
+
+  try {
+    if (saveInterviewBtn) {
+      saveInterviewBtn.disabled = true;
+      saveInterviewBtn.textContent = "Guardando...";
+    }
+
+    const res = await fetch(`${API_URL}/api/entrevistas`, {
+      method: "POST",
+      headers: authHeaders({
+        "Content-Type": "application/json"
+      }),
+      body: JSON.stringify({
+        candidatoId: selectedCandidate.id,
+        candidatoNombre: selectedCandidate.nombre || "Sin nombre",
+        correo: selectedCandidate.correo || "",
+        telefono: selectedCandidate.telefono || "",
+        puesto: selectedCandidate.vacanteTitulo || selectedCandidate.puestoInteres || "",
+        sucursal: selectedCandidate.sucursal || selectedCandidate.sucursalNombre || "",
+        ciudad: selectedCandidate.ciudad || "",
+        fecha,
+        hora,
+        reclutador,
+        tipo,
+        comentarios
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || "No fue posible guardar la entrevista.");
+    }
+
+    closeInterviewModal();
+    closeCandidateModal();
+
+    await cargarPostulaciones();
+
+    setStatus("✅ Entrevista agendada correctamente.");
+  } catch (error) {
+    console.error("Error guardando entrevista:", error);
+    setStatus(`⚠️ ${error.message}`);
+  } finally {
+    if (saveInterviewBtn) {
+      saveInterviewBtn.disabled = false;
+      saveInterviewBtn.textContent = "Guardar entrevista";
+    }
+  }
 }
 
 /* =========================
@@ -326,6 +429,22 @@ if (closeModalBtn) closeModalBtn.addEventListener("click", closeCandidateModal);
 if (closeModalBackdrop) closeModalBackdrop.addEventListener("click", closeCandidateModal);
 if (approveBtn) approveBtn.addEventListener("click", () => actualizarEstado("aprobado"));
 if (rejectBtn) rejectBtn.addEventListener("click", () => actualizarEstado("rechazado"));
+
+if (scheduleInterviewBtn) {
+  scheduleInterviewBtn.addEventListener("click", openInterviewModal);
+}
+
+if (closeInterviewBtn) {
+  closeInterviewBtn.addEventListener("click", closeInterviewModal);
+}
+
+if (closeInterviewBackdrop) {
+  closeInterviewBackdrop.addEventListener("click", closeInterviewModal);
+}
+
+if (saveInterviewBtn) {
+  saveInterviewBtn.addEventListener("click", guardarEntrevista);
+}
 
 /* =========================
    INIT

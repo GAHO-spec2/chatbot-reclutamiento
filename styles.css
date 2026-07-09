@@ -28,21 +28,34 @@ body {
   margin: 0;
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.04), transparent 28%),
-    radial-gradient(circle at top right, rgba(255, 255, 255, 0.03), transparent 24%),
-    linear-gradient(180deg, #000000 0%, #090909 45%, #111111 100%);
+    radial-gradient(circle at 20% 10%, rgba(56, 189, 248, 0.12), transparent 28%),
+    radial-gradient(circle at 90% 20%, rgba(53, 255, 138, 0.06), transparent 26%),
+    linear-gradient(180deg, #020617 0%, #050505 42%, #0b0b0b 100%) !important;
   color: var(--text);
   min-height: 100vh;
 }
 
+/* ===== FONDO ANIMADO ===== */
+#dotted-surface-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* =========================
+   TOPBAR
+========================= */
 .topbar {
   padding: 14px 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  background: rgba(0,0,0,0.94);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  background: rgba(0, 0, 0, 0.82);
   position: sticky;
   top: 0;
   z-index: 1000;
   backdrop-filter: blur(10px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
 }
 
 .topbar__left {
@@ -54,11 +67,11 @@ body {
 }
 
 .corporativo-logo {
-  width: 58px;
-  height: 58px;
+  width: 54px;
+  height: 54px;
   object-fit: contain;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.03);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.035);
   padding: 6px;
   border: 1px solid rgba(255,255,255,0.08);
 }
@@ -68,6 +81,7 @@ body {
   font-size: 1rem;
   color: #ffffff;
   letter-spacing: 0.4px;
+  font-family: "Space Grotesk", system-ui, sans-serif;
 }
 
 .topbar__left p {
@@ -76,18 +90,27 @@ body {
   font-size: 13px;
 }
 
+/* =========================
+   HERO
+========================= */
 .hero {
-  padding: 74px 20px 42px;
+  padding: 82px 20px 56px !important;
+  display: block !important;
 }
 
 .hero__content {
-  width: min(1200px, 92%);
+  width: min(1120px, 92%) !important;
   margin: 0 auto;
-  padding: 52px;
-  border: 1px solid var(--line);
-  border-radius: 32px;
-  background: linear-gradient(135deg, rgba(18,18,18,0.98), rgba(8,8,8,0.96));
-  box-shadow: var(--shadow);
+  padding: clamp(34px, 5vw, 64px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 34px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.055), transparent 35%),
+    radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.12), transparent 34%),
+    linear-gradient(135deg, rgba(18, 18, 18, 0.92), rgba(7, 7, 7, 0.94));
+  box-shadow:
+    0 28px 80px rgba(0, 0, 0, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   position: relative;
   overflow: hidden;
 }
@@ -98,45 +121,137 @@ body {
   inset: 0;
   background: radial-gradient(circle at top right, rgba(255,255,255,0.06), transparent 34%);
   pointer-events: none;
+  opacity: 0.55;
 }
 
-.hero h1 {
-  margin: 0 0 16px;
-  font-size: clamp(2.3rem, 5vw, 4.6rem);
-  line-height: 1.02;
-  color: #ffffff;
+.hero__content--compact {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+/* =========================
+   TITULOS SCRAMBLE
+========================= */
+.scramble-title {
+  display: block;
+  width: 100%;
+  max-width: 980px !important;
+  margin: 0 auto 22px !important;
+  text-align: center !important;
+  font-family: "Space Grotesk", system-ui, sans-serif !important;
+  font-size: clamp(2.55rem, 5vw, 5rem) !important;
+  font-weight: 800 !important;
+  line-height: 1.06 !important;
+  letter-spacing: -0.055em !important;
+  color: #ffffff !important;
+  text-shadow:
+    0 0 18px rgba(56, 189, 248, 0.38),
+    0 0 46px rgba(56, 189, 248, 0.16) !important;
+}
+
+.scramble-title::after {
+  content: "";
+  display: block;
+  width: 96px !important;
+  height: 2px !important;
+  margin: 22px auto 0 !important;
+  border-radius: 999px;
+  opacity: 0.85;
+  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.95), transparent) !important;
+}
+
+.scramble-title--section {
+  font-size: clamp(2rem, 4vw, 3.5rem);
   max-width: 900px;
 }
 
-.hero p {
-  margin: 0;
-  max-width: 760px;
-  color: var(--muted);
-  font-size: 1.06rem;
-  line-height: 1.7;
+.hero__content--compact p {
+  max-width: 760px !important;
+  margin: 0 auto !important;
+  color: rgba(245, 245, 245, 0.68) !important;
+  font-size: clamp(1rem, 1.6vw, 1.12rem) !important;
+  line-height: 1.75 !important;
 }
 
+/* =========================
+   BOTONES
+========================= */
 .hero__actions {
-  display: flex;
+  margin-top: 34px !important;
+  display: flex !important;
+  justify-content: center !important;
+  gap: 14px !important;
   flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 34px;
 }
 
+.btn {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 13px 22px;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.18s ease, opacity 0.18s ease, background 0.18s ease, border 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn--primary {
+  background: linear-gradient(135deg, #ffffff, #d8d8d8);
+  color: #050505;
+  box-shadow:
+    0 12px 28px rgba(255, 255, 255, 0.10),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.btn--secondary {
+  background: rgba(255,255,255,0.08);
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+.btn--ghost {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  backdrop-filter: blur(12px);
+}
+
+.btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* =========================
+   CONTAINER Y CARDS
+========================= */
 .container {
   width: min(1200px, 92%);
-  margin: 0 auto 60px;
+  margin: 10px auto 60px;
   display: grid;
   gap: 24px;
 }
 
 .card {
   padding: 30px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--panel);
-  backdrop-filter: blur(16px);
-  box-shadow: var(--shadow);
+  border: 1px solid rgba(255, 255, 255, 0.105);
+  border-radius: 28px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018));
+  box-shadow:
+    0 22px 60px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
   overflow: hidden;
 }
 
@@ -155,6 +270,7 @@ body {
   margin: 0 0 8px;
   font-size: 1.6rem;
   color: #ffffff;
+  font-family: "Space Grotesk", system-ui, sans-serif;
 }
 
 .section-head p {
@@ -171,6 +287,9 @@ body {
   letter-spacing: 0.08em;
 }
 
+/* =========================
+   FORMULARIOS
+========================= */
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -197,14 +316,15 @@ input,
 textarea,
 select {
   width: 100%;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.13);
+  background: rgba(255, 255, 255, 0.045);
   color: #ffffff;
   border-radius: 16px;
   padding: 14px 15px;
   outline: none;
   transition: 0.25s ease;
   font-size: 14px;
+  font-family: "Inter", system-ui, sans-serif;
 }
 
 input::placeholder,
@@ -215,8 +335,8 @@ textarea::placeholder {
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: rgba(255,255,255,0.45);
-  box-shadow: 0 0 0 4px rgba(255,255,255,0.08);
+  border-color: rgba(56, 189, 248, 0.42);
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.10);
   background: rgba(255,255,255,0.06);
 }
 
@@ -231,46 +351,9 @@ select option {
   color: #ffffff;
 }
 
-.btn {
-  appearance: none;
-  border: 0;
-  border-radius: 16px;
-  padding: 13px 18px;
-  font-weight: 700;
-  cursor: pointer;
-  text-decoration: none;
-  transition: transform 0.18s ease, opacity 0.18s ease, background 0.18s ease, border 0.18s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn:hover {
-  transform: translateY(-1px);
-}
-
-.btn--primary {
-  background: linear-gradient(135deg, #ffffff, #d7d7d7);
-  color: #000000;
-}
-
-.btn--secondary {
-  background: rgba(255,255,255,0.08);
-  color: #ffffff;
-  border: 1px solid rgba(255,255,255,0.10);
-}
-
-.btn--ghost {
-  background: transparent;
-  color: #ffffff;
-  border: 1px solid rgba(255,255,255,0.18);
-}
-
-.btn--ghost:hover,
-.btn--secondary:hover {
-  background: rgba(255,255,255,0.10);
-}
-
+/* =========================
+   STATUS
+========================= */
 .status {
   margin-top: 16px;
   padding: 14px 16px;
@@ -288,27 +371,28 @@ select option {
 }
 
 /* =========================
-   HERO BUSCADOR TIPO STARBUCKS
+   HERO BUSCADOR
 ========================= */
 .store-search-hero {
   display: grid;
   grid-template-columns: 1fr 1fr;
   min-height: 360px;
   overflow: hidden;
-  border-radius: 26px;
-  border: 1px solid var(--line);
-  background: rgba(255,255,255,0.04);
-  box-shadow: var(--shadow);
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.105);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015));
+  box-shadow:
+    0 22px 60px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .store-search-hero__image {
   position: relative;
   min-height: 360px;
   background:
-    linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0.02)),
-    radial-gradient(circle at 50% 50%, rgba(53,255,138,0.24), transparent 24%),
-    repeating-linear-gradient(35deg, rgba(255,255,255,0.14) 0 4px, transparent 4px 54px),
-    linear-gradient(135deg, #122019, #1b2f25);
+    radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.20), transparent 25%),
+    linear-gradient(135deg, #07111d, #0d1b2c 48%, #080808);
   display: grid;
   place-items: center;
 }
@@ -330,10 +414,12 @@ select option {
   height: 190px;
   border-radius: 50% 50% 50% 12px;
   transform: rotate(-45deg);
-  background: linear-gradient(135deg, #ffffff, #d7d7d7);
+  background: linear-gradient(135deg, #ffffff, #d5d5d5);
   display: grid;
   place-items: center;
-  box-shadow: 0 28px 60px rgba(0,0,0,0.45);
+  box-shadow:
+    0 30px 70px rgba(0, 0, 0, 0.45),
+    0 0 44px rgba(56, 189, 248, 0.20);
   z-index: 2;
 }
 
@@ -350,13 +436,13 @@ select option {
 .store-search-hero__content {
   padding: 44px;
   background:
-    radial-gradient(circle at top right, rgba(53,255,138,0.10), transparent 34%),
-    linear-gradient(135deg, rgba(18,18,18,0.96), rgba(10,10,10,0.98));
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.10), transparent 36%),
+    linear-gradient(135deg, rgba(16, 16, 16, 0.96), rgba(7, 7, 7, 0.98));
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  text-align: center;
+  text-align: center !important;
 }
 
 .store-search-hero__content h2 {
@@ -364,35 +450,41 @@ select option {
   max-width: 560px;
   font-size: clamp(2rem, 4vw, 3.2rem);
   line-height: 1.1;
-  text-transform: uppercase;
+  text-transform: none !important;
+  letter-spacing: -0.045em !important;
+  text-shadow: 0 0 14px rgba(56, 189, 248, 0.25) !important;
+  font-family: "Space Grotesk", system-ui, sans-serif;
 }
 
 .store-search-hero__content p {
   margin: 0 0 28px;
-  max-width: 560px;
+  max-width: 760px;
   color: var(--muted);
   font-size: 1.05rem;
   line-height: 1.7;
+  text-align: center;
 }
-
 
 /* =========================
    CHATBOT
 ========================= */
 .chatbot-box {
-  position: fixed;
-  right: 22px;
-  bottom: 96px;
-  width: min(430px, calc(100vw - 24px));
-  height: 680px;
+  position: fixed !important;
+  right: 24px !important;
+  bottom: 118px !important;
+  width: 390px !important;
+  height: 560px !important;
+  max-height: 560px !important;
+  border-radius: 28px !important;
+  overflow: hidden !important;
+  z-index: 1190 !important;
+  background:
+    linear-gradient(145deg, rgba(18, 18, 18, 0.98), rgba(5, 5, 5, 0.98));
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.56),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
   display: flex;
   flex-direction: column;
-  background: rgba(10,10,10,0.98);
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  overflow: hidden;
-  box-shadow: var(--shadow);
-  z-index: 1100;
 }
 
 .chatbot-header {
@@ -402,11 +494,13 @@ select option {
   gap: 14px;
   padding: 16px;
   border-bottom: 1px solid var(--line);
-  background: rgba(255,255,255,0.03);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
 }
 
 .chatbot-header strong {
   color: #ffffff;
+  font-family: "Space Grotesk", system-ui, sans-serif;
 }
 
 .chatbot-header p {
@@ -426,8 +520,9 @@ select option {
 }
 
 .chatbot-messages {
-  flex: 1;
-  overflow-y: auto;
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -440,7 +535,8 @@ select option {
   border-radius: 16px;
   line-height: 1.5;
   white-space: pre-wrap;
-  font-size: 14px;
+  font-size: 15px;
+  font-family: "Inter", system-ui, sans-serif;
 }
 
 .msg.user {
@@ -471,6 +567,8 @@ select option {
   color: #000000;
   font-weight: 700;
   cursor: pointer;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 .chatbot-upload-bar {
@@ -478,29 +576,34 @@ select option {
 }
 
 .chatbot-form {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 8px;
+  flex-shrink: 0 !important;
+  display: grid !important;
+  grid-template-columns: 50px 1fr 88px !important;
+  align-items: center !important;
+  gap: 10px !important;
   padding: 14px;
   border-top: 1px solid var(--line);
   background: rgba(0,0,0,0.35);
 }
 
 #attachCvBtn {
-  width: 46px;
-  height: 46px;
-  padding: 0;
-  border-radius: 15px;
-  font-size: 0;
+  width: 50px !important;
+  height: 50px !important;
+  padding: 0 !important;
+  border-radius: 18px !important;
+  font-size: 0 !important;
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.14);
   color: #ffffff;
-  position: relative;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #attachCvBtn::before {
   content: "📎";
-  font-size: 20px;
+  font-size: 22px;
 }
 
 #attachCvBtn:hover {
@@ -511,21 +614,26 @@ select option {
 #chatbot-input {
   flex: 1;
   min-width: 0;
-  height: 46px;
+  height: 50px;
   border-radius: 15px;
 }
 
 #chatbot-send {
   border: 0;
   border-radius: 15px;
-  padding: 0 18px;
-  min-height: 46px;
+  padding: 0 12px !important;
+  min-height: 50px !important;
   background: linear-gradient(135deg, #ffffff, #d9d9d9);
   color: #000000;
   font-weight: 800;
   cursor: pointer;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  letter-spacing: -0.01em;
 }
 
+/* =========================
+   BOTÓN CHATBOT TOGGLE
+========================= */
 .chatbot-toggle {
   position: fixed;
   right: 22px;
@@ -588,588 +696,6 @@ select option {
   border: 2px solid #0b0b0b;
 }
 
-@keyframes chatbotFloat {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-6px); }
-}
-
-@keyframes chatbotPulse {
-  0% { transform: scale(0.92); opacity: 0.55; }
-  70%, 100% { transform: scale(1.18); opacity: 0; }
-}
-
-/* =========================
-   RESPONSIVE
-========================= */
-@media (max-width: 980px) {
-  .store-search-hero {
-    grid-template-columns: 1fr;
-  }
-
-  .store-search-hero__image {
-    min-height: 280px;
-  }
-
-  .store-search-hero__pin {
-    width: 150px;
-    height: 150px;
-  }
-
-  .store-search-hero__pin img {
-    width: 82px;
-    height: 82px;
-  }
-
-  .branch-layout,
-  .branch-vacancies {
-    grid-template-columns: 1fr;
-  }
-
-  .branch-map {
-    min-height: 440px;
-  }
-
-  #realBranchMap {
-    min-height: 410px;
-  }
-}
-
-@media (max-width: 780px) {
-  .hero__content,
-  .card {
-    padding: 22px;
-  }
-
-  .store-search-hero__content {
-    padding: 30px 22px;
-  }
-
-  .store-search-hero__content h2 {
-    font-size: 2rem;
-  }
-
-  .branch-card {
-    padding: 0;
-  }
-
-  .branch-card > .section-head,
-  .branch-card > .vacancy-board {
-    padding: 22px;
-  }
-
-  .section-head--split,
-  .vacancy-board__head {
-    display: grid;
-  }
-
-  .branch-map-actions {
-    width: 100%;
-    justify-content: stretch;
-  }
-
-  .branch-map-actions .btn {
-    width: 100%;
-  }
-
-  .branch-filters {
-    grid-template-columns: 1fr;
-  }
-
-  .branch-filters .field {
-    grid-column: 1 / -1;
-  }
-
-  .vacancy-board {
-    width: calc(100% - 24px);
-    top: 50%;
-    max-height: 82%;
-    padding: 20px;
-  }
-
-  .vacancy-board__head p,
-  .vacancy-board__tools {
-    text-align: left;
-    justify-content: flex-start;
-  }
-
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .chatbot-box {
-    right: 12px;
-    left: 12px;
-    width: auto;
-    bottom: 86px;
-    height: 78vh;
-  }
-
-  .chatbot-toggle {
-    width: 72px;
-    height: 72px;
-    right: 14px;
-    bottom: 14px;
-  }
-
-  .chatbot-toggle__core {
-    width: 58px;
-    height: 58px;
-  }
-
-  select,
-  input,
-  textarea {
-    font-size: 16px;
-  }
-
-  .hero h1 {
-    font-size: 2.5rem;
-  }
-
-  .hero p {
-    font-size: 1rem;
-  }
-
-  .chat-options {
-    flex-direction: column;
-  }
-
-  .chat-option-btn {
-    width: 100%;
-  }
-}
-/* ===== FONDO ANIMADO ===== */
-
-#dotted-surface-bg {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-body {
-  background: radial-gradient(circle at top, #102033 0%, #050816 45%, #020617 100%);
-  min-height: 100vh;
-}
-
-/* ===== HERO CENTRADO ===== */
-
-.hero {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.hero__content--compact {
-  width: min(1200px, 92%);
-  margin: 0 auto !important;
-  display: flex !important;
-  flex-direction: column;
-  align-items: center !important;
-  justify-content: center !important;
-  text-align: center !important;
-}
-
-.hero__content--compact h1,
-.hero__content--compact p {
-  margin-left: auto !important;
-  margin-right: auto !important;
-  text-align: center !important;
-}
-
-.hero__content--compact p {
-  max-width: 900px;
-}
-
-.hero__actions {
-  width: 100%;
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-/* ===== TITULOS SCRAMBLE ===== */
-
-.scramble-title {
-  display: block;
-  width: 100%;
-  max-width: 1100px;
-  margin: 0 auto 25px auto !important;
-  text-align: center !important;
-  font-family: "Courier New", monospace;
-  font-size: clamp(2.8rem, 6vw, 5.5rem);
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -0.04em;
-  color: #ffffff;
-  text-shadow:
-    0 0 10px rgba(56, 189, 248, 0.7),
-    0 0 25px rgba(56, 189, 248, 0.5),
-    0 0 50px rgba(56, 189, 248, 0.3);
-}
-
-.scramble-title::after {
-  content: "";
-  display: block;
-  width: 120px;
-  height: 3px;
-  margin: 18px auto 0;
-  border-radius: 999px;
-  background: linear-gradient(90deg, transparent, #38bdf8, transparent);
-}
-
-.scramble-title--section {
-  font-size: clamp(2rem, 4vw, 3.5rem);
-  max-width: 900px;
-}
-
-/* ===== SECCION UBICACIONES CENTRADA ===== */
-
-.store-search-hero__content {
-  text-align: center !important;
-  align-items: center !important;
-}
-
-.store-search-hero__content p {
-  max-width: 760px;
-  margin-left: auto;
-  margin-right: auto;
-  text-align: center;
-}
-
-/* ===== TIPOGRAFÍA GENERAL MODERNA ===== */
-
-h1,
-h2,
-h3,
-.topbar__left h2,
-.chatbot-header strong,
-.btn {
-  font-family: "Space Grotesk", system-ui, sans-serif;
-}
-
-p,
-label,
-input,
-select,
-textarea,
-.chatbot-header p,
-.msg,
-.status {
-  font-family: "Inter", system-ui, sans-serif;
-}
-
-/* Títulos principales con estilo premium */
-.scramble-title {
-  font-family: "Space Grotesk", system-ui, sans-serif !important;
-  letter-spacing: -0.05em;
-}
-
-/* Texto normal más limpio */
-body {
-  font-feature-settings: "liga" 1, "kern" 1;
-  text-rendering: geometricPrecision;
-}
-
-/* Botones más modernos */
-.btn,
-#chatbot-send,
-.chat-option-btn {
-  font-family: "Space Grotesk", system-ui, sans-serif;
-  letter-spacing: -0.01em;
-}
-
-/* =========================================================
-   AJUSTE FINAL PREMIUM HERO / ESTRUCTURA GENERAL
-   Pegar al final del styles.css
-========================================================= */
-
-body {
-  background:
-    radial-gradient(circle at 20% 10%, rgba(56, 189, 248, 0.12), transparent 28%),
-    radial-gradient(circle at 90% 20%, rgba(53, 255, 138, 0.06), transparent 26%),
-    linear-gradient(180deg, #020617 0%, #050505 42%, #0b0b0b 100%) !important;
-}
-
-/* Topbar más limpia */
-.topbar {
-  background: rgba(0, 0, 0, 0.82);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
-}
-
-.corporativo-logo {
-  width: 54px;
-  height: 54px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.035);
-}
-
-/* Hero mejor proporcionado */
-.hero {
-  padding: 82px 20px 56px !important;
-  display: block !important;
-}
-
-.hero__content {
-  width: min(1120px, 92%) !important;
-  min-height: auto;
-  padding: clamp(34px, 5vw, 64px) !important;
-  border-radius: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.055), transparent 35%),
-    radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.12), transparent 34%),
-    linear-gradient(135deg, rgba(18, 18, 18, 0.92), rgba(7, 7, 7, 0.94));
-  box-shadow:
-    0 28px 80px rgba(0, 0, 0, 0.48),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.hero__content::before {
-  opacity: 0.55;
-}
-
-.hero__content--compact {
-  display: flex !important;
-  flex-direction: column;
-  align-items: center !important;
-  justify-content: center !important;
-  text-align: center !important;
-}
-
-/* Título más elegante, menos glow excesivo */
-.scramble-title {
-  max-width: 980px !important;
-  margin: 0 auto 22px !important;
-  font-family: "Space Grotesk", system-ui, sans-serif !important;
-  font-size: clamp(2.55rem, 5vw, 5rem) !important;
-  font-weight: 800 !important;
-  line-height: 1.06 !important;
-  letter-spacing: -0.055em !important;
-  color: #ffffff !important;
-  text-shadow:
-    0 0 18px rgba(56, 189, 248, 0.38),
-    0 0 46px rgba(56, 189, 248, 0.16) !important;
-}
-
-.scramble-title::after {
-  width: 96px !important;
-  height: 2px !important;
-  margin-top: 22px !important;
-  opacity: 0.85;
-  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.95), transparent) !important;
-}
-
-.hero__content--compact p {
-  max-width: 760px !important;
-  margin: 0 auto !important;
-  color: rgba(245, 245, 245, 0.68) !important;
-  font-size: clamp(1rem, 1.6vw, 1.12rem) !important;
-  line-height: 1.75 !important;
-}
-
-/* Botones más premium */
-.hero__actions {
-  margin-top: 34px !important;
-  display: flex !important;
-  justify-content: center !important;
-  gap: 14px !important;
-}
-
-.btn {
-  min-height: 48px;
-  border-radius: 999px;
-  padding: 13px 22px;
-  font-weight: 800;
-}
-
-.btn--primary {
-  background: linear-gradient(135deg, #ffffff, #d8d8d8);
-  color: #050505;
-  box-shadow:
-    0 12px 28px rgba(255, 255, 255, 0.10),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7);
-}
-
-.btn--ghost {
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: #ffffff;
-  backdrop-filter: blur(12px);
-}
-
-.btn--ghost:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-/* Separación del contenido inferior */
-.container {
-  margin-top: 10px !important;
-}
-
-/* Sección ubicación mejor integrada */
-.store-search-hero {
-  border-radius: 30px;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015));
-  border: 1px solid rgba(255, 255, 255, 0.105);
-  box-shadow:
-    0 22px 60px rgba(0, 0, 0, 0.42),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-.store-search-hero__content {
-  background:
-    radial-gradient(circle at top right, rgba(56, 189, 248, 0.10), transparent 36%),
-    linear-gradient(135deg, rgba(16, 16, 16, 0.96), rgba(7, 7, 7, 0.98));
-}
-
-.store-search-hero__content h2 {
-  text-transform: none !important;
-  letter-spacing: -0.045em !important;
-  text-shadow:
-    0 0 14px rgba(56, 189, 248, 0.25) !important;
-}
-
-.store-search-hero__image {
-  background:
-    radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.20), transparent 25%),
-    linear-gradient(135deg, #07111d, #0d1b2c 48%, #080808);
-}
-
-.store-search-hero__pin {
-  background: linear-gradient(135deg, #ffffff, #d5d5d5);
-  box-shadow:
-    0 30px 70px rgba(0, 0, 0, 0.45),
-    0 0 44px rgba(56, 189, 248, 0.20);
-}
-
-/* Cards más refinadas */
-.card {
-  border-radius: 28px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018));
-  border: 1px solid rgba(255, 255, 255, 0.105);
-  box-shadow:
-    0 22px 60px rgba(0, 0, 0, 0.38),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-/* Formularios */
-input,
-select,
-textarea {
-  background: rgba(255, 255, 255, 0.045);
-  border-color: rgba(255, 255, 255, 0.13);
-}
-
-input:focus,
-select:focus,
-textarea:focus {
-  border-color: rgba(56, 189, 248, 0.42);
-  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.10);
-}
-
-/* Chatbot mejor alineado */
-.chatbot-box {
-  border-radius: 28px;
-  background:
-    linear-gradient(145deg, rgba(18, 18, 18, 0.98), rgba(5, 5, 5, 0.98));
-  box-shadow:
-    0 24px 80px rgba(0, 0, 0, 0.56),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-.chatbot-header {
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
-}
-
-/* Responsive final */
-@media (max-width: 780px) {
-  .hero {
-    padding: 42px 14px 30px !important;
-  }
-
-  .hero__content {
-    padding: 32px 22px !important;
-    border-radius: 26px;
-  }
-
-  .scramble-title {
-    font-size: clamp(2.35rem, 12vw, 3.35rem) !important;
-    letter-spacing: -0.06em !important;
-  }
-
-  .hero__actions {
-    width: 100%;
-    display: grid !important;
-    grid-template-columns: 1fr;
-  }
-
-  .hero__actions .btn {
-    width: 100%;
-  }
-
-  .store-search-hero {
-    border-radius: 24px;
-  }
-
-  .store-search-hero__content {
-    padding: 30px 22px;
-  }
-}
-/* =========================
-   FIX DEFINITIVO CHATBOT
-========================= */
-
-.chatbot-box {
-  position: fixed !important;
-  right: 24px !important;
-  bottom: 118px !important;
-  width: 390px !important;
-  height: 560px !important;
-  max-height: 560px !important;
-  border-radius: 28px !important;
-  overflow: hidden !important;
-  z-index: 1190 !important;
-}
-
-.chatbot-messages {
-  flex: 1 !important;
-  min-height: 0 !important;
-  overflow-y: auto !important;
-}
-
-.chatbot-form {
-  flex-shrink: 0 !important;
-  display: grid !important;
-  grid-template-columns: 50px 1fr 88px !important;
-  align-items: center !important;
-  gap: 10px !important;
-}
-
-#attachCvBtn {
-  width: 50px !important;
-  height: 50px !important;
-  padding: 0 !important;
-  font-size: 0 !important;
-  border-radius: 18px !important;
-}
-
-#attachCvBtn::before {
-  content: "📎";
-  font-size: 22px;
-}
-
-#chatbot-send {
-  height: 50px !important;
-}
-
 /* Botón abierto como X roja */
 .chatbot-toggle.is-open {
   width: 72px !important;
@@ -1204,40 +730,113 @@ textarea:focus {
   transform: rotate(-45deg);
 }
 
-/* Laptop / pantalla baja */
-@media (max-height: 720px) {
-  .chatbot-box {
-    height: calc(100vh - 138px) !important;
-    max-height: calc(100vh - 138px) !important;
-    bottom: 104px !important;
-  }
+@keyframes chatbotFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
 }
 
-/* Celular */
-@media (max-width: 780px) {
-  .chatbot-box {
-    left: 12px !important;
-    right: 12px !important;
-    bottom: 96px !important;
-    width: auto !important;
-    height: calc(100vh - 122px) !important;
-    max-height: calc(100vh - 122px) !important;
-    border-radius: 24px !important;
-  }
-
-  .chatbot-form {
-    grid-template-columns: 48px 1fr 76px !important;
-  }
-
-  #chatbot-send {
-    padding: 0 12px !important;
-  }
+@keyframes chatbotPulse {
+  0% { transform: scale(0.92); opacity: 0.55; }
+  70%, 100% { transform: scale(1.18); opacity: 0; }
 }
 
 /* =========================
-   TARJETAS DE VACANTES
+   EFECTOS Y PROGRESO CHATBOT
 ========================= */
+/* Efecto de escritura */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  padding: 10px 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 15px;
+  margin: 5px 0;
+  border: 1px solid var(--line);
+}
 
+.typing-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.typing-dots span {
+  width: 8px;
+  height: 8px;
+  background: #999;
+  border-radius: 50%;
+  animation: typing 1.4s infinite;
+}
+
+.typing-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.typing-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Barra de progreso */
+.chatbot-progress-container {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+
+.chatbot-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8, #35ff8a);
+  transition: width 0.5s ease;
+  width: 0%;
+  border-radius: 2px;
+}
+
+/* Mejoras en tarjetas de vacantes del chat */
+.chat-vacancy-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 16px;
+  margin: 8px 0;
+}
+
+.chat-vacancy-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.chat-vacancy-card h4 {
+  margin: 0 0 8px;
+  color: #fff;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+}
+
+.chat-vacancy-card p {
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.chat-vacancy-card .chat-option-btn {
+  margin-top: 12px;
+  width: 100%;
+}
+
+/* =========================
+   VACANTES GRID
+========================= */
 .vacantes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -1291,6 +890,7 @@ textarea:focus {
   margin-bottom: 20px;
   font-size: 1.6rem;
   color: #fff;
+  font-family: "Space Grotesk", system-ui, sans-serif;
 }
 
 .vacante-card__body p {
@@ -1306,6 +906,7 @@ textarea:focus {
 .vacante-card__body .btn {
   margin-top: auto;
 }
+
 .vacantes-page {
   margin-top: 32px;
 }
@@ -1313,10 +914,10 @@ textarea:focus {
 .hero__actions--compact {
   margin-top: 0 !important;
 }
-/* =========================
-   TAGS REQUISITOS VACANTES
-========================= */
 
+/* =========================
+   TAGS REQUISITOS
+========================= */
 .tags {
   display: flex;
   flex-wrap: wrap;
@@ -1333,4 +934,168 @@ textarea:focus {
   color: #9adfff;
   font-size: 12px;
   font-weight: 600;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+@media (max-width: 980px) {
+  .store-search-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .store-search-hero__image {
+    min-height: 280px;
+  }
+
+  .store-search-hero__pin {
+    width: 150px;
+    height: 150px;
+  }
+
+  .store-search-hero__pin img {
+    width: 82px;
+    height: 82px;
+  }
+
+  .vacantes-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+}
+
+@media (max-width: 780px) {
+  .hero {
+    padding: 42px 14px 30px !important;
+  }
+
+  .hero__content {
+    padding: 32px 22px !important;
+    border-radius: 26px;
+  }
+
+  .scramble-title {
+    font-size: clamp(2.35rem, 12vw, 3.35rem) !important;
+    letter-spacing: -0.06em !important;
+  }
+
+  .hero__actions {
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: 1fr;
+  }
+
+  .hero__actions .btn {
+    width: 100%;
+  }
+
+  .store-search-hero {
+    border-radius: 24px;
+  }
+
+  .store-search-hero__content {
+    padding: 30px 22px;
+  }
+
+  .store-search-hero__content h2 {
+    font-size: 2rem;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .section-head--split {
+    display: grid;
+  }
+
+  .chatbot-box {
+    left: 12px !important;
+    right: 12px !important;
+    bottom: 96px !important;
+    width: auto !important;
+    height: calc(100vh - 122px) !important;
+    max-height: calc(100vh - 122px) !important;
+    border-radius: 24px !important;
+  }
+
+  .chatbot-form {
+    grid-template-columns: 48px 1fr 76px !important;
+  }
+
+  #chatbot-send {
+    padding: 0 12px !important;
+  }
+
+  .chatbot-toggle {
+    width: 72px;
+    height: 72px;
+    right: 14px;
+    bottom: 14px;
+  }
+
+  .chatbot-toggle__core {
+    width: 58px;
+    height: 58px;
+  }
+
+  select,
+  input,
+  textarea {
+    font-size: 16px;
+  }
+
+  .chat-options {
+    flex-direction: column;
+  }
+
+  .chat-option-btn {
+    width: 100%;
+  }
+
+  .vacantes-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vacante-card {
+    min-height: auto;
+  }
+}
+
+/* Laptop / pantalla baja */
+@media (max-height: 720px) {
+  .chatbot-box {
+    height: calc(100vh - 138px) !important;
+    max-height: calc(100vh - 138px) !important;
+    bottom: 104px !important;
+  }
+}
+
+/* =========================
+   TIPOGRAFÍA GENERAL
+========================= */
+h1,
+h2,
+h3,
+.topbar__left h2,
+.chatbot-header strong,
+.btn,
+.chat-option-btn,
+#chatbot-send {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+}
+
+p,
+label,
+input,
+select,
+textarea,
+.chatbot-header p,
+.msg,
+.status {
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+body {
+  font-feature-settings: "liga" 1, "kern" 1;
+  text-rendering: geometricPrecision;
 }
