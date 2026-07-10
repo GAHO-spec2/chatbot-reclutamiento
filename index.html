@@ -231,15 +231,18 @@
             Suscribirse
           </button>
         </form>
-        
-        
-    <!-- Barra inferior - CENTRADA -->
-    <div class="footer__bottom">
-      <p data-translate="copyright">
-        &copy; 2026 Great American Hospitality. Todos los derechos reservados.
-      </p>
+      </div>
     </div>
   </footer>
+
+  <!-- =========================
+       COPYRIGHT - FUERA DEL FOOTER (CENTRADO)
+  ========================= -->
+  <div class="footer__copyright">
+    <p data-translate="copyright">
+      &copy; 2026 Great American Hospitality. Todos los derechos reservados.
+    </p>
+  </div>
 
   <button id="chatbot-toggle" class="chatbot-toggle" aria-label="Abrir chat">
     <span class="chatbot-toggle__ring"></span>
@@ -325,7 +328,7 @@
   <script src="text-scramble.js"></script>
   <script src="chatbot.js"></script>
   
-  <!-- Script de traducción COMPLETO -->
+  <!-- Script de traducción -->
   <script>
     // =========================
     // TRADUCCIÓN COMPLETA DE LA PÁGINA
@@ -477,30 +480,21 @@
     function setLanguage(lang) {
       currentLang = lang;
       
-      // Actualizar botones de idioma
-      document.querySelectorAll('.footer__lang').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.lang === lang);
-      });
-      
-      // Actualizar el atributo lang del HTML
       document.documentElement.lang = lang === 'es' ? 'es' : 'en';
       
-      // Traducir todos los elementos con data-translate
       document.querySelectorAll('[data-translate]').forEach(element => {
         const key = element.dataset.translate;
         if (translations[lang] && translations[lang][key]) {
-          // Si es un input/textarea, traducir placeholder
           if ((element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') && element.hasAttribute('data-translate-placeholder')) {
             // Ya se maneja con data-translate-placeholder
           } else if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-            // No hacer nada con inputs que no tienen placeholder
+            // No hacer nada
           } else {
             element.textContent = translations[lang][key];
           }
         }
       });
       
-      // Traducir placeholders específicos
       document.querySelectorAll('[data-translate-placeholder]').forEach(element => {
         const key = element.dataset.translatePlaceholder;
         if (translations[lang] && translations[lang][key]) {
@@ -508,7 +502,6 @@
         }
       });
       
-      // Traducir opciones de select
       document.querySelectorAll('select option[data-translate]').forEach(option => {
         const key = option.dataset.translate;
         if (translations[lang] && translations[lang][key]) {
@@ -516,41 +509,21 @@
         }
       });
       
-      // Guardar preferencia en localStorage
       try {
         localStorage.setItem('preferred_language', lang);
-      } catch (e) {
-        // Ignorar errores de localStorage
-      }
+      } catch (e) {}
     }
 
-    // Event listeners para los botones de idioma
     document.addEventListener('DOMContentLoaded', () => {
-      const langEs = document.getElementById('lang-es');
-      const langEn = document.getElementById('lang-en');
-      
-      // Cargar idioma guardado
       try {
         const savedLang = localStorage.getItem('preferred_language');
         if (savedLang && (savedLang === 'es' || savedLang === 'en')) {
           currentLang = savedLang;
         }
-      } catch (e) {
-        // Ignorar errores
-      }
+      } catch (e) {}
       
-      if (langEs) {
-        langEs.addEventListener('click', () => setLanguage('es'));
-      }
-      
-      if (langEn) {
-        langEn.addEventListener('click', () => setLanguage('en'));
-      }
-      
-      // Aplicar idioma inicial
       setLanguage(currentLang);
       
-      // Manejar suscripción
       const subscribeForm = document.getElementById('footerSubscribeForm');
       if (subscribeForm) {
         subscribeForm.addEventListener('submit', (e) => {
@@ -559,28 +532,21 @@
           const email = input?.value.trim();
           
           if (email && email.includes('@')) {
-            const successMsg = translations[currentLang].subscribe_success || 
-                              (currentLang === 'en' ? 'Thank you for subscribing!' : '¡Gracias por suscribirte!');
+            const successMsg = currentLang === 'en' ? 'Thank you for subscribing!' : '¡Gracias por suscribirte!';
             alert(successMsg);
             input.value = '';
           } else {
-            const errorMsg = translations[currentLang].subscribe_error ||
-                            (currentLang === 'en' ? 'Please enter a valid email.' : 'Por favor, ingresa un correo válido.');
+            const errorMsg = currentLang === 'en' ? 'Please enter a valid email.' : 'Por favor, ingresa un correo válido.';
             alert(errorMsg);
           }
         });
       }
-      
-      // También traducir el chatbot.js (los mensajes iniciales)
-      // Esto se maneja desde el archivo chatbot.js con la función getCurrentLanguage()
     });
 
-    // Función para obtener el idioma actual (para usar en chatbot.js)
     function getCurrentLanguage() {
       return currentLang;
     }
     
-    // Exponer la función globalmente
     window.getCurrentLanguage = getCurrentLanguage;
     window.setLanguage = setLanguage;
   </script>
