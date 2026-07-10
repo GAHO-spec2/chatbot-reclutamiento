@@ -57,6 +57,47 @@ let chatHistory = [
 ];
 
 // =========================
+// OBTENER IDIOMA ACTUAL PARA EL CHATBOT
+// =========================
+
+function getCurrentLanguage() {
+  // Intentar obtener el idioma de la función global
+  if (typeof window.getCurrentLanguage === 'function') {
+    return window.getCurrentLanguage();
+  }
+  
+  // Fallback: leer de localStorage
+  try {
+    const saved = localStorage.getItem('preferred_language');
+    if (saved === 'es' || saved === 'en') return saved;
+  } catch (e) {}
+  
+  return 'es'; // Default
+}
+
+// Mensajes del chatbot traducidos
+const chatbotMessages = {
+  es: {
+    welcome: "👋 ¡Hola! Soy tu asistente de reclutamiento inteligente. Estoy aquí para ayudarte a encontrar la oportunidad perfecta para ti. ¿Qué te gustaría hacer hoy?",
+    analyze_cv: "📄 Analizar mi CV",
+    search_location: "📍 Buscar por ubicación",
+    recommendations: "🎯 Recomendaciones personalizadas",
+    check_status: "📋 Consultar estatus",
+    cv_upload: "📎 Perfecto. Adjunta tu CV en PDF o imagen JPG/PNG para analizar tu experiencia, habilidades y perfil profesional.",
+    // ... más mensajes
+  },
+  en: {
+    welcome: "👋 Hello! I'm your intelligent recruitment assistant. I'm here to help you find the perfect opportunity for you. What would you like to do today?",
+    analyze_cv: "📄 Analyze my CV",
+    search_location: "📍 Search by location",
+    recommendations: "🎯 Personalized recommendations",
+    check_status: "📋 Check status",
+    cv_upload: "📎 Perfect. Attach your CV in PDF or JPG/PNG image to analyze your experience, skills and professional profile.",
+    // ... más mensajes
+  }
+};
+
+// =========================
 // VENTANA DE BIENVENIDA
 // =========================
 

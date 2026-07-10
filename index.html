@@ -21,28 +21,28 @@
       <img src="img/gaho.png" alt="GA Hospitality" class="corporativo-logo" />
       <div>
         <h2>GA Hospitality</h2>
-        <p>Plataforma de reclutamiento</p>
+        <p data-translate="topbar_subtitle">Plataforma de reclutamiento</p>
       </div>
     </div>
   </header>
 
   <header class="hero">
     <div class="hero__content hero__content--compact">
-      <h1 id="scramble-title" class="scramble-title js-scramble">
+      <h1 id="scramble-title" class="scramble-title js-scramble" data-translate="hero_title">
           Tu próxima oportunidad comienza aquí
       </h1>
       
-      <p>
+      <p data-translate="hero_description">
         Comparte tu currículum y recibe recomendaciones de vacantes según tu
         experiencia, habilidades y enfoque profesional.
       </p>
 
       <div class="hero__actions">
-        <button id="startApplicationBtn" class="btn btn--primary" type="button">
+        <button id="startApplicationBtn" class="btn btn--primary" type="button" data-translate="hero_btn_cv">
           Analizar mi CV
         </button>
 
-        <a href="#busca-sucursal-visual" class="btn btn--ghost">
+        <a href="#busca-sucursal-visual" class="btn btn--ghost" data-translate="hero_btn_branch">
           Postularme por sucursal
         </a>
       </div>
@@ -58,18 +58,18 @@
       </div>
 
       <div class="store-search-hero__content">
-        <span class="eyebrow">Ubicaciones disponibles</span>
+        <span class="eyebrow" data-translate="locations_eyebrow">Ubicaciones disponibles</span>
 
-        <h2 class="scramble-title scramble-title--section js-scramble">
+        <h2 class="scramble-title scramble-title--section js-scramble" data-translate="locations_title">
         Busca la tienda más cercana para postularte
       </h2>
 
-        <p>
+        <p data-translate="locations_description">
           Usa nuestro mapa interactivo para encontrar sucursales disponibles,
           revisar vacantes activas y enviar tu solicitud en la ubicación de tu preferencia.
         </p>
 
-        <a href="ubicaciones.html" class="btn btn--primary">
+        <a href="ubicaciones.html" class="btn btn--primary" data-translate="locations_btn">
           Buscar vacantes por ubicación
         </a>
       </div>
@@ -77,45 +77,45 @@
 
     <section id="busqueda-vacantes" class="card">
       <div class="section-head">
-        <h2>Buscar empleo</h2>
-        <p>Selecciona los filtros de búsqueda y consulta las vacantes disponibles.</p>
+        <h2 data-translate="search_title">Buscar empleo</h2>
+        <p data-translate="search_description">Selecciona los filtros de búsqueda y consulta las vacantes disponibles.</p>
       </div>
 
       <div class="form-grid">
         <div class="field">
-          <label for="filtroTipo">Tipo</label>
+          <label for="filtroTipo" data-translate="filter_type">Tipo</label>
           <select id="filtroTipo">
-            <option value="">Todos</option>
-            <option value="operativa">Operativa / Restaurante</option>
-            <option value="administrativa">Administrativa / Corporativo</option>
+            <option value="" data-translate="filter_all">Todos</option>
+            <option value="operativa" data-translate="filter_operativa">Operativa / Restaurante</option>
+            <option value="administrativa" data-translate="filter_administrativa">Administrativa / Corporativo</option>
           </select>
         </div>
 
         <div class="field">
-          <label for="filtroPais">País</label>
+          <label for="filtroPais" data-translate="filter_country">País</label>
           <select id="filtroPais">
-            <option value="">Todos</option>
+            <option value="" data-translate="filter_all">Todos</option>
             <option value="México">México</option>
-            <option value="Estados Unidos">Estados Unidos</option>
+            <option value="Estados Unidos" data-translate="filter_usa">Estados Unidos</option>
           </select>
         </div>
 
         <div class="field">
-          <label for="filtroEstado">Estado</label>
+          <label for="filtroEstado" data-translate="filter_state">Estado</label>
           <select id="filtroEstado">
-            <option value="">Todos</option>
+            <option value="" data-translate="filter_all">Todos</option>
           </select>
         </div>
 
         <div class="field">
-          <label for="filtroCiudad">Ciudad</label>
+          <label for="filtroCiudad" data-translate="filter_city">Ciudad</label>
           <select id="filtroCiudad">
-            <option value="">Todas</option>
+            <option value="" data-translate="filter_all_cities">Todas</option>
           </select>
         </div>
 
         <div class="form-actions field--full">
-          <button id="buscarVacantesBtn" class="btn btn--primary" type="button">
+          <button id="buscarVacantesBtn" class="btn btn--primary" type="button" data-translate="search_btn">
             Buscar vacantes
           </button>
         </div>
@@ -126,18 +126,18 @@
 
     <section id="estatus" class="card">
       <div class="section-head">
-        <h2>Consultar estatus de mi solicitud</h2>
-        <p>Ingresa tu folio de postulación para revisar tu estado actual.</p>
+        <h2 data-translate="status_title">Consultar estatus de mi solicitud</h2>
+        <p data-translate="status_description">Ingresa tu folio de postulación para revisar tu estado actual.</p>
       </div>
 
       <div class="form-grid">
         <div class="field field--full">
-          <label for="folioConsulta">Folio de postulación</label>
-          <input id="folioConsulta" type="text" placeholder="Ej. 1717600000000" />
+          <label for="folioConsulta" data-translate="status_folio">Folio de postulación</label>
+          <input id="folioConsulta" type="text" placeholder="Ej. 1717600000000" data-translate-placeholder="status_placeholder" />
         </div>
 
         <div class="form-actions field--full">
-          <button id="consultarStatusBtn" type="button" class="btn btn--secondary">
+          <button id="consultarStatusBtn" type="button" class="btn btn--secondary" data-translate="status_btn">
             Consultar estatus
           </button>
         </div>
@@ -148,7 +148,7 @@
   </main>
 
   <!-- =========================
-       FOOTER - GREAT AMERICAN HOSPITALITY (BILINGÜE)
+       FOOTER - GREAT AMERICAN HOSPITALITY
   ========================= -->
   <footer class="footer" id="main-footer">
     <div class="footer__container">
@@ -224,6 +224,7 @@
             class="footer__subscribe-input"
             placeholder="Tu correo electrónico"
             id="footerEmailInput"
+            data-translate-placeholder="email_placeholder"
             required
           />
           <button type="submit" class="footer__subscribe-btn" data-translate="subscribe_btn">
@@ -231,7 +232,7 @@
           </button>
         </form>
         
-        <!-- Selector de idioma solo para el footer -->
+        <!-- Selector de idioma -->
         <div class="footer__languages">
           <button class="footer__lang active" data-lang="es" id="lang-es">
             🇪🇸 Español
@@ -243,7 +244,7 @@
       </div>
     </div>
 
-    <!-- Barra inferior -->
+    <!-- Barra inferior - CENTRADA -->
     <div class="footer__bottom">
       <p data-translate="copyright">
         &copy; 2026 Great American Hospitality. Todos los derechos reservados.
@@ -265,8 +266,8 @@
   <aside id="chatbot-box" class="chatbot-box hidden">
     <div class="chatbot-header">
       <div>
-        <strong>Asistente de Reclutamiento</strong>
-        <p>Vacantes, análisis de CV y orientación personalizada</p>
+        <strong data-translate="chatbot_title">Asistente de Reclutamiento</strong>
+        <p data-translate="chatbot_subtitle">Vacantes, análisis de CV y orientación personalizada</p>
       </div>
 
       <button id="chatbot-close" class="chatbot-close" aria-label="Cerrar chat">✕</button>
@@ -280,20 +281,20 @@
           <span class="chatbot-welcome-status"></span>
         </div>
         
-        <h3 class="chatbot-welcome-title">👋 ¡Hola! Yo puedo ayudarte</h3>
+        <h3 class="chatbot-welcome-title" data-translate="welcome_title">👋 ¡Hola! Yo puedo ayudarte</h3>
         
-        <p class="chatbot-welcome-text">
+        <p class="chatbot-welcome-text" data-translate="welcome_text">
           Soy tu asistente de reclutamiento. Puedo analizar tu CV, 
           recomendarte vacantes y ayudarte con tu postulación.
         </p>
         
         <div class="chatbot-welcome-features">
-          <span>📄 Analizar CV</span>
-          <span>📍 Buscar ubicaciones</span>
-          <span>🎯 Recomendaciones</span>
+          <span data-translate="welcome_feature_1">📄 Analizar CV</span>
+          <span data-translate="welcome_feature_2">📍 Buscar ubicaciones</span>
+          <span data-translate="welcome_feature_3">🎯 Recomendaciones</span>
         </div>
         
-        <button id="chatbot-welcome-btn" class="chatbot-welcome-btn">
+        <button id="chatbot-welcome-btn" class="chatbot-welcome-btn" data-translate="welcome_btn">
           Comenzar conversación →
         </button>
       </div>
@@ -307,7 +308,7 @@
     <div id="chatbot-messages" class="chatbot-messages"></div>
 
     <form id="chatbot-form" class="chatbot-form">
-      <button id="attachCvBtn" type="button" class="btn btn--secondary" title="Adjuntar CV">
+      <button id="attachCvBtn" type="button" class="btn btn--secondary" title="Adjuntar CV" data-translate="attach_cv">
         Adjuntar CV
       </button>
 
@@ -315,10 +316,11 @@
         id="chatbot-input"
         type="text"
         placeholder="Escribe tu respuesta..."
+        data-translate-placeholder="chat_input_placeholder"
         autocomplete="off"
       />
 
-      <button id="chatbot-send" type="submit">Enviar</button>
+      <button id="chatbot-send" type="submit" data-translate="send_btn">Enviar</button>
     </form>
 
     <input
@@ -334,14 +336,51 @@
   <script src="text-scramble.js"></script>
   <script src="chatbot.js"></script>
   
-  <!-- Script de traducción solo para el footer -->
+  <!-- Script de traducción COMPLETO -->
   <script>
     // =========================
-    // TRADUCCIÓN SOLO PARA EL FOOTER
+    // TRADUCCIÓN COMPLETA DE LA PÁGINA
     // =========================
 
-    const footerTranslations = {
+    const translations = {
       es: {
+        // Topbar
+        topbar_subtitle: "Plataforma de reclutamiento",
+        
+        // Hero
+        hero_title: "Tu próxima oportunidad comienza aquí",
+        hero_description: "Comparte tu currículum y recibe recomendaciones de vacantes según tu experiencia, habilidades y enfoque profesional.",
+        hero_btn_cv: "Analizar mi CV",
+        hero_btn_branch: "Postularme por sucursal",
+        
+        // Ubicaciones
+        locations_eyebrow: "Ubicaciones disponibles",
+        locations_title: "Busca la tienda más cercana para postularte",
+        locations_description: "Usa nuestro mapa interactivo para encontrar sucursales disponibles, revisar vacantes activas y enviar tu solicitud en la ubicación de tu preferencia.",
+        locations_btn: "Buscar vacantes por ubicación",
+        
+        // Búsqueda de empleo
+        search_title: "Buscar empleo",
+        search_description: "Selecciona los filtros de búsqueda y consulta las vacantes disponibles.",
+        filter_type: "Tipo",
+        filter_all: "Todos",
+        filter_operativa: "Operativa / Restaurante",
+        filter_administrativa: "Administrativa / Corporativo",
+        filter_country: "País",
+        filter_usa: "Estados Unidos",
+        filter_state: "Estado",
+        filter_city: "Ciudad",
+        filter_all_cities: "Todas",
+        search_btn: "Buscar vacantes",
+        
+        // Estatus
+        status_title: "Consultar estatus de mi solicitud",
+        status_description: "Ingresa tu folio de postulación para revisar tu estado actual.",
+        status_folio: "Folio de postulación",
+        status_placeholder: "Ej. 1717600000000",
+        status_btn: "Consultar estatus",
+        
+        // Footer
         footer_description: "Desde franquicias de gran volumen hasta conceptos originales dirigidos a audiencias específicas, el grupo ha desempeñado un papel versátil e influyente con más de 80 ubicaciones en mercados de toda la República Mexicana y mercados dentro de la línea fronteriza en Texas.",
         site_map: "Mapa del sitio",
         home: "Inicio",
@@ -357,10 +396,60 @@
         stay_updated: "Manténgase actualizado",
         subscribe_text: "Suscríbete para recibir las últimas vacantes y novedades.",
         subscribe_btn: "Suscribirse",
+        email_placeholder: "Tu correo electrónico",
         copyright: "© 2026 Great American Hospitality. Todos los derechos reservados.",
-        email_placeholder: "Tu correo electrónico"
+        
+        // Chatbot
+        chatbot_title: "Asistente de Reclutamiento",
+        chatbot_subtitle: "Vacantes, análisis de CV y orientación personalizada",
+        welcome_title: "👋 ¡Hola! Yo puedo ayudarte",
+        welcome_text: "Soy tu asistente de reclutamiento. Puedo analizar tu CV, recomendarte vacantes y ayudarte con tu postulación.",
+        welcome_feature_1: "📄 Analizar CV",
+        welcome_feature_2: "📍 Buscar ubicaciones",
+        welcome_feature_3: "🎯 Recomendaciones",
+        welcome_btn: "Comenzar conversación →",
+        attach_cv: "Adjuntar CV",
+        chat_input_placeholder: "Escribe tu respuesta...",
+        send_btn: "Enviar"
       },
       en: {
+        // Topbar
+        topbar_subtitle: "Recruitment Platform",
+        
+        // Hero
+        hero_title: "Your Next Opportunity Starts Here",
+        hero_description: "Share your resume and receive job recommendations based on your experience, skills, and professional profile.",
+        hero_btn_cv: "Analyze my CV",
+        hero_btn_branch: "Apply by branch",
+        
+        // Ubicaciones
+        locations_eyebrow: "Available Locations",
+        locations_title: "Find the nearest store to apply",
+        locations_description: "Use our interactive map to find available branches, review active vacancies, and submit your application at your preferred location.",
+        locations_btn: "Search vacancies by location",
+        
+        // Búsqueda de empleo
+        search_title: "Job Search",
+        search_description: "Select the search filters and check available vacancies.",
+        filter_type: "Type",
+        filter_all: "All",
+        filter_operativa: "Operational / Restaurant",
+        filter_administrativa: "Administrative / Corporate",
+        filter_country: "Country",
+        filter_usa: "United States",
+        filter_state: "State",
+        filter_city: "City",
+        filter_all_cities: "All",
+        search_btn: "Search vacancies",
+        
+        // Estatus
+        status_title: "Check my application status",
+        status_description: "Enter your application folio to check your current status.",
+        status_folio: "Application folio",
+        status_placeholder: "Ex. 1717600000000",
+        status_btn: "Check status",
+        
+        // Footer
         footer_description: "From high-volume franchises to original concepts targeting specific audiences, the group has played a versatile and influential role with over 80 locations in markets throughout the Mexican Republic and border markets in Texas.",
         site_map: "Site Map",
         home: "Home",
@@ -376,72 +465,101 @@
         stay_updated: "Stay Updated",
         subscribe_text: "Subscribe to receive the latest vacancies and news.",
         subscribe_btn: "Subscribe",
+        email_placeholder: "Your email address",
         copyright: "© 2026 Great American Hospitality. All rights reserved.",
-        email_placeholder: "Your email address"
+        
+        // Chatbot
+        chatbot_title: "Recruitment Assistant",
+        chatbot_subtitle: "Vacancies, CV analysis and personalized guidance",
+        welcome_title: "👋 Hello! I can help you",
+        welcome_text: "I'm your recruitment assistant. I can analyze your CV, recommend vacancies, and help you with your application.",
+        welcome_feature_1: "📄 Analyze CV",
+        welcome_feature_2: "📍 Find locations",
+        welcome_feature_3: "🎯 Recommendations",
+        welcome_btn: "Start conversation →",
+        attach_cv: "Attach CV",
+        chat_input_placeholder: "Type your response...",
+        send_btn: "Send"
       }
     };
 
-    let currentFooterLang = 'es';
+    let currentLang = 'es';
 
-    function setFooterLanguage(lang) {
-      currentFooterLang = lang;
+    function setLanguage(lang) {
+      currentLang = lang;
       
       // Actualizar botones de idioma
       document.querySelectorAll('.footer__lang').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.lang === lang);
       });
       
-      // Traducir todos los elementos del footer con data-translate
+      // Actualizar el atributo lang del HTML
+      document.documentElement.lang = lang === 'es' ? 'es' : 'en';
+      
+      // Traducir todos los elementos con data-translate
       document.querySelectorAll('[data-translate]').forEach(element => {
         const key = element.dataset.translate;
-        if (footerTranslations[lang] && footerTranslations[lang][key]) {
-          if (element.tagName === 'INPUT' && element.type === 'email') {
-            element.placeholder = footerTranslations[lang].email_placeholder;
+        if (translations[lang] && translations[lang][key]) {
+          // Si es un input/textarea, traducir placeholder
+          if ((element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') && element.hasAttribute('data-translate-placeholder')) {
+            // Ya se maneja con data-translate-placeholder
+          } else if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+            // No hacer nada con inputs que no tienen placeholder
           } else {
-            element.textContent = footerTranslations[lang][key];
+            element.textContent = translations[lang][key];
           }
         }
       });
       
-      // Traducir placeholder del email específicamente
-      const emailInput = document.getElementById('footerEmailInput');
-      if (emailInput) {
-        emailInput.placeholder = footerTranslations[lang].email_placeholder;
-      }
+      // Traducir placeholders específicos
+      document.querySelectorAll('[data-translate-placeholder]').forEach(element => {
+        const key = element.dataset.translatePlaceholder;
+        if (translations[lang] && translations[lang][key]) {
+          element.placeholder = translations[lang][key];
+        }
+      });
+      
+      // Traducir opciones de select
+      document.querySelectorAll('select option[data-translate]').forEach(option => {
+        const key = option.dataset.translate;
+        if (translations[lang] && translations[lang][key]) {
+          option.textContent = translations[lang][key];
+        }
+      });
       
       // Guardar preferencia en localStorage
       try {
-        localStorage.setItem('preferred_footer_language', lang);
+        localStorage.setItem('preferred_language', lang);
       } catch (e) {
         // Ignorar errores de localStorage
       }
     }
 
-    // Event listeners para los botones de idioma del footer
+    // Event listeners para los botones de idioma
     document.addEventListener('DOMContentLoaded', () => {
       const langEs = document.getElementById('lang-es');
       const langEn = document.getElementById('lang-en');
       
       // Cargar idioma guardado
       try {
-        const savedLang = localStorage.getItem('preferred_footer_language');
+        const savedLang = localStorage.getItem('preferred_language');
         if (savedLang && (savedLang === 'es' || savedLang === 'en')) {
-          currentFooterLang = savedLang;
+          currentLang = savedLang;
         }
       } catch (e) {
         // Ignorar errores
       }
       
       if (langEs) {
-        langEs.addEventListener('click', () => setFooterLanguage('es'));
+        langEs.addEventListener('click', () => setLanguage('es'));
       }
       
       if (langEn) {
-        langEn.addEventListener('click', () => setFooterLanguage('en'));
+        langEn.addEventListener('click', () => setLanguage('en'));
       }
       
-      // Aplicar idioma inicial al footer
-      setFooterLanguage(currentFooterLang);
+      // Aplicar idioma inicial
+      setLanguage(currentLang);
       
       // Manejar suscripción
       const subscribeForm = document.getElementById('footerSubscribeForm');
@@ -452,18 +570,30 @@
           const email = input?.value.trim();
           
           if (email && email.includes('@')) {
-            const successMsg = footerTranslations[currentFooterLang].subscribe_success || 
-                              (currentFooterLang === 'en' ? 'Thank you for subscribing!' : '¡Gracias por suscribirte!');
+            const successMsg = translations[currentLang].subscribe_success || 
+                              (currentLang === 'en' ? 'Thank you for subscribing!' : '¡Gracias por suscribirte!');
             alert(successMsg);
             input.value = '';
           } else {
-            const errorMsg = footerTranslations[currentFooterLang].subscribe_error ||
-                            (currentFooterLang === 'en' ? 'Please enter a valid email.' : 'Por favor, ingresa un correo válido.');
+            const errorMsg = translations[currentLang].subscribe_error ||
+                            (currentLang === 'en' ? 'Please enter a valid email.' : 'Por favor, ingresa un correo válido.');
             alert(errorMsg);
           }
         });
       }
+      
+      // También traducir el chatbot.js (los mensajes iniciales)
+      // Esto se maneja desde el archivo chatbot.js con la función getCurrentLanguage()
     });
+
+    // Función para obtener el idioma actual (para usar en chatbot.js)
+    function getCurrentLanguage() {
+      return currentLang;
+    }
+    
+    // Exponer la función globalmente
+    window.getCurrentLanguage = getCurrentLanguage;
+    window.setLanguage = setLanguage;
   </script>
 </body>
 </html>
