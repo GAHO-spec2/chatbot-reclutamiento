@@ -1095,4 +1095,150 @@ async function init() {
   await revisarAplicacionDesdeUrl();
 }
 
+
+// =========================
+// SISTEMA DE TRADUCCIÓN
+// =========================
+
+const translations = {
+  es: {
+    // Footer
+    footer_description: "Desde franquicias de gran volumen hasta conceptos originales dirigidos a audiencias específicas, el grupo ha desempeñado un papel versátil e influyente con más de 80 ubicaciones en mercados de toda la República Mexicana y mercados dentro de la línea fronteriza en Texas.",
+    site_map: "Mapa del sitio",
+    home: "Inicio",
+    about_us: "Nosotros",
+    concepts: "Conceptos",
+    franchises: "Franquicias",
+    vacancies: "Vacantes",
+    locations: "Ubicaciones",
+    contact: "Contacto",
+    address: "Cd. Juárez, Chihuahua, México",
+    founded: "Fundado en 1994",
+    restaurants: "80+ restaurantes",
+    stay_updated: "Manténgase actualizado",
+    subscribe_text: "Suscríbete para recibir las últimas vacantes y novedades.",
+    subscribe_btn: "Suscribirse",
+    copyright: "© 2026 Great American Hospitality. Todos los derechos reservados.",
+    
+    // Placeholders
+    email_placeholder: "Tu correo electrónico",
+    
+    // Mensajes de éxito
+    subscribe_success: "¡Gracias por suscribirte!",
+    subscribe_error: "Por favor, ingresa un correo válido."
+  },
+  en: {
+    // Footer
+    footer_description: "From high-volume franchises to original concepts targeting specific audiences, the group has played a versatile and influential role with over 80 locations in markets throughout the Mexican Republic and border markets in Texas.",
+    site_map: "Site Map",
+    home: "Home",
+    about_us: "About Us",
+    concepts: "Concepts",
+    franchises: "Franchises",
+    vacancies: "Vacancies",
+    locations: "Locations",
+    contact: "Contact",
+    address: "Cd. Juárez, Chihuahua, Mexico",
+    founded: "Founded in 1994",
+    restaurants: "80+ restaurants",
+    stay_updated: "Stay Updated",
+    subscribe_text: "Subscribe to receive the latest vacancies and news.",
+    subscribe_btn: "Subscribe",
+    copyright: "© 2026 Great American Hospitality. All rights reserved.",
+    
+    // Placeholders
+    email_placeholder: "Your email address",
+    
+    // Mensajes de éxito
+    subscribe_success: "Thank you for subscribing!",
+    subscribe_error: "Please enter a valid email."
+  }
+};
+
+let currentLang = 'es';
+
+function setLanguage(lang) {
+  currentLang = lang;
+  
+  // Actualizar botones de idioma
+  document.querySelectorAll('.footer__lang').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === lang);
+  });
+  
+  // Traducir todos los elementos con data-translate
+  document.querySelectorAll('[data-translate]').forEach(element => {
+    const key = element.dataset.translate;
+    if (translations[lang] && translations[lang][key]) {
+      // Si es un input, traducir placeholder
+      if (element.tagName === 'INPUT' && element.type === 'email') {
+        element.placeholder = translations[lang].email_placeholder || translations[lang][key];
+      } else {
+        element.textContent = translations[lang][key];
+      }
+    }
+  });
+  
+  // Traducir placeholder del email específicamente
+  const emailInput = document.getElementById('footerEmailInput');
+  if (emailInput) {
+    emailInput.placeholder = translations[lang].email_placeholder || 'Tu correo electrónico';
+  }
+  
+  // Guardar preferencia en localStorage
+  try {
+    localStorage.setItem('preferred_language', lang);
+  } catch (e) {
+    // Ignorar errores de localStorage
+  }
+}
+
+// Event listeners para los botones de idioma
+document.addEventListener('DOMContentLoaded', () => {
+  const langEs = document.getElementById('lang-es');
+  const langEn = document.getElementById('lang-en');
+  
+  // Cargar idioma guardado
+  try {
+    const savedLang = localStorage.getItem('preferred_language');
+    if (savedLang && (savedLang === 'es' || savedLang === 'en')) {
+      currentLang = savedLang;
+    }
+  } catch (e) {
+    // Ignorar errores
+  }
+  
+  if (langEs) {
+    langEs.addEventListener('click', () => setLanguage('es'));
+  }
+  
+  if (langEn) {
+    langEn.addEventListener('click', () => setLanguage('en'));
+  }
+  
+  // Aplicar idioma inicial
+  setLanguage(currentLang);
+  
+  // Manejar suscripción
+  const subscribeForm = document.getElementById('footerSubscribeForm');
+  if (subscribeForm) {
+    subscribeForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = document.getElementById('footerEmailInput');
+      const email = input?.value.trim();
+      
+      if (email && email.includes('@')) {
+        alert(translations[currentLang].subscribe_success);
+        input.value = '';
+      } else {
+        alert(translations[currentLang].subscribe_error);
+      }
+    });
+  }
+});
+
+// Función para obtener el idioma actual (para usar en otros scripts)
+function getCurrentLanguage() {
+  return currentLang;
+}
+
 init();

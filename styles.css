@@ -1069,6 +1069,17 @@ select option {
     bottom: 104px !important;
   }
 }
+/* Agregar al final de .vacante-card */
+.vacante-card {
+  /* ... estilos existentes ... */
+  transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.vacante-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(255,255,255,0.18);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
 
 /* =========================
    TIPOGRAFÍA GENERAL
@@ -1446,49 +1457,81 @@ body {
   box-shadow: 0 8px 24px rgba(255, 255, 255, 0.15);
 }
 
-/* Idiomas */
+/* =========================
+   SELECTOR DE IDIOMAS MEJORADO
+========================= */
+
 .footer__languages {
   display: flex;
-  gap: 12px;
-  margin-top: 16px;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .footer__lang {
-  font-size: 0.8rem;
+  flex: 1;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
   color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  text-align: center;
+  font-family: "Inter", system-ui, sans-serif;
 }
 
 .footer__lang:hover {
+  background: rgba(255, 255, 255, 0.08);
   color: #ffffff;
+  transform: translateY(-1px);
 }
 
 .footer__lang.active {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+  border-color: rgba(56, 189, 248, 0.3);
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.1);
 }
 
-/* Barra inferior */
-.footer__bottom {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px 0;
-  text-align: center;
+.footer__lang.active::after {
+  content: " ✓";
+  color: #35ff8a;
+  font-weight: 700;
 }
 
-.footer__bottom p {
-  color: #5a5a5a;
-  font-size: 0.8rem;
-  margin: 0;
+/* Animación de cambio de idioma */
+[data-translate] {
+  transition: opacity 0.2s ease;
 }
+
+.footer__lang:active {
+  transform: scale(0.95);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .footer__languages {
+    flex-direction: row;
+  }
+  
+  .footer__lang {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+  }
+}
+
+
+
+
 
 /* =========================
    RESPONSIVE FOOTER
 ========================= */
-
+/* Reemplaza la sección de responsive footer con esto */
 @media (max-width: 980px) {
   .footer__container {
     grid-template-columns: 1fr 1fr;
@@ -1521,4 +1564,47 @@ body {
   .footer__social {
     justify-content: center;
   }
+  
+  .footer__col {
+    text-align: center;
+  }
+  
+  .footer__list li {
+    justify-content: center;
+  }
+}
+/* =========================
+   SCROLLBAR PERSONALIZADO
+========================= */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Para Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) rgba(255, 255, 255, 0.03);
+}
+
+/* Agregar al final del footer */
+.footer__col,
+.footer__list a,
+.footer__lang {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }

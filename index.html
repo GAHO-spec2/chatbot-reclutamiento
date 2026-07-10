@@ -148,9 +148,9 @@
   </main>
 
   <!-- =========================
-       FOOTER - GREAT AMERICAN HOSPITALITY
+       FOOTER - GREAT AMERICAN HOSPITALITY (BILINGÜE)
   ========================= -->
-  <footer class="footer">
+  <footer class="footer" id="main-footer">
     <div class="footer__container">
       <!-- Columna 1: Info de la empresa -->
       <div class="footer__col">
@@ -158,7 +158,7 @@
           <img src="img/gaho.png" alt="GA Hospitality" class="footer__logo" />
           <span class="footer__brand-name">GA Hospitality</span>
         </div>
-        <p class="footer__description">
+        <p class="footer__description" data-translate="footer_description">
           Desde franquicias de gran volumen hasta conceptos originales dirigidos a
           audiencias específicas, el grupo ha desempeñado un papel versátil e
           influyente con más de 80 ubicaciones en mercados de toda la República
@@ -174,24 +174,24 @@
 
       <!-- Columna 2: Mapa del sitio -->
       <div class="footer__col">
-        <h4 class="footer__title">Mapa del sitio</h4>
+        <h4 class="footer__title" data-translate="site_map">Mapa del sitio</h4>
         <ul class="footer__list">
-          <li><a href="index.html">Inicio</a></li>
-          <li><a href="https://gahospitality.com/es/about-us/" target="_blank">Nosotros</a></li>
-          <li><a href="https://gahospitality.com/es/" target="_blank">Conceptos</a></li>
-          <li><a href="https://gahospitality.com/es/" target="_blank">Franquicias</a></li>
-          <li><a href="vacantes.html">Vacantes</a></li>
-          <li><a href="ubicaciones.html">Ubicaciones</a></li>
+          <li><a href="index.html" data-translate="home">Inicio</a></li>
+          <li><a href="https://gahospitality.com/es/about-us/" target="_blank" data-translate="about_us">Nosotros</a></li>
+          <li><a href="https://gahospitality.com/es/" target="_blank" data-translate="concepts">Conceptos</a></li>
+          <li><a href="https://gahospitality.com/es/" target="_blank" data-translate="franchises">Franquicias</a></li>
+          <li><a href="vacantes.html" data-translate="vacancies">Vacantes</a></li>
+          <li><a href="ubicaciones.html" data-translate="locations">Ubicaciones</a></li>
         </ul>
       </div>
 
       <!-- Columna 3: Contacto -->
       <div class="footer__col">
-        <h4 class="footer__title">Contacto</h4>
+        <h4 class="footer__title" data-translate="contact">Contacto</h4>
         <ul class="footer__list">
           <li>
             <span class="footer__icon">📍</span>
-            Cd. Juárez, Chihuahua, México
+            <span data-translate="address">Cd. Juárez, Chihuahua, México</span>
           </li>
           <li>
             <span class="footer__icon">📧</span>
@@ -203,19 +203,19 @@
           </li>
           <li>
             <span class="footer__icon">🏢</span>
-            Fundado en 1994
+            <span data-translate="founded">Fundado en 1994</span>
           </li>
           <li>
             <span class="footer__icon">🍽️</span>
-            80+ restaurantes
+            <span data-translate="restaurants">80+ restaurantes</span>
           </li>
         </ul>
       </div>
 
       <!-- Columna 4: Suscripción -->
       <div class="footer__col">
-        <h4 class="footer__title">Manténgase actualizado</h4>
-        <p class="footer__subscribe-text">
+        <h4 class="footer__title" data-translate="stay_updated">Manténgase actualizado</h4>
+        <p class="footer__subscribe-text" data-translate="subscribe_text">
           Suscríbete para recibir las últimas vacantes y novedades.
         </p>
         <form class="footer__subscribe-form" id="footerSubscribeForm">
@@ -223,20 +223,29 @@
             type="email"
             class="footer__subscribe-input"
             placeholder="Tu correo electrónico"
+            id="footerEmailInput"
             required
           />
-          <button type="submit" class="footer__subscribe-btn">Suscribirse</button>
+          <button type="submit" class="footer__subscribe-btn" data-translate="subscribe_btn">
+            Suscribirse
+          </button>
         </form>
+        
+        <!-- Selector de idioma solo para el footer -->
         <div class="footer__languages">
-          <span class="footer__lang active">Español</span>
-          <span class="footer__lang">English</span>
+          <button class="footer__lang active" data-lang="es" id="lang-es">
+            🇪🇸 Español
+          </button>
+          <button class="footer__lang" data-lang="en" id="lang-en">
+            🇺🇸 English
+          </button>
         </div>
       </div>
     </div>
 
     <!-- Barra inferior -->
     <div class="footer__bottom">
-      <p>
+      <p data-translate="copyright">
         &copy; 2026 Great American Hospitality. Todos los derechos reservados.
       </p>
     </div>
@@ -324,5 +333,137 @@
   <script src="dotted-surface.js"></script>
   <script src="text-scramble.js"></script>
   <script src="chatbot.js"></script>
+  
+  <!-- Script de traducción solo para el footer -->
+  <script>
+    // =========================
+    // TRADUCCIÓN SOLO PARA EL FOOTER
+    // =========================
+
+    const footerTranslations = {
+      es: {
+        footer_description: "Desde franquicias de gran volumen hasta conceptos originales dirigidos a audiencias específicas, el grupo ha desempeñado un papel versátil e influyente con más de 80 ubicaciones en mercados de toda la República Mexicana y mercados dentro de la línea fronteriza en Texas.",
+        site_map: "Mapa del sitio",
+        home: "Inicio",
+        about_us: "Nosotros",
+        concepts: "Conceptos",
+        franchises: "Franquicias",
+        vacancies: "Vacantes",
+        locations: "Ubicaciones",
+        contact: "Contacto",
+        address: "Cd. Juárez, Chihuahua, México",
+        founded: "Fundado en 1994",
+        restaurants: "80+ restaurantes",
+        stay_updated: "Manténgase actualizado",
+        subscribe_text: "Suscríbete para recibir las últimas vacantes y novedades.",
+        subscribe_btn: "Suscribirse",
+        copyright: "© 2026 Great American Hospitality. Todos los derechos reservados.",
+        email_placeholder: "Tu correo electrónico"
+      },
+      en: {
+        footer_description: "From high-volume franchises to original concepts targeting specific audiences, the group has played a versatile and influential role with over 80 locations in markets throughout the Mexican Republic and border markets in Texas.",
+        site_map: "Site Map",
+        home: "Home",
+        about_us: "About Us",
+        concepts: "Concepts",
+        franchises: "Franchises",
+        vacancies: "Vacancies",
+        locations: "Locations",
+        contact: "Contact",
+        address: "Cd. Juárez, Chihuahua, Mexico",
+        founded: "Founded in 1994",
+        restaurants: "80+ restaurants",
+        stay_updated: "Stay Updated",
+        subscribe_text: "Subscribe to receive the latest vacancies and news.",
+        subscribe_btn: "Subscribe",
+        copyright: "© 2026 Great American Hospitality. All rights reserved.",
+        email_placeholder: "Your email address"
+      }
+    };
+
+    let currentFooterLang = 'es';
+
+    function setFooterLanguage(lang) {
+      currentFooterLang = lang;
+      
+      // Actualizar botones de idioma
+      document.querySelectorAll('.footer__lang').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.lang === lang);
+      });
+      
+      // Traducir todos los elementos del footer con data-translate
+      document.querySelectorAll('[data-translate]').forEach(element => {
+        const key = element.dataset.translate;
+        if (footerTranslations[lang] && footerTranslations[lang][key]) {
+          if (element.tagName === 'INPUT' && element.type === 'email') {
+            element.placeholder = footerTranslations[lang].email_placeholder;
+          } else {
+            element.textContent = footerTranslations[lang][key];
+          }
+        }
+      });
+      
+      // Traducir placeholder del email específicamente
+      const emailInput = document.getElementById('footerEmailInput');
+      if (emailInput) {
+        emailInput.placeholder = footerTranslations[lang].email_placeholder;
+      }
+      
+      // Guardar preferencia en localStorage
+      try {
+        localStorage.setItem('preferred_footer_language', lang);
+      } catch (e) {
+        // Ignorar errores de localStorage
+      }
+    }
+
+    // Event listeners para los botones de idioma del footer
+    document.addEventListener('DOMContentLoaded', () => {
+      const langEs = document.getElementById('lang-es');
+      const langEn = document.getElementById('lang-en');
+      
+      // Cargar idioma guardado
+      try {
+        const savedLang = localStorage.getItem('preferred_footer_language');
+        if (savedLang && (savedLang === 'es' || savedLang === 'en')) {
+          currentFooterLang = savedLang;
+        }
+      } catch (e) {
+        // Ignorar errores
+      }
+      
+      if (langEs) {
+        langEs.addEventListener('click', () => setFooterLanguage('es'));
+      }
+      
+      if (langEn) {
+        langEn.addEventListener('click', () => setFooterLanguage('en'));
+      }
+      
+      // Aplicar idioma inicial al footer
+      setFooterLanguage(currentFooterLang);
+      
+      // Manejar suscripción
+      const subscribeForm = document.getElementById('footerSubscribeForm');
+      if (subscribeForm) {
+        subscribeForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const input = document.getElementById('footerEmailInput');
+          const email = input?.value.trim();
+          
+          if (email && email.includes('@')) {
+            const successMsg = footerTranslations[currentFooterLang].subscribe_success || 
+                              (currentFooterLang === 'en' ? 'Thank you for subscribing!' : '¡Gracias por suscribirte!');
+            alert(successMsg);
+            input.value = '';
+          } else {
+            const errorMsg = footerTranslations[currentFooterLang].subscribe_error ||
+                            (currentFooterLang === 'en' ? 'Please enter a valid email.' : 'Por favor, ingresa un correo válido.');
+            alert(errorMsg);
+          }
+        });
+      }
+    });
+  </script>
 </body>
 </html>
