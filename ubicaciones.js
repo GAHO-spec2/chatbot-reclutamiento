@@ -2,7 +2,7 @@
    CONFIG API
 ========================= */
 
-const API_URL = "https://chatbot-reclutamiento-cl32.onrender.com";
+const API_URL = "https://chatbot-reclutamiento-dcqb.onrender.com";
 
 /* =========================
    ELEMENTOS
