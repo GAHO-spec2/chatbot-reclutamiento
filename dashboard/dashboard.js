@@ -1,4 +1,4 @@
-const API_URL = "https://chatbot-reclutamiento-cl32.onrender.com";
+const API_URL = "https://chatbot-reclutamiento-dcqb.onrender.com";
 
 /* =========================
    FIREBASE AUTH
@@ -319,19 +319,33 @@ async function guardarEntrevista() {
         "Content-Type": "application/json"
       }),
       body: JSON.stringify({
-        candidatoId: selectedCandidate.id,
-        candidatoNombre: selectedCandidate.nombre || "Sin nombre",
-        correo: selectedCandidate.correo || "",
-        telefono: selectedCandidate.telefono || "",
-        puesto: selectedCandidate.vacanteTitulo || selectedCandidate.puestoInteres || "",
-        sucursal: selectedCandidate.sucursal || selectedCandidate.sucursalNombre || "",
-        ciudad: selectedCandidate.ciudad || "",
-        fecha,
-        hora,
-        reclutador,
-        tipo,
-        comentarios
-      })
+  candidatoId: selectedCandidate.id,
+  candidatoNombre: selectedCandidate.nombre || "Sin nombre",
+  correo: selectedCandidate.correo || "",
+  telefono: selectedCandidate.telefono || "",
+
+  puesto:
+    selectedCandidate.vacanteTitulo ||
+    selectedCandidate.puestoInteres ||
+    "",
+
+  marca:
+    selectedCandidate.grupoSeleccionado ||
+    selectedCandidate.grupo ||
+    "GA Hospitality",
+
+  sucursal:
+    selectedCandidate.sucursal ||
+    selectedCandidate.sucursalNombre ||
+    "",
+
+  ciudad: selectedCandidate.ciudad || "",
+  fecha,
+  hora,
+  reclutador,
+  tipo,
+  comentarios
+})
     });
 
     const data = await res.json();

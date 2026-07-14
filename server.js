@@ -999,12 +999,33 @@ ${cvTexto.slice(0, 12000)}
   }
 }
 
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
-app.get("/index.html", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
-app.get("/vacantes.html", (req, res) => res.sendFile(path.join(__dirname, "vacantes.html")));
-app.get("/login-admin.html", (req, res) => res.sendFile(path.join(__dirname, "login-admin.html")));
-app.get("/dashboard.html", (req, res) => res.sendFile(path.join(__dirname, "dashboard.html")));
-app.get("/vacantes-admin.html", (req, res) => res.sendFile(path.join(__dirname, "vacantes-admin.html")));
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+app.get("/index.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+app.get("/vacantes.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "vacantes.html"));
+});
+
+app.get("/login-admin.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "login-admin.html"));
+});
+
+app.get("/dashboard.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "dashboard.html"));
+});
+
+app.get("/vacantes-admin.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "vacantes-admin.html"));
+});
+
+app.get("/entrevistas.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "entrevistas.html"));
+});
 
 app.get("/health", async (req, res) => {
   try {
@@ -1411,43 +1432,45 @@ app.get("/api/entrevistas", verifyAdmin, async (req, res) => {
 app.post("/api/entrevistas", verifyAdmin, async (req, res) => {
   try {
     const {
-      candidatoId,
-      candidatoNombre,
-      correo,
-      telefono,
-      puesto,
-      sucursal,
-      ciudad,
-      fecha,
-      hora,
-      reclutador,
-      tipo,
-      comentarios
-    } = req.body;
+  candidatoId,
+  candidatoNombre,
+  correo,
+  telefono,
+  puesto,
+  marca,
+  sucursal,
+  ciudad,
+  fecha,
+  hora,
+  reclutador,
+  tipo,
+  comentarios
+} = req.body;
 
     if (!candidatoId || !candidatoNombre || !fecha || !hora) {
       return res.status(400).json({ error: "Faltan datos obligatorios para agendar la entrevista." });
     }
 
     const entrevista = {
-      id: `ent-${Date.now()}`,
-      candidatoId,
-      candidatoNombre,
-      correo: correo || "",
-      telefono: telefono || "",
-      puesto: puesto || "",
-      sucursal: sucursal || "",
-      ciudad: ciudad || "",
-      fecha,
-      hora,
-      reclutador: reclutador || "",
-      tipo: tipo || "presencial",
-      comentarios: comentarios || "",
-      estado: "agendada",
-      creadaPor: req.adminUser.email,
-      creadaEn: new Date().toISOString(),
-      fechaActualizacion: new Date().toISOString()
-    };
+  id: `ent-${Date.now()}`,
+  candidatoId,
+  candidatoNombre,
+  correo: correo || "",
+  telefono: telefono || "",
+  puesto: puesto || "",
+  marca: marca || "GA Hospitality",
+  sucursal: sucursal || "",
+  ciudad: ciudad || "",
+  fecha,
+  hora,
+  reclutador: reclutador || "",
+  tipo: tipo || "presencial",
+  comentarios: comentarios || "",
+  estado: "agendada",
+  creadaPor: req.adminUser.email,
+  creadaEn: new Date().toISOString(),
+  fechaActualizacion: new Date().toISOString()
+};
 
     await guardarEntrevista(entrevista);
 
@@ -1474,6 +1497,15 @@ app.patch("/api/entrevistas/:id", verifyAdmin, async (req, res) => {
   try {
     const { id } = req.params;
 
+    const entrevistas = await leerEntrevistas();
+    const entrevistaActual = entrevistas.find((item) => item.id === id);
+
+    if (!entrevistaActual) {
+      return res.status(404).json({
+        error: "Entrevista no encontrada."
+      });
+    }
+
     const data = {
       ...req.body,
       fechaActualizacion: new Date().toISOString()
@@ -1481,41 +1513,121 @@ app.patch("/api/entrevistas/:id", verifyAdmin, async (req, res) => {
 
     await actualizarEntrevista(id, data);
 
+    if (
+      entrevistaActual.candidatoId &&
+      (data.fecha || data.hora)
+    ) {
+      await actualizarPostulacion(entrevistaActual.candidatoId, {
+        fechaEntrevista:
+          data.fecha || entrevistaActual.fecha,
+        horaEntrevista:
+          data.hora || entrevistaActual.hora,
+        fechaActualizacion: new Date().toISOString()
+      });
+    }
+
     res.json({
       ok: true,
-      message: "Entrevista actualizada correctamente."
+      message: "Entrevista actualizada correctamente.",
+      entrevista: {
+        ...entrevistaActual,
+        ...data,
+        id
+      }
     });
   } catch (error) {
     console.error("Error actualizando entrevista:", error);
-    res.status(500).json({ error: "No fue posible actualizar la entrevista." });
+
+    res.status(500).json({
+      error: "No fue posible actualizar la entrevista."
+    });
   }
 });
 
-app.patch("/api/entrevistas/:id/estado", verifyAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { estado } = req.body;
+app.patch(
+  "/api/entrevistas/:id/estado",
+  verifyAdmin,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { estado } = req.body;
 
-    const estadosValidos = ["agendada", "confirmada", "realizada", "cancelada", "reagendada"];
+      const estadosValidos = [
+  "pendiente",
+  "aprobado",
+  "rechazado",
+  "entrevista_agendada",
+  "entrevista_realizada"
+];
 
-    if (!estadosValidos.includes(estado)) {
-      return res.status(400).json({ error: "Estado de entrevista no valido." });
+      if (!estadosValidos.includes(estado)) {
+        return res.status(400).json({
+          error: "Estado de entrevista no válido."
+        });
+      }
+
+      const entrevistas = await leerEntrevistas();
+      const entrevista = entrevistas.find(
+        (item) => item.id === id
+      );
+
+      if (!entrevista) {
+        return res.status(404).json({
+          error: "Entrevista no encontrada."
+        });
+      }
+
+      const data = {
+        estado,
+        fechaActualizacion: new Date().toISOString()
+      };
+
+      await actualizarEntrevista(id, data);
+
+      if (entrevista.candidatoId) {
+        let estadoSolicitud = "entrevista_agendada";
+
+        if (estado === "realizada") {
+          estadoSolicitud = "entrevista_realizada";
+        }
+
+        if (estado === "cancelada") {
+          estadoSolicitud = "aprobado";
+        }
+
+        await actualizarPostulacion(
+          entrevista.candidatoId,
+          {
+            estadoSolicitud,
+            estadoEntrevista: estado,
+            fechaActualizacion: new Date().toISOString()
+          }
+        );
+      }
+
+      res.json({
+        ok: true,
+        message:
+          "Estado de entrevista actualizado correctamente.",
+        entrevista: {
+          ...entrevista,
+          ...data,
+          id
+        }
+      });
+    } catch (error) {
+      console.error(
+        "Error actualizando estado de entrevista:",
+        error
+      );
+
+      res.status(500).json({
+        error:
+          "No fue posible actualizar el estado de la entrevista."
+      });
     }
-
-    await actualizarEntrevista(id, {
-      estado,
-      fechaActualizacion: new Date().toISOString()
-    });
-
-    res.json({
-      ok: true,
-      message: "Estado de entrevista actualizado correctamente."
-    });
-  } catch (error) {
-    console.error("Error actualizando estado de entrevista:", error);
-    res.status(500).json({ error: "No fue posible actualizar el estado de la entrevista." });
   }
-});
+);
 
 
 async function buscarDatosSucursalExistente(data = {}) {

@@ -3,15 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Entrevistas RH | GA Hospitality</title>
-  <link rel="icon" type="image/png" sizes="32x32" href="icons8-documento-32.png">
-  <link rel="stylesheet" href="entrevistas.css?v=2" />
-</head>
-<body>
 
+  <title>Entrevistas RH | GA Hospitality</title>
+
+  <meta
+    name="description"
+    content="Panel administrativo para coordinar, confirmar, reprogramar y dar seguimiento a entrevistas laborales."
+  />
+
+  <link
+    rel="icon"
+    type="image/png"
+    sizes="32x32"
+    href="icons8-documento-32.png"
+  />
+
+  <link rel="stylesheet" href="entrevistas.css?v=3" />
+</head>
+
+<body>
+  <!-- =========================
+       ENCABEZADO
+  ========================== -->
   <header class="topbar">
     <div class="topbar__left">
-      <img src="gaho.png" alt="GA Hospitality" class="corporativo-logo" />
+      <img
+        src="gaho.png"
+        alt="GA Hospitality"
+        class="corporativo-logo"
+      />
+
       <div>
         <h2>GA Hospitality</h2>
         <p>Coordinación de entrevistas</p>
@@ -19,117 +40,263 @@
     </div>
 
     <div class="topbar__right">
-      <a href="dashboard.html" class="btn btn--secondary">Candidatos</a>
-      <a href="vacantes-admin.html" class="btn btn--secondary">Vacantes</a>
-      <button id="logoutBtn" class="btn btn--primary" type="button">Cerrar sesión</button>
+      <a
+        href="dashboard.html"
+        class="btn btn--secondary"
+      >
+        Candidatos
+      </a>
+
+      <a
+        href="vacantes-admin.html"
+        class="btn btn--secondary"
+      >
+        Vacantes
+      </a>
+
+      <button
+        id="logoutBtn"
+        class="btn btn--primary"
+        type="button"
+      >
+        Cerrar sesión
+      </button>
     </div>
   </header>
 
+  <!-- =========================
+       CONTENIDO
+  ========================== -->
   <main class="app-layout">
     <aside class="sidebar">
-      <a href="dashboard.html">Candidatos</a>
-      <a href="vacantes-admin.html">Vacantes</a>
-      <a href="entrevistas.html" class="active">Entrevistas</a>
+      <a href="dashboard.html">
+        Candidatos
+      </a>
+
+      <a href="vacantes-admin.html">
+        Vacantes
+      </a>
+
+      <a
+        href="entrevistas.html"
+        class="active"
+        aria-current="page"
+      >
+        Entrevistas
+      </a>
     </aside>
 
     <section class="content">
       <div class="section-head">
         <div>
           <h1>Entrevistas</h1>
-          <p>Administra, confirma, reprograma y da seguimiento a entrevistas laborales.</p>
+
+          <p>
+            Administra, confirma, reprograma y da seguimiento a entrevistas laborales.
+          </p>
         </div>
-        <button id="refreshBtn" class="btn btn--primary">Actualizar</button>
+
+        <button
+          id="refreshBtn"
+          class="btn btn--primary"
+          type="button"
+        >
+          Actualizar
+        </button>
       </div>
 
-      <div id="statusBox" class="status hidden"></div>
+      <div
+        id="statusBox"
+        class="status hidden"
+        role="status"
+        aria-live="polite"
+      ></div>
 
+      <!-- =========================
+           ESTADÍSTICAS
+      ========================== -->
       <section class="stats-grid">
         <div class="stat-box">
           <span>Hoy</span>
           <strong id="statHoy">0</strong>
         </div>
+
         <div class="stat-box">
           <span>Pendientes</span>
           <strong id="statPendientes">0</strong>
         </div>
+
         <div class="stat-box">
           <span>Confirmadas</span>
           <strong id="statConfirmadas">0</strong>
         </div>
+
         <div class="stat-box">
           <span>Canceladas</span>
           <strong id="statCanceladas">0</strong>
         </div>
+
         <div class="stat-box">
           <span>Finalizadas</span>
           <strong id="statFinalizadas">0</strong>
         </div>
       </section>
 
+      <!-- =========================
+           CALENDARIO
+      ========================== -->
       <section class="calendar-card">
         <div class="calendar-head">
           <div>
-            <span class="calendar-label">Agenda semanal</span>
-            <h2 id="calendarTitle">Entrevistas de la semana</h2>
+            <span class="calendar-label">
+              Agenda semanal
+            </span>
+
+            <h2 id="calendarTitle">
+              Entrevistas de la semana
+            </h2>
           </div>
 
           <div class="calendar-actions">
-            <button id="prevWeekBtn" class="btn btn--secondary">Semana anterior</button>
-            <button id="todayWeekBtn" class="btn btn--primary">Hoy</button>
-            <button id="nextWeekBtn" class="btn btn--secondary">Semana siguiente</button>
+            <button
+              id="prevWeekBtn"
+              class="btn btn--secondary"
+              type="button"
+            >
+              Semana anterior
+            </button>
+
+            <button
+              id="todayWeekBtn"
+              class="btn btn--primary"
+              type="button"
+            >
+              Hoy
+            </button>
+
+            <button
+              id="nextWeekBtn"
+              class="btn btn--secondary"
+              type="button"
+            >
+              Semana siguiente
+            </button>
           </div>
         </div>
 
-        <div class="calendar-grid" id="calendarGrid"></div>
+        <div
+          class="calendar-grid"
+          id="calendarGrid"
+        ></div>
 
         <div class="calendar-summary">
-          <span class="calendar-bell">🔔</span>
-          <span id="calendarSummaryText">0 entrevistas agendadas esta semana</span>
+          <span
+            class="calendar-bell"
+            aria-hidden="true"
+          >
+            🔔
+          </span>
+
+          <span id="calendarSummaryText">
+            0 entrevistas agendadas esta semana
+          </span>
         </div>
       </section>
 
+      <!-- =========================
+           FILTROS Y TABLA
+      ========================== -->
       <section class="card">
         <div class="filters-grid">
           <div class="field">
-            <label>Buscar candidato</label>
-            <input id="searchInput" type="text" placeholder="Nombre del candidato">
+            <label for="searchInput">
+              Buscar candidato
+            </label>
+
+            <input
+              id="searchInput"
+              type="text"
+              placeholder="Nombre del candidato"
+              autocomplete="off"
+            />
           </div>
 
           <div class="field">
-            <label>Fecha</label>
-            <input id="filterDate" type="date">
+            <label for="filterDate">
+              Fecha
+            </label>
+
+            <input
+              id="filterDate"
+              type="date"
+            />
           </div>
 
           <div class="field">
-            <label>Marca</label>
+            <label for="filterMarca">
+              Marca
+            </label>
+
             <select id="filterMarca">
-              <option value="">Todas</option>
+              <option value="">
+                Todas
+              </option>
             </select>
           </div>
 
           <div class="field">
-            <label>Sucursal</label>
+            <label for="filterSucursal">
+              Sucursal
+            </label>
+
             <select id="filterSucursal">
-              <option value="">Todas</option>
+              <option value="">
+                Todas
+              </option>
             </select>
           </div>
 
           <div class="field">
-            <label>Puesto</label>
+            <label for="filterPuesto">
+              Puesto
+            </label>
+
             <select id="filterPuesto">
-              <option value="">Todos</option>
+              <option value="">
+                Todos
+              </option>
             </select>
           </div>
 
           <div class="field">
-            <label>Estatus</label>
+            <label for="filterStatus">
+              Estatus
+            </label>
+
             <select id="filterStatus">
-              <option value="">Todos</option>
-              <option value="agendada">Agendada</option>
-              <option value="confirmada">Confirmada</option>
-              <option value="realizada">Realizada</option>
-              <option value="cancelada">Cancelada</option>
-              <option value="reagendada">Reagendada</option>
+              <option value="">
+                Todos
+              </option>
+
+              <option value="agendada">
+                Agendada
+              </option>
+
+              <option value="confirmada">
+                Confirmada
+              </option>
+
+              <option value="realizada">
+                Realizada
+              </option>
+
+              <option value="cancelada">
+                Cancelada
+              </option>
+
+              <option value="reagendada">
+                Reagendada
+              </option>
             </select>
           </div>
         </div>
@@ -149,23 +316,55 @@
                 <th>Acciones</th>
               </tr>
             </thead>
-            <tbody id="interviewsTable"></tbody>
+
+            <tbody id="interviewsTable">
+              <tr>
+                <td colspan="9">
+                  Cargando entrevistas...
+                </td>
+              </tr>
+            </tbody>
           </table>
         </div>
       </section>
     </section>
   </main>
 
-  <div id="detailModal" class="modal hidden">
-    <div class="modal__backdrop" id="closeDetailBackdrop"></div>
+  <!-- =========================
+       MODAL DETALLE
+  ========================== -->
+  <div
+    id="detailModal"
+    class="modal hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="detailCandidate"
+  >
+    <div
+      class="modal__backdrop"
+      id="closeDetailBackdrop"
+    ></div>
 
     <div class="modal__content">
       <div class="modal__header">
         <div>
-          <h3 id="detailCandidate">Detalle de entrevista</h3>
-          <p id="detailStatusText">Estatus actual</p>
+          <h3 id="detailCandidate">
+            Detalle de entrevista
+          </h3>
+
+          <p id="detailStatusText">
+            Estatus actual
+          </p>
         </div>
-        <button id="closeDetailBtn" class="chatbot-close">x</button>
+
+        <button
+          id="closeDetailBtn"
+          class="chatbot-close"
+          type="button"
+          aria-label="Cerrar detalle"
+        >
+          ✕
+        </button>
       </div>
 
       <div class="modal__body">
@@ -174,30 +373,37 @@
             <span>Candidato</span>
             <strong id="detailNombre">-</strong>
           </div>
+
           <div class="modal-item">
             <span>Puesto</span>
             <strong id="detailPuesto">-</strong>
           </div>
+
           <div class="modal-item">
             <span>Marca</span>
             <strong id="detailMarca">-</strong>
           </div>
+
           <div class="modal-item">
             <span>Sucursal</span>
             <strong id="detailSucursal">-</strong>
           </div>
+
           <div class="modal-item">
             <span>Fecha</span>
             <strong id="detailFecha">-</strong>
           </div>
+
           <div class="modal-item">
             <span>Hora</span>
             <strong id="detailHora">-</strong>
           </div>
+
           <div class="modal-item">
             <span>Entrevistador</span>
             <strong id="detailEntrevistador">-</strong>
           </div>
+
           <div class="modal-item">
             <span>Tipo</span>
             <strong id="detailTipo">-</strong>
@@ -211,47 +417,122 @@
       </div>
 
       <div class="modal__footer">
-        <button id="confirmBtn" class="btn btn--primary">Confirmar</button>
-        <button id="rescheduleBtn" class="btn btn--secondary">Reprogramar</button>
-        <button id="doneBtn" class="btn btn--secondary">Realizada</button>
-        <button id="cancelBtn" class="btn btn--danger">Cancelar</button>
+        <button
+          id="confirmBtn"
+          class="btn btn--primary"
+          type="button"
+        >
+          Confirmar
+        </button>
+
+        <button
+          id="rescheduleBtn"
+          class="btn btn--secondary"
+          type="button"
+        >
+          Reprogramar
+        </button>
+
+        <button
+          id="doneBtn"
+          class="btn btn--secondary"
+          type="button"
+        >
+          Realizada
+        </button>
+
+        <button
+          id="cancelBtn"
+          class="btn btn--danger"
+          type="button"
+        >
+          Cancelar
+        </button>
       </div>
     </div>
   </div>
 
-  <div id="rescheduleModal" class="modal hidden">
-    <div class="modal__backdrop" id="closeRescheduleBackdrop"></div>
+  <!-- =========================
+       MODAL REPROGRAMAR
+  ========================== -->
+  <div
+    id="rescheduleModal"
+    class="modal hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="rescheduleTitle"
+  >
+    <div
+      class="modal__backdrop"
+      id="closeRescheduleBackdrop"
+    ></div>
 
     <div class="modal__content modal__content--small">
       <div class="modal__header">
         <div>
-          <h3>Reprogramar entrevista</h3>
-          <p>Selecciona nueva fecha y hora.</p>
+          <h3 id="rescheduleTitle">
+            Reprogramar entrevista
+          </h3>
+
+          <p>
+            Selecciona una nueva fecha y hora.
+          </p>
         </div>
-        <button id="closeRescheduleBtn" class="chatbot-close">x</button>
+
+        <button
+          id="closeRescheduleBtn"
+          class="chatbot-close"
+          type="button"
+          aria-label="Cerrar reprogramación"
+        >
+          ✕
+        </button>
       </div>
 
       <div class="modal__body">
         <div class="filters-grid filters-grid--two">
           <div class="field">
-            <label>Nueva fecha</label>
-            <input id="newDate" type="date">
+            <label for="newDate">
+              Nueva fecha
+            </label>
+
+            <input
+              id="newDate"
+              type="date"
+            />
           </div>
+
           <div class="field">
-            <label>Nueva hora</label>
-            <input id="newTime" type="time">
+            <label for="newTime">
+              Nueva hora
+            </label>
+
+            <input
+              id="newTime"
+              type="time"
+            />
           </div>
         </div>
       </div>
 
       <div class="modal__footer">
-        <button id="saveRescheduleBtn" class="btn btn--primary">Guardar cambio</button>
+        <button
+          id="saveRescheduleBtn"
+          class="btn btn--primary"
+          type="button"
+        >
+          Guardar cambio
+        </button>
       </div>
     </div>
   </div>
 
+  <!-- =========================
+       FIREBASE Y JAVASCRIPT
+  ========================== -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="entrevistas.js"></script>
+
+  <script src="entrevistas.js?v=3"></script>
 </body>
 </html>

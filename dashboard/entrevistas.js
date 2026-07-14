@@ -1,4 +1,4 @@
-const API_URL = "https://chatbot-reclutamiento-cl32.onrender.com";
+const API_URL = "https://chatbot-reclutamiento-dcqb.onrender.com";
 
 /* =========================
    FIREBASE AUTH
@@ -194,34 +194,30 @@ async function cargarEntrevistas() {
   try {
     setStatus("Cargando entrevistas...");
 
-    /*
-      CONEXIÓN REAL POSTERIOR:
-      Cuando quieras usar el backend que ya creamos, puedes reemplazar demo por esto:
+    const res = await fetch(`${API_URL}/api/entrevistas`, {
+      headers: authHeaders()
+    });
 
-      const res = await fetch(`${API_URL}/api/entrevistas`, {
-        headers: authHeaders()
-      });
+    const data = await res.json();
 
-      const data = await res.json();
+    if (!res.ok) {
+      throw new Error(
+        data.error || `No fue posible cargar entrevistas. Error ${res.status}`
+      );
+    }
 
-      if (!res.ok) {
-        throw new Error(data.error || "No fue posible cargar entrevistas.");
-      }
-
-      entrevistas = Array.isArray(data) ? data : [];
-    */
-
-    entrevistas = [...demoEntrevistas];
+    entrevistas = Array.isArray(data) ? data : [];
 
     poblarFiltros();
     render();
     setStatus("", false);
   } catch (error) {
-    console.error(error);
-    setStatus(`⚠️ ${error.message || "No fue posible cargar entrevistas."}`);
+    console.error("Error cargando entrevistas:", error);
+    setStatus(
+      `⚠️ ${error.message || "No fue posible cargar entrevistas."}`
+    );
   }
 }
-
 /* =========================
    FILTROS
 ========================= */
@@ -390,22 +386,45 @@ function findInterview(id) {
 
 async function cambiarEstado(id, estado) {
   const item = findInterview(id);
-  if (!item) return;
 
-  /*
-    CONEXIÓN REAL POSTERIOR:
-    await fetch(`${API_URL}/api/entrevistas/${id}/estado`, {
-      method: "PATCH",
-      headers: authHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ estado })
-    });
-  */
+  if (!item) {
+    setStatus("⚠️ No se encontró la entrevista seleccionada.");
+    return;
+  }
 
-  item.estado = estado;
-  render();
-  setStatus(`✅ Entrevista marcada como ${estadoLabel(estado)}.`);
+  try {
+    setStatus("Actualizando entrevista...");
+
+    const res = await fetch(
+      `${API_URL}/api/entrevistas/${encodeURIComponent(id)}/estado`,
+      {
+        method: "PATCH",
+        headers: authHeaders({
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify({ estado })
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(
+        data.error || "No fue posible actualizar la entrevista."
+      );
+    }
+
+    await cargarEntrevistas();
+    closeDetailModal();
+
+    setStatus(
+      `✅ Entrevista marcada como ${estadoLabel(estado)}.`
+    );
+  } catch (error) {
+    console.error("Error actualizando entrevista:", error);
+    setStatus(`⚠️ ${error.message}`);
+  }
 }
-
 function handleTableAction(action, id) {
   const item = findInterview(id);
   if (!item) return;
@@ -429,36 +448,64 @@ function closeRescheduleModal() {
 }
 
 async function guardarReprogramacion() {
-  if (!selectedInterview) return;
+  if (!selectedInterview?.id) {
+    setStatus("⚠️ No hay una entrevista seleccionada.");
+    return;
+  }
 
   if (!newDate.value || !newTime.value) {
     setStatus("⚠️ Selecciona nueva fecha y hora.");
     return;
   }
 
-  /*
-    CONEXIÓN REAL POSTERIOR:
-    await fetch(`${API_URL}/api/entrevistas/${selectedInterview.id}`, {
-      method: "PATCH",
-      headers: authHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({
-        fecha: newDate.value,
-        hora: newTime.value,
-        estado: "reagendada"
-      })
-    });
-  */
+  try {
+    if (saveRescheduleBtn) {
+      saveRescheduleBtn.disabled = true;
+      saveRescheduleBtn.textContent = "Guardando...";
+    }
 
-  selectedInterview.fecha = newDate.value;
-  selectedInterview.hora = newTime.value;
-  selectedInterview.estado = "reagendada";
+    const res = await fetch(
+      `${API_URL}/api/entrevistas/${encodeURIComponent(
+        selectedInterview.id
+      )}`,
+      {
+        method: "PATCH",
+        headers: authHeaders({
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify({
+          fecha: newDate.value,
+          hora: newTime.value,
+          estado: "reagendada"
+        })
+      }
+    );
 
-  closeRescheduleModal();
-  closeDetailModal();
-  render();
+    const data = await res.json();
 
-  setStatus("✅ Entrevista reprogramada correctamente.");
+    if (!res.ok) {
+      throw new Error(
+        data.error || "No fue posible reprogramar la entrevista."
+      );
+    }
+
+    closeRescheduleModal();
+    closeDetailModal();
+
+    await cargarEntrevistas();
+
+    setStatus("✅ Entrevista reprogramada correctamente.");
+  } catch (error) {
+    console.error("Error reprogramando entrevista:", error);
+    setStatus(`⚠️ ${error.message}`);
+  } finally {
+    if (saveRescheduleBtn) {
+      saveRescheduleBtn.disabled = false;
+      saveRescheduleBtn.textContent = "Guardar cambios";
+    }
+  }
 }
+
 
 /* =========================
    LOGOUT
