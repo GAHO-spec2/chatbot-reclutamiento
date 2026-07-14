@@ -911,17 +911,25 @@ async function sugerirVacantesBasicas(texto = "", tipoVacante = "") {
 }
 
 async function analizarCvConIA(cvTexto = "") {
-  if (!cvTexto.trim() || !process.env.OPENAI_API_KEY) {
-    return {
-      resumen: "CV recibido correctamente.",
-      habilidadesDetectadas: [],
-      perfilRecomendado: "",
-      palabrasClave: [],
-      areasCompatibles: [],
-      puestosSugeridos: [],
-      nivelExperiencia: "",
-      tipoPerfil: ""
-    };
+  const textoLimpio = String(cvTexto || "").trim();
+
+  console.log("=== DIAGNÓSTICO ANÁLISIS CV ===");
+  console.log("Caracteres extraídos:", textoLimpio.length);
+  console.log(
+    "OpenAI configurado:",
+    Boolean(process.env.OPENAI_API_KEY)
+  );
+
+  if (!textoLimpio) {
+    throw new Error(
+      "No fue posible extraer texto del PDF. El documento podría ser una imagen escaneada."
+    );
+  }
+
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error(
+      "La variable OPENAI_API_KEY no está configurada en el servidor."
+    );
   }
 
   try {
@@ -933,72 +941,84 @@ async function analizarCvConIA(cvTexto = "") {
           content: `
 Eres un especialista senior en reclutamiento y selección para GA Hospitality.
 
-Tu tarea es analizar CVs y devolver SOLO JSON válido, sin markdown.
+Analiza el CV recibido y responde únicamente JSON válido, sin markdown.
 
-Debes identificar:
-- resumen profesional
-- habilidades técnicas y blandas
-- tipo de perfil: operativo, administrativo, sistemas, soporte, cocina, servicio, ventas, RH, contabilidad, monitoreo, proyectos u otro
-- nivel de experiencia
-- puestos sugeridos
-- palabras clave para comparar contra vacantes
-- áreas compatibles
-
-No inventes experiencia. Si algo no aparece en el CV, no lo agregues.
+No inventes estudios, experiencia ni habilidades que no aparezcan en el CV.
 `
         },
         {
           role: "user",
           content: `
-Analiza este CV y devuelve JSON válido con esta estructura exacta:
+Analiza el siguiente CV y devuelve exactamente esta estructura:
 
 {
-  "resumen": "resumen profesional breve y claro",
-  "habilidadesDetectadas": ["..."],
+  "resumen": "Resumen profesional detallado de entre 80 y 160 palabras",
+  "habilidadesDetectadas": ["habilidad 1", "habilidad 2"],
   "perfilRecomendado": "operativa, administrativa o mixta",
   "tipoPerfil": "sistemas, soporte, cocina, servicio, ventas, RH, contabilidad, monitoreo, proyectos, administrativo, operativo u otro",
   "nivelExperiencia": "sin experiencia, junior, intermedio, senior o no determinado",
-  "puestosSugeridos": ["..."],
-  "palabrasClave": ["..."],
-  "areasCompatibles": ["..."]
+  "puestosSugeridos": ["puesto 1", "puesto 2"],
+  "palabrasClave": ["palabra 1", "palabra 2"],
+  "areasCompatibles": ["área 1", "área 2"]
 }
 
 CV:
-${cvTexto.slice(0, 12000)}
+${textoLimpio.slice(0, 12000)}
 `
         }
       ]
     });
 
-    const content = completion.choices?.[0]?.message?.content || "{}";
-    const parsed = JSON.parse(limpiarJsonRespuesta(content));
+    const content =
+      completion.choices?.[0]?.message?.content || "{}";
+
+    const parsed = JSON.parse(
+      limpiarJsonRespuesta(content)
+    );
 
     return {
-      resumen: parsed.resumen || "CV recibido correctamente.",
-      habilidadesDetectadas: Array.isArray(parsed.habilidadesDetectadas) ? parsed.habilidadesDetectadas : [],
-      perfilRecomendado: parsed.perfilRecomendado || "",
-      tipoPerfil: parsed.tipoPerfil || "",
-      nivelExperiencia: parsed.nivelExperiencia || "",
-      puestosSugeridos: Array.isArray(parsed.puestosSugeridos) ? parsed.puestosSugeridos : [],
-      palabrasClave: Array.isArray(parsed.palabrasClave) ? parsed.palabrasClave : [],
-      areasCompatibles: Array.isArray(parsed.areasCompatibles) ? parsed.areasCompatibles : []
+      resumen:
+        parsed.resumen ||
+        "No fue posible generar el resumen del CV.",
+
+      habilidadesDetectadas:
+        Array.isArray(parsed.habilidadesDetectadas)
+          ? parsed.habilidadesDetectadas
+          : [],
+
+      perfilRecomendado:
+        parsed.perfilRecomendado || "",
+
+      tipoPerfil:
+        parsed.tipoPerfil || "",
+
+      nivelExperiencia:
+        parsed.nivelExperiencia || "",
+
+      puestosSugeridos:
+        Array.isArray(parsed.puestosSugeridos)
+          ? parsed.puestosSugeridos
+          : [],
+
+      palabrasClave:
+        Array.isArray(parsed.palabrasClave)
+          ? parsed.palabrasClave
+          : [],
+
+      areasCompatibles:
+        Array.isArray(parsed.areasCompatibles)
+          ? parsed.areasCompatibles
+          : []
     };
   } catch (error) {
     console.error("Error IA CV:", error);
 
-    return {
-      resumen: "CV recibido correctamente. El análisis automático no estuvo disponible en este momento.",
-      habilidadesDetectadas: [],
-      perfilRecomendado: "",
-      tipoPerfil: "",
-      nivelExperiencia: "",
-      puestosSugeridos: [],
-      palabrasClave: [],
-      areasCompatibles: []
-    };
+    throw new Error(
+      error.message ||
+      "El servicio de inteligencia artificial no pudo analizar el CV."
+    );
   }
 }
-
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
@@ -1161,16 +1181,51 @@ app.get("/api/postulacion/:id", async (req, res) => {
   }
 });
 
-app.post("/api/analizar-cv", upload.fields([{ name: "cvFile", maxCount: 1 }]), async (req, res) => {
-  try {
-    const cvFile = req.files?.cvFile?.[0];
+app.post(
+  "/api/analizar-cv",
+  upload.fields([
+    { name: "cvFile", maxCount: 1 }
+  ]),
+  async (req, res) => {
+    try {
+      const cvFile = req.files?.cvFile?.[0];
 
-    if (!cvFile) {
-      return res.status(400).json({ error: "Debes adjuntar tu CV en PDF." });
-    }
+      if (!cvFile) {
+        return res.status(400).json({
+          error: "Debes adjuntar tu CV en PDF."
+        });
+      }
 
-    const cvTexto = await extraerTextoPdf(cvFile.path);
-    const analisisIA = await analizarCvConIA(cvTexto);
+      const cvTexto = await extraerTextoPdf(
+        cvFile.path
+      );
+
+      console.log(
+        "Archivo recibido:",
+        cvFile.originalname
+      );
+
+      console.log(
+        "Tamaño del archivo:",
+        cvFile.size
+      );
+
+      console.log(
+        "Caracteres extraídos:",
+        cvTexto.length
+      );
+
+      if (!cvTexto.trim()) {
+        return res.status(422).json({
+          error:
+            "No se pudo leer el contenido del PDF. El documento puede estar escaneado como imagen."
+        });
+      }
+
+      const analisisIA =
+        await analizarCvConIA(cvTexto);
+
+      // Continúa aquí el resto de tu ruta actual.
 
     let tipoSugerido = "";
 
