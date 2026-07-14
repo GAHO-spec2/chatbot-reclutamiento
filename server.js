@@ -296,24 +296,7 @@ function guardarJson(filePath, data) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
 }
 
-async function leerPostulaciones() {
-  if (!db) return leerJson(postulacionesFile, []);
 
-  const snapshot = await db.collection(POSTULACIONES_COLLECTION).get();
-
-  const postulaciones = snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data()
-  }));
-
-  postulaciones.sort((a, b) => {
-    const fechaA = new Date(a.fechaRegistro || 0).getTime();
-    const fechaB = new Date(b.fechaRegistro || 0).getTime();
-    return fechaB - fechaA;
-  });
-
-  return postulaciones;
-}
 async function guardarPostulacion(postulacion) {
   if (!db) {
     const postulaciones = leerJson(postulacionesFile, []);
@@ -325,6 +308,27 @@ async function guardarPostulacion(postulacion) {
   await db.collection(POSTULACIONES_COLLECTION).doc(postulacion.id).set(postulacion);
 }
 
+async function leerPostulaciones(limit = 50) {
+  if (!db) {
+    return leerJson(postulacionesFile, [])
+      .sort((a, b) => {
+        return new Date(b.fechaRegistro || 0) -
+          new Date(a.fechaRegistro || 0);
+      })
+      .slice(0, limit);
+  }
+
+  const snapshot = await db
+    .collection(POSTULACIONES_COLLECTION)
+    .orderBy("fechaRegistro", "desc")
+    .limit(limit)
+    .get();
+
+  return snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+}
 async function actualizarPostulacion(id, data) {
   if (!db) {
     const postulaciones = leerJson(postulacionesFile, []);
@@ -345,23 +349,30 @@ async function actualizarPostulacion(id, data) {
   await db.collection(POSTULACIONES_COLLECTION).doc(id).update(data);
 }
 
-async function leerEntrevistas() {
-  if (!db) return leerJson(entrevistasFile, []);
+async function leerEntrevistas(limit = 100) {
+  if (!db) {
+    return leerJson(entrevistasFile, [])
+      .sort((a, b) => {
+        return new Date(
+          `${a.fecha || ""}T${a.hora || "00:00"}`
+        ) -
+        new Date(
+          `${b.fecha || ""}T${b.hora || "00:00"}`
+        );
+      })
+      .slice(0, limit);
+  }
 
-  const snapshot = await db.collection(ENTREVISTAS_COLLECTION).get();
+  const snapshot = await db
+    .collection(ENTREVISTAS_COLLECTION)
+    .orderBy("fecha", "asc")
+    .limit(limit)
+    .get();
 
-  const entrevistas = snapshot.docs.map((doc) => ({
+  return snapshot.docs.map((doc) => ({
     id: doc.id,
     ...doc.data()
   }));
-
-  entrevistas.sort((a, b) => {
-    const fechaA = new Date(`${a.fecha || ""}T${a.hora || "00:00"}`).getTime();
-    const fechaB = new Date(`${b.fecha || ""}T${b.hora || "00:00"}`).getTime();
-    return fechaA - fechaB;
-  });
-
-  return entrevistas;
 }
 
 async function guardarEntrevista(entrevista) {
@@ -1425,17 +1436,34 @@ app.get("/api/admin/me", verifyAdmin, (req, res) => {
   });
 });
 
-app.get("/api/postulaciones", verifyAdmin, async (req, res) => {
-  try {
-    const postulaciones = await leerPostulaciones();
-    res.json(postulaciones);
-  } catch (error) {
-    console.error("Error cargando postulaciones:", error);
-    res.status(500).json({
-      error: error.message || "No fue posible cargar postulaciones."
-    });
+app.get(
+  "/api/postulaciones",
+  verifyAdmin,
+  async (req, res) => {
+    try {
+      const requestedLimit = Number(req.query.limit);
+      const limit = Number.isFinite(requestedLimit)
+        ? Math.min(Math.max(requestedLimit, 1), 100)
+        : 50;
+
+      const postulaciones =
+        await leerPostulaciones(limit);
+
+      res.json(postulaciones);
+    } catch (error) {
+      console.error(
+        "Error cargando postulaciones:",
+        error
+      );
+
+      res.status(500).json({
+        error:
+          error.message ||
+          "No fue posible cargar postulaciones."
+      });
+    }
   }
-});
+);
 
 app.patch("/api/postulaciones/:id/estado", verifyAdmin, async (req, res) => {
   try {

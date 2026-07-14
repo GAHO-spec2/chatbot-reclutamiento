@@ -1,5 +1,6 @@
 const API_URL = "https://chatbot-reclutamiento-dcqb.onrender.com";
-
+const DASHBOARD_CACHE_KEY = "rh_postulaciones_cache";
+const DASHBOARD_CACHE_TIME = 2 * 60 * 1000;
 /* =========================
    FIREBASE AUTH
 ========================= */
@@ -553,30 +554,87 @@ async function guardarEntrevista() {
     }
   }
 }
+function guardarPostulacionesCache(data) {
+  try {
+    sessionStorage.setItem(
+      DASHBOARD_CACHE_KEY,
+      JSON.stringify({
+        timestamp: Date.now(),
+        data
+      })
+    );
+  } catch (error) {
+    console.warn("No se pudo guardar caché:", error);
+  }
+}
 
+function leerPostulacionesCache() {
+  try {
+    const raw = sessionStorage.getItem(DASHBOARD_CACHE_KEY);
+
+    if (!raw) return null;
+
+    const cache = JSON.parse(raw);
+
+    if (Date.now() - cache.timestamp > DASHBOARD_CACHE_TIME) {
+      sessionStorage.removeItem(DASHBOARD_CACHE_KEY);
+      return null;
+    }
+
+    return Array.isArray(cache.data) ? cache.data : null;
+  } catch (error) {
+    return null;
+  }
+}
 /* =========================
    API
 ========================= */
-async function cargarPostulaciones() {
-  try {
-    setStatus("Cargando postulaciones...");
+async function cargarPostulaciones(forceRefresh = false) {
+  const cache = !forceRefresh
+    ? leerPostulacionesCache()
+    : null;
 
+  if (cache) {
+    postulaciones = cache;
+    renderPostulaciones();
+    setStatus("", false);
+  } else {
+    setStatus("Cargando postulaciones...");
+  }
+
+  try {
     const res = await fetch(`${API_URL}/api/postulaciones`, {
-      headers: authHeaders()
+      headers: authHeaders(),
+      cache: "no-store"
     });
 
     const data = await res.json();
 
     if (!res.ok) {
-      throw new Error(data.error || `Error HTTP ${res.status}`);
+      throw new Error(
+        data.error || `Error HTTP ${res.status}`
+      );
     }
 
     postulaciones = Array.isArray(data) ? data : [];
+
+    guardarPostulacionesCache(postulaciones);
     renderPostulaciones();
     setStatus("", false);
   } catch (error) {
-    console.error("Error cargando postulaciones:", error);
-    setStatus(`⚠️ ${error.message || "No fue posible cargar las postulaciones."}`);
+    console.error(
+      "Error cargando postulaciones:",
+      error
+    );
+
+    if (!cache) {
+      setStatus(
+        `⚠️ ${
+          error.message ||
+          "No fue posible cargar las postulaciones."
+        }`
+      );
+    }
   }
 }
 
@@ -623,7 +681,9 @@ async function cerrarSesion() {
 
 
 if (refreshBtn) {
-  refreshBtn.addEventListener("click", cargarPostulaciones);
+  refreshBtn.addEventListener("click", () => {
+    cargarPostulaciones(true);
+  });
 }
 
 if (logoutBtn) {
