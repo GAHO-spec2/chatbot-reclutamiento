@@ -69,6 +69,17 @@ const saveInterviewBtn = document.getElementById("saveInterviewBtn");
 let postulaciones = [];
 let selectedCandidate = null;
 
+const candidateSearch = document.getElementById("candidateSearch");
+const candidateStatusFilter = document.getElementById(
+  "candidateStatusFilter"
+);
+const candidateTypeFilter = document.getElementById(
+  "candidateTypeFilter"
+);
+const clearCandidateFiltersBtn = document.getElementById(
+  "clearCandidateFiltersBtn"
+);
+
 /* =========================
    HELPERS
 ========================= */
@@ -164,6 +175,89 @@ function updateStats() {
   if (statRechazado) statRechazado.textContent = rechazados;
 }
 
+
+function normalizarBusqueda(texto = "") {
+  return String(texto)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function getPostulacionesFiltradas() {
+  const search = normalizarBusqueda(
+    candidateSearch?.value || ""
+  );
+
+  const status =
+    candidateStatusFilter?.value || "";
+
+  const tipo =
+    candidateTypeFilter?.value || "";
+
+  return postulaciones.filter((postulacion) => {
+    const contenido = normalizarBusqueda(`
+      ${postulacion.nombre || ""}
+      ${postulacion.vacanteTitulo || ""}
+      ${postulacion.puestoInteres || ""}
+      ${postulacion.ciudad || ""}
+      ${postulacion.sucursal || ""}
+      ${postulacion.grupoSeleccionado || ""}
+      ${postulacion.correo || ""}
+      ${postulacion.telefono || ""}
+    `);
+
+    const coincideBusqueda =
+      !search || contenido.includes(search);
+
+    const coincideEstado =
+      !status ||
+      postulacion.estadoSolicitud === status;
+
+    const coincideTipo =
+      !tipo ||
+      postulacion.tipoVacante === tipo;
+
+    return (
+      coincideBusqueda &&
+      coincideEstado &&
+      coincideTipo
+    );
+  });
+}
+
+function getIniciales(nombre = "") {
+  const partes = String(nombre)
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (!partes.length) return "RH";
+
+  return partes
+    .slice(0, 2)
+    .map((parte) => parte.charAt(0).toUpperCase())
+    .join("");
+}
+
+function formatInterviewDate(fecha = "", hora = "") {
+  if (!fecha) {
+    return "Sin entrevista";
+  }
+
+  const partes = fecha.split("-");
+
+  if (partes.length !== 3) {
+    return `${fecha} ${hora}`.trim();
+  }
+
+  const [year, month, day] = partes;
+
+  return `${day}/${month}/${year}${hora ? ` · ${hora}` : ""}`;
+}
+
+
+
 /* =========================
    RENDER POSTULACIONES
 ========================= */
@@ -172,60 +266,149 @@ function renderPostulaciones() {
 
   postulacionesList.innerHTML = "";
 
-  if (!postulaciones.length) {
+  const data = getPostulacionesFiltradas();
+
+  if (!data.length) {
     postulacionesList.innerHTML = `
-      <div class="status">
-        No hay postulaciones registradas todavía.
+      <div class="candidate-empty">
+        <div class="candidate-empty__icon">🔎</div>
+        <h3>No se encontraron candidatos</h3>
+        <p>
+          Intenta modificar los filtros o actualizar las postulaciones.
+        </p>
       </div>
     `;
+
     updateStats();
     return;
   }
 
-  postulaciones.forEach((postulacion) => {
+  const fragment = document.createDocumentFragment();
+
+  data.forEach((postulacion) => {
     const card = document.createElement("article");
+
     card.className = "dashboard-card";
+    card.dataset.id = postulacion.id;
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.setAttribute(
+      "aria-label",
+      `Ver información de ${postulacion.nombre || "candidato"}`
+    );
+
+    const puesto =
+      postulacion.vacanteTitulo ||
+      postulacion.puestoInteres ||
+      "Sin puesto asignado";
+
+    const sucursal =
+      postulacion.sucursal ||
+      postulacion.sucursalNombre ||
+      "Sin sucursal";
+
+    const marca =
+      postulacion.grupoSeleccionado ||
+      "GA Hospitality";
+
+    const estado =
+      postulacion.estadoSolicitud ||
+      "pendiente";
+
+    const entrevista = formatInterviewDate(
+      postulacion.fechaEntrevista,
+      postulacion.horaEntrevista
+    );
 
     card.innerHTML = `
-      <div class="dashboard-card__top">
-        <div>
-          <h3>${postulacion.nombre || "Sin nombre"}</h3>
-          <p>${postulacion.vacanteTitulo || postulacion.puestoInteres || "Sin puesto de interés"}</p>
+      <div class="candidate-primary">
+        <div class="candidate-avatar">
+          ${getIniciales(postulacion.nombre)}
         </div>
-        <span class="${getEstadoClass(postulacion.estadoSolicitud)}">
-          ${postulacion.estadoSolicitud || "pendiente"}
+
+        <div class="candidate-identity">
+          <h3>${postulacion.nombre || "Sin nombre"}</h3>
+
+          <p>
+            ${postulacion.correo || postulacion.telefono || "Sin contacto"}
+          </p>
+        </div>
+      </div>
+
+      <div class="candidate-position">
+        <strong>${puesto}</strong>
+
+        <span>
+          ${marca} · ${sucursal}
         </span>
+
+        <small>
+          ${postulacion.ciudad || "Ciudad no registrada"}
+        </small>
       </div>
 
-      <div class="dashboard-card__info">
-        <p><strong>Ciudad:</strong> ${postulacion.ciudad || "-"}</p>
-        <p><strong>Sucursal:</strong> ${postulacion.sucursal || postulacion.sucursalNombre || "-"}</p>
-        <p><strong>Grupo:</strong> ${postulacion.grupoSeleccionado || "-"}</p>
-        <p><strong>Tipo:</strong> ${postulacion.tipoVacante || "-"}</p>
-        <p><strong>CV:</strong> ${postulacion.cvNombre || "No disponible"}</p>
-        ${postulacion.fechaEntrevista ? `<p><strong>Entrevista:</strong> ${postulacion.fechaEntrevista} ${postulacion.horaEntrevista || ""}</p>` : ""}
+      <div class="candidate-process">
+        <span class="${getEstadoClass(estado)}">
+          ${estado.replaceAll("_", " ")}
+        </span>
+
+        <small>
+          ${entrevista}
+        </small>
       </div>
 
-      <div class="dashboard-card__actions">
-        <button class="btn btn--secondary view-btn" data-id="${postulacion.id}">
-          Ver datos
+      <div class="candidate-actions">
+        <button
+          class="btn btn--secondary view-btn"
+          type="button"
+          data-id="${postulacion.id}"
+        >
+          Ver
         </button>
       </div>
     `;
 
-    postulacionesList.appendChild(card);
+    card.addEventListener("click", (event) => {
+      if (event.target.closest("button")) return;
+
+      openCandidateModal(postulacion);
+    });
+
+    card.addEventListener("keydown", (event) => {
+      if (
+        event.key === "Enter" ||
+        event.key === " "
+      ) {
+        event.preventDefault();
+        openCandidateModal(postulacion);
+      }
+    });
+
+    fragment.appendChild(card);
   });
 
-  document.querySelectorAll(".view-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const id = btn.dataset.id;
-      const candidate = postulaciones.find((p) => p.id === id);
-      if (candidate) openCandidateModal(candidate);
+  postulacionesList.appendChild(fragment);
+
+  document
+    .querySelectorAll(".view-btn")
+    .forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.id;
+
+        const candidate =
+          postulaciones.find(
+            (item) => item.id === id
+          );
+
+        if (candidate) {
+          openCandidateModal(candidate);
+        }
+      });
     });
-  });
 
   updateStats();
 }
+
 
 /* =========================
    MODAL CANDIDATO
@@ -437,29 +620,106 @@ async function cerrarSesion() {
 /* =========================
    EVENTS
 ========================= */
-if (refreshBtn) refreshBtn.addEventListener("click", cargarPostulaciones);
-if (logoutBtn) logoutBtn.addEventListener("click", cerrarSesion);
-if (closeModalBtn) closeModalBtn.addEventListener("click", closeCandidateModal);
-if (closeModalBackdrop) closeModalBackdrop.addEventListener("click", closeCandidateModal);
-if (approveBtn) approveBtn.addEventListener("click", () => actualizarEstado("aprobado"));
-if (rejectBtn) rejectBtn.addEventListener("click", () => actualizarEstado("rechazado"));
+
+
+if (refreshBtn) {
+  refreshBtn.addEventListener("click", cargarPostulaciones);
+}
+
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", cerrarSesion);
+}
+
+if (closeModalBtn) {
+  closeModalBtn.addEventListener("click", closeCandidateModal);
+}
+
+if (closeModalBackdrop) {
+  closeModalBackdrop.addEventListener("click", closeCandidateModal);
+}
+
+if (approveBtn) {
+  approveBtn.addEventListener("click", () => {
+    actualizarEstado("aprobado");
+  });
+}
+
+if (rejectBtn) {
+  rejectBtn.addEventListener("click", () => {
+    actualizarEstado("rechazado");
+  });
+}
 
 if (scheduleInterviewBtn) {
-  scheduleInterviewBtn.addEventListener("click", openInterviewModal);
+  scheduleInterviewBtn.addEventListener(
+    "click",
+    openInterviewModal
+  );
 }
 
 if (closeInterviewBtn) {
-  closeInterviewBtn.addEventListener("click", closeInterviewModal);
+  closeInterviewBtn.addEventListener(
+    "click",
+    closeInterviewModal
+  );
 }
 
 if (closeInterviewBackdrop) {
-  closeInterviewBackdrop.addEventListener("click", closeInterviewModal);
+  closeInterviewBackdrop.addEventListener(
+    "click",
+    closeInterviewModal
+  );
 }
 
 if (saveInterviewBtn) {
-  saveInterviewBtn.addEventListener("click", guardarEntrevista);
+  saveInterviewBtn.addEventListener(
+    "click",
+    guardarEntrevista
+  );
 }
 
+/* =========================
+   FILTROS DE CANDIDATOS
+========================= */
+
+[
+  candidateSearch,
+  candidateStatusFilter,
+  candidateTypeFilter
+].forEach((element) => {
+  if (!element) return;
+
+  element.addEventListener(
+    "input",
+    renderPostulaciones
+  );
+
+  element.addEventListener(
+    "change",
+    renderPostulaciones
+  );
+});
+
+if (clearCandidateFiltersBtn) {
+  clearCandidateFiltersBtn.addEventListener(
+    "click",
+    () => {
+      if (candidateSearch) {
+        candidateSearch.value = "";
+      }
+
+      if (candidateStatusFilter) {
+        candidateStatusFilter.value = "";
+      }
+
+      if (candidateTypeFilter) {
+        candidateTypeFilter.value = "";
+      }
+
+      renderPostulaciones();
+    }
+  );
+}
 /* =========================
    INIT
 ========================= */
