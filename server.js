@@ -1635,13 +1635,23 @@ app.patch(
       const { id } = req.params;
       const { estado } = req.body;
 
+
       const estadosValidos = [
-  "pendiente",
-  "aprobado",
-  "rechazado",
-  "entrevista_agendada",
-  "entrevista_realizada"
-];
+      // Estados nuevos
+      "agendada",
+      "confirmada",
+      "reagendada",
+      "realizada",
+      "cancelada",
+
+      // Compatibilidad con versiones anteriores
+      "pendiente",
+      "aprobado",
+      "rechazado",
+      "entrevista_agendada",
+      "entrevista_realizada"
+    ];
+
 
       if (!estadosValidos.includes(estado)) {
         return res.status(400).json({
