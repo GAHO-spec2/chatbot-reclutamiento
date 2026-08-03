@@ -1349,7 +1349,9 @@ app.post(
   ]),
   async (req, res) => {
     try {
-      const vacantes = (await leerVacantes()).map(enriquecerVacanteConSucursal);
+      const vacantes = (await leerVacantes()).map(
+        enriquecerVacanteConSucursal
+      );
 
       const {
         nombre,
@@ -1360,70 +1362,304 @@ app.post(
         vacanteSeleccionada,
         escolaridad,
         experiencia,
-        habilidades
+        habilidades,
+        politicaCv,
+        configuracionPostulacion,
+        respuestasPersonalizadas
       } = req.body;
 
-      if (!nombre || !correo || !telefono || !vacanteSeleccionada) {
-        return res.status(400).json({ error: "Faltan campos obligatorios." });
+      if (!nombre || !vacanteSeleccionada) {
+        return res.status(400).json({
+          error:
+            "Faltan el nombre o la vacante seleccionada."
+        });
       }
 
-      const cvFile = req.files?.cvFile?.[0];
-
-      if (!cvFile) {
-        return res.status(400).json({ error: "Debes adjuntar tu CV en PDF." });
-      }
-
-      const vacante = vacantes.find((v) => v.id === vacanteSeleccionada);
+      const vacante = vacantes.find(
+        (item) =>
+          item.id === vacanteSeleccionada
+      );
 
       if (!vacante) {
-        return res.status(400).json({ error: "La vacante seleccionada no existe." });
+        return res.status(400).json({
+          error:
+            "La vacante seleccionada no existe."
+        });
       }
 
-      const cvTexto = await extraerTextoPdf(cvFile.path);
-      const analisisIA = await analizarCvConIA(cvTexto);
+      const configuracion =
+        normalizarConfiguracionPostulacion(
+          vacante.configuracionPostulacion || {}
+        );
+
+      if (
+        configuracion.solicitarCorreo &&
+        !String(correo || "").trim()
+      ) {
+        return res.status(400).json({
+          error:
+            "El correo electrónico es obligatorio para esta vacante."
+        });
+      }
+
+      if (
+        configuracion.solicitarTelefono &&
+        !String(telefono || "").trim()
+      ) {
+        return res.status(400).json({
+          error:
+            "El teléfono es obligatorio para esta vacante."
+        });
+      }
+
+      if (
+        configuracion.solicitarExperiencia &&
+        !String(experiencia || "").trim()
+      ) {
+        return res.status(400).json({
+          error:
+            "La experiencia es obligatoria para esta vacante."
+        });
+      }
+
+      if (
+        configuracion.solicitarEscolaridad &&
+        !String(escolaridad || "").trim()
+      ) {
+        return res.status(400).json({
+          error:
+            "La escolaridad es obligatoria para esta vacante."
+        });
+      }
+
+      if (
+        configuracion.solicitarDisponibilidad &&
+        !String(disponibilidad || "").trim()
+      ) {
+        return res.status(400).json({
+          error:
+            "La disponibilidad es obligatoria para esta vacante."
+        });
+      }
+
+      const cvFile =
+        req.files?.cvFile?.[0] || null;
+
+      if (
+        configuracion.cv === "obligatorio" &&
+        !cvFile
+      ) {
+        return res.status(400).json({
+          error:
+            "Debes adjuntar tu CV para esta vacante."
+        });
+      }
+
+      let respuestasPersonalizadasParseadas = {};
+
+      try {
+        respuestasPersonalizadasParseadas =
+          respuestasPersonalizadas
+            ? JSON.parse(
+                respuestasPersonalizadas
+              )
+            : {};
+      } catch (error) {
+        return res.status(400).json({
+          error:
+            "Las respuestas personalizadas no tienen un formato válido."
+        });
+      }
+
+      const preguntasConfiguradas =
+        Array.isArray(
+          vacante.preguntasPersonalizadas
+        )
+          ? vacante.preguntasPersonalizadas
+          : [];
+
+      for (const pregunta of preguntasConfiguradas) {
+        if (pregunta.obligatoria === false) {
+          continue;
+        }
+
+        const respuesta =
+          respuestasPersonalizadasParseadas[
+            pregunta.id
+          ];
+
+        const valorRespuesta =
+          typeof respuesta === "object"
+            ? respuesta?.respuesta
+            : respuesta;
+
+        if (
+          !String(
+            valorRespuesta || ""
+          ).trim()
+        ) {
+          return res.status(400).json({
+            error:
+              `Falta responder la pregunta obligatoria: ${pregunta.texto}`
+          });
+        }
+      }
+
+      let analisisIA = {
+        resumen: "",
+        habilidadesDetectadas: [],
+        perfilRecomendado: ""
+      };
+
+      let cvNombre = "";
+      let cvRuta = "";
+
+      if (cvFile) {
+        cvNombre = cvFile.originalname;
+        cvRuta =
+          `/uploads/${cvFile.filename}`;
+
+        const cvTexto =
+          await extraerTextoPdf(
+            cvFile.path
+          );
+
+        if (cvTexto.trim()) {
+          analisisIA =
+            await analizarCvConIA(
+              cvTexto
+            );
+        }
+      }
 
       const postulacion = {
         id: Date.now().toString(),
-        nombre,
-        correo,
-        telefono,
-        edad,
-        pais: vacante.pais,
-        estado: vacante.estado,
-        ciudad: vacante.ciudad,
-        sucursal: vacante.sucursal,
-        sucursalId: vacante.sucursalId,
-        direccion: vacante.direccion,
-        googleMapsUrl: vacante.googleMapsUrl,
-        appleMapsUrl: vacante.appleMapsUrl,
-        disponibilidad,
-        tipoVacante: vacante.tipoVacante,
-        grupoSeleccionado: vacante.grupo,
-        vacanteId: vacante.id,
-        vacanteTitulo: vacante.titulo,
-        puestoInteres: vacante.titulo,
-        escolaridad,
-        experiencia,
-        habilidades,
-        cvNombre: cvFile.originalname,
-        cvRuta: `/uploads/${cvFile.filename}`,
-        resumenIA: analisisIA.resumen,
-        habilidadesDetectadas: analisisIA.habilidadesDetectadas,
-        perfilRecomendado: analisisIA.perfilRecomendado,
-        estadoSolicitud: "pendiente",
-        fechaRegistro: new Date().toISOString()
+
+        nombre:
+          String(nombre).trim(),
+
+        correo:
+          String(correo || "").trim(),
+
+        telefono:
+          String(telefono || "").trim(),
+
+        edad:
+          String(edad || "").trim(),
+
+        pais:
+          vacante.pais,
+
+        estado:
+          vacante.estado,
+
+        ciudad:
+          vacante.ciudad,
+
+        sucursal:
+          vacante.sucursal,
+
+        sucursalId:
+          vacante.sucursalId,
+
+        direccion:
+          vacante.direccion,
+
+        googleMapsUrl:
+          vacante.googleMapsUrl,
+
+        appleMapsUrl:
+          vacante.appleMapsUrl,
+
+        disponibilidad:
+          String(
+            disponibilidad || ""
+          ).trim(),
+
+        tipoVacante:
+          vacante.tipoVacante,
+
+        grupoSeleccionado:
+          vacante.grupo,
+
+        vacanteId:
+          vacante.id,
+
+        vacanteTitulo:
+          vacante.titulo,
+
+        puestoInteres:
+          vacante.titulo,
+
+        escolaridad:
+          String(
+            escolaridad || ""
+          ).trim(),
+
+        experiencia:
+          String(
+            experiencia || ""
+          ).trim(),
+
+        habilidades:
+          String(
+            habilidades || ""
+          ).trim(),
+
+        politicaCv:
+          configuracion.cv,
+
+        configuracionPostulacion:
+          configuracion,
+
+        respuestasPersonalizadas:
+          respuestasPersonalizadasParseadas,
+
+        cvNombre,
+        cvRuta,
+
+        resumenIA:
+          analisisIA.resumen || "",
+
+        habilidadesDetectadas:
+          Array.isArray(
+            analisisIA.habilidadesDetectadas
+          )
+            ? analisisIA.habilidadesDetectadas
+            : [],
+
+        perfilRecomendado:
+          analisisIA.perfilRecomendado ||
+          "",
+
+        estadoSolicitud:
+          "pendiente",
+
+        fechaRegistro:
+          new Date().toISOString()
       };
 
-      await guardarPostulacion(postulacion);
+      await guardarPostulacion(
+        postulacion
+      );
 
-      res.json({
+      res.status(201).json({
         ok: true,
-        message: "Postulacion recibida correctamente.",
+        message:
+          "Postulación recibida correctamente.",
         postulacion
       });
     } catch (error) {
-      console.error("Error guardando postulacion:", error);
-      res.status(500).json({ error: "No fue posible guardar la postulacion." });
+      console.error(
+        "Error guardando postulación:",
+        error
+      );
+
+      res.status(500).json({
+        error:
+          error.message ||
+          "No fue posible guardar la postulación."
+      });
     }
   }
 );
