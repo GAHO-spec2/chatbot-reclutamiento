@@ -407,6 +407,45 @@ async function actualizarEntrevista(id, data) {
   await db.collection(ENTREVISTAS_COLLECTION).doc(id).set(data, { merge: true });
 }
 
+async function eliminarEntrevista(id) {
+  if (!db) {
+    const entrevistas = leerJson(entrevistasFile, []);
+
+    const existe = entrevistas.some(
+      (entrevista) => entrevista.id === id
+    );
+
+    if (!existe) {
+      return false;
+    }
+
+    const entrevistasActualizadas = entrevistas.filter(
+      (entrevista) => entrevista.id !== id
+    );
+
+    guardarJson(
+      entrevistasFile,
+      entrevistasActualizadas
+    );
+
+    return true;
+  }
+
+  const entrevistaRef = db
+    .collection(ENTREVISTAS_COLLECTION)
+    .doc(id);
+
+  const entrevistaDoc = await entrevistaRef.get();
+
+  if (!entrevistaDoc.exists) {
+    return false;
+  }
+
+  await entrevistaRef.delete();
+
+  return true;
+}
+
 async function leerVacantes() {
   if (!db) return leerJson(vacantesFile, vacantesIniciales);
 
@@ -1722,6 +1761,60 @@ app.patch(
   }
 );
 
+app.delete(
+  "/api/entrevistas/:id",
+  verifyAdmin,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        return res.status(400).json({
+          error: "El ID de la entrevista es obligatorio."
+        });
+      }
+
+      const entrevistas = await leerEntrevistas();
+
+      const entrevista = entrevistas.find(
+        (item) => item.id === id
+      );
+
+      if (!entrevista) {
+        return res.status(404).json({
+          error: "Entrevista no encontrada."
+        });
+      }
+
+      const eliminada = await eliminarEntrevista(id);
+
+      if (!eliminada) {
+        return res.status(404).json({
+          error: "Entrevista no encontrada."
+        });
+      }
+
+      res.json({
+        ok: true,
+        message: "Entrevista eliminada correctamente.",
+        entrevistaEliminada: {
+          id,
+          candidatoNombre:
+            entrevista.candidatoNombre || ""
+        }
+      });
+    } catch (error) {
+      console.error(
+        "Error eliminando entrevista:",
+        error
+      );
+
+      res.status(500).json({
+        error: "No fue posible eliminar la entrevista."
+      });
+    }
+  }
+);
 
 async function buscarDatosSucursalExistente(data = {}) {
   const vacantes = await leerVacantes();
@@ -1759,184 +1852,579 @@ async function buscarDatosSucursalExistente(data = {}) {
   };
 }
 
-app.post("/api/vacantes", verifyAdmin, async (req, res) => {
-  try {
-    const {
-      tipoVacante,
-      grupo,
-      titulo,
-      area,
-      pais,
-      estado,
-      ciudad,
-      sucursal,
-      sucursalId,
-      numeroTienda,
-      direccion,
-      googleMapsUrl,
-      appleMapsUrl,
-      lat,
-      lng,
-      requisitos
-    } = req.body;
+/* =========================
+   CONFIGURACIÓN DINÁMICA
+   DE POSTULACIÓN
+========================= */
 
-    if (!tipoVacante || !grupo || !titulo || !area || !pais || !estado || !ciudad || !sucursal) {
-      return res.status(400).json({ error: "Faltan campos obligatorios." });
+const POLITICAS_CV_VALIDAS = [
+  "obligatorio",
+  "opcional",
+  "no_solicitar"
+];
+
+const TIPOS_PREGUNTA_VALIDOS = [
+  "texto_corto",
+  "texto_largo",
+  "numero",
+  "si_no",
+  "seleccion"
+];
+
+function normalizarConfiguracionPostulacion(configuracion = {}) {
+  const cv = POLITICAS_CV_VALIDAS.includes(configuracion.cv)
+    ? configuracion.cv
+    : "opcional";
+
+  return {
+    cv,
+
+    solicitarTelefono:
+      configuracion.solicitarTelefono !== false,
+
+    solicitarCorreo:
+      configuracion.solicitarCorreo !== false,
+
+    solicitarExperiencia:
+      configuracion.solicitarExperiencia !== false,
+
+    solicitarEscolaridad:
+      Boolean(configuracion.solicitarEscolaridad),
+
+    solicitarDisponibilidad:
+      configuracion.solicitarDisponibilidad !== false
+  };
+}
+
+function normalizarPreguntasPersonalizadas(preguntas = []) {
+  if (!Array.isArray(preguntas)) {
+    return [];
+  }
+
+  return preguntas.map((pregunta, index) => {
+    const tipo = TIPOS_PREGUNTA_VALIDOS.includes(
+      pregunta?.tipo
+    )
+      ? pregunta.tipo
+      : "texto_corto";
+
+    let opciones = [];
+
+    if (tipo === "si_no") {
+      opciones = ["Sí", "No"];
     }
 
-    const finalSucursalId = sucursalId || slugify(`${grupo} ${sucursal} ${ciudad} ${estado} ${pais}`);
-
-    const datosSucursalExistente = await buscarDatosSucursalExistente({
-      sucursalId: finalSucursalId,
-      branchId: finalSucursalId,
-      grupo,
-      sucursal,
-      ciudad,
-      estado,
-      pais
-    });
-
-    const direccionFinal = direccion || datosSucursalExistente?.direccion || "";
-    const numeroTiendaFinal = numeroTienda || datosSucursalExistente?.numeroTienda || "";
-    const googleMapsUrlFinal = googleMapsUrl || datosSucursalExistente?.googleMapsUrl || "";
-    const appleMapsUrlFinal = appleMapsUrl || datosSucursalExistente?.appleMapsUrl || "";
-
-    const latEntrada = lat ?? datosSucursalExistente?.lat ?? null;
-    const lngEntrada = lng ?? datosSucursalExistente?.lng ?? null;
-
-    const query = construirConsultaDireccion({
-      direccion: direccionFinal,
-      sucursal,
-      ciudad,
-      estado,
-      pais
-    });
-
-    const coords = await resolverCoordenadas({
-      direccion: direccionFinal,
-      sucursal,
-      ciudad,
-      estado,
-      pais,
-      lat: latEntrada,
-      lng: lngEntrada
-    });
-
-    const nuevaVacante = {
-      id: `vac-${Date.now()}`,
-      sucursalId: finalSucursalId,
-      branchId: finalSucursalId,
-      tipoVacante,
-      grupo,
-      titulo,
-      area,
-      pais,
-      estado,
-      ciudad,
-      sucursal,
-      numeroTienda: numeroTiendaFinal,
-      direccion: direccionFinal,
-      googleMapsUrl: googleMapsUrlFinal || crearMapsUrl(query),
-      appleMapsUrl: appleMapsUrlFinal || crearAppleMapsUrl(query),
-      lat: coords.lat,
-      lng: coords.lng,
-      requisitos: Array.isArray(requisitos)
-        ? requisitos
-        : String(requisitos || "")
-            .split(",")
-            .map((item) => item.trim())
-            .filter(Boolean),
-      fechaCreacion: new Date().toISOString()
-    };
-
-    await guardarVacante(nuevaVacante);
-
-    res.json({
-      ok: true,
-      message: "Vacante creada correctamente.",
-      vacante: nuevaVacante
-    });
-  } catch (error) {
-    console.error("Error creando vacante:", error);
-    res.status(500).json({ error: "No fue posible crear la vacante." });
-  }
-});
-
-app.put("/api/vacantes/:id", verifyAdmin, async (req, res) => {
-  try {
-    const vacantes = await leerVacantes();
-    const { id } = req.params;
-    const actual = vacantes.find((v) => v.id === id);
-
-    if (!actual) {
-      return res.status(404).json({ error: "Vacante no encontrada." });
+    if (tipo === "seleccion") {
+      opciones = Array.isArray(pregunta?.opciones)
+        ? pregunta.opciones
+            .map((opcion) =>
+              String(opcion || "").trim()
+            )
+            .filter(Boolean)
+        : [];
     }
 
-    const body = req.body || {};
-    const merged = {
-      ...actual,
-      ...body,
-      id
+    return {
+      id:
+        String(
+          pregunta?.id ||
+          `pregunta-${Date.now()}-${index + 1}`
+        ).trim(),
+
+      texto:
+        String(pregunta?.texto || "").trim(),
+
+      tipo,
+
+      obligatoria:
+        pregunta?.obligatoria !== false,
+
+      opciones,
+
+      orden: index + 1
     };
+  });
+}
 
-    const finalSucursalId =
-      body.sucursalId ||
-      body.branchId ||
-      actual.sucursalId ||
-      actual.branchId ||
-      resolverSucursalId(merged);
+function validarPreguntasServidor(preguntas = []) {
+  for (const pregunta of preguntas) {
+    if (!pregunta.texto) {
+      return {
+        ok: false,
+        error:
+          `La pregunta ${pregunta.orden} no tiene texto.`
+      };
+    }
 
-    const query = construirConsultaDireccion({
-      direccion: merged.direccion,
-      sucursal: merged.sucursal,
-      ciudad: merged.ciudad,
-      estado: merged.estado,
-      pais: merged.pais
-    });
-
-    const coords = await resolverCoordenadas({
-      direccion: merged.direccion,
-      sucursal: merged.sucursal,
-      ciudad: merged.ciudad,
-      estado: merged.estado,
-      pais: merged.pais,
-      lat: merged.lat,
-      lng: merged.lng
-    });
-
-    const vacanteActualizada = {
-      ...merged,
-      sucursalId: finalSucursalId,
-      branchId: finalSucursalId,
-      numeroTienda: merged.numeroTienda || "",
-      direccion: merged.direccion || "",
-      googleMapsUrl: merged.googleMapsUrl || crearMapsUrl(query),
-      appleMapsUrl: merged.appleMapsUrl || crearAppleMapsUrl(query),
-      lat: coords.lat,
-      lng: coords.lng,
-      requisitos: Array.isArray(merged.requisitos)
-        ? merged.requisitos
-        : String(merged.requisitos || "")
-            .split(",")
-            .map((item) => item.trim())
-            .filter(Boolean),
-      fechaActualizacion: new Date().toISOString()
-    };
-
-    await actualizarVacante(id, vacanteActualizada);
-
-    res.json({
-      ok: true,
-      message: "Vacante actualizada correctamente.",
-      vacante: vacanteActualizada
-    });
-  } catch (error) {
-    console.error("Error actualizando vacante:", error);
-    res.status(500).json({
-      error: error.message || "No fue posible actualizar la vacante."
-    });
+    if (
+      pregunta.tipo === "seleccion" &&
+      pregunta.opciones.length < 2
+    ) {
+      return {
+        ok: false,
+        error:
+          `La pregunta ${pregunta.orden} debe tener al menos dos opciones.`
+      };
+    }
   }
-});
+
+  return { ok: true };
+}
+
+app.post(
+  "/api/vacantes",
+  verifyAdmin,
+  async (req, res) => {
+    try {
+      const {
+        tipoVacante,
+        grupo,
+        titulo,
+        area,
+        pais,
+        estado,
+        ciudad,
+        sucursal,
+        sucursalId,
+        numeroTienda,
+        direccion,
+        googleMapsUrl,
+        appleMapsUrl,
+        lat,
+        lng,
+        requisitos,
+        configuracionPostulacion,
+        preguntasPersonalizadas
+      } = req.body || {};
+
+      if (
+        !tipoVacante ||
+        !grupo ||
+        !titulo ||
+        !area ||
+        !pais ||
+        !estado ||
+        !ciudad ||
+        !sucursal
+      ) {
+        return res.status(400).json({
+          error:
+            "Faltan campos obligatorios de la vacante."
+        });
+      }
+
+      const requisitosNormalizados =
+        Array.isArray(requisitos)
+          ? requisitos
+              .map((item) =>
+                String(item || "").trim()
+              )
+              .filter(Boolean)
+          : String(requisitos || "")
+              .split(",")
+              .map((item) => item.trim())
+              .filter(Boolean);
+
+      if (!requisitosNormalizados.length) {
+        return res.status(400).json({
+          error:
+            "La vacante debe incluir al menos un requisito."
+        });
+      }
+
+      const configuracionNormalizada =
+        normalizarConfiguracionPostulacion(
+          configuracionPostulacion
+        );
+
+      const preguntasNormalizadas =
+        normalizarPreguntasPersonalizadas(
+          preguntasPersonalizadas
+        );
+
+      const validacionPreguntas =
+        validarPreguntasServidor(
+          preguntasNormalizadas
+        );
+
+      if (!validacionPreguntas.ok) {
+        return res.status(400).json({
+          error: validacionPreguntas.error
+        });
+      }
+
+      const finalSucursalId =
+        sucursalId ||
+        slugify(
+          `${grupo} ${sucursal} ${ciudad} ${estado} ${pais}`
+        );
+
+      const datosSucursalExistente =
+        await buscarDatosSucursalExistente({
+          sucursalId: finalSucursalId,
+          branchId: finalSucursalId,
+          grupo,
+          sucursal,
+          ciudad,
+          estado,
+          pais
+        });
+
+      const direccionFinal =
+        direccion ||
+        datosSucursalExistente?.direccion ||
+        "";
+
+      const numeroTiendaFinal =
+        numeroTienda ||
+        datosSucursalExistente?.numeroTienda ||
+        "";
+
+      const googleMapsUrlFinal =
+        googleMapsUrl ||
+        datosSucursalExistente?.googleMapsUrl ||
+        "";
+
+      const appleMapsUrlFinal =
+        appleMapsUrl ||
+        datosSucursalExistente?.appleMapsUrl ||
+        "";
+
+      const latEntrada =
+        lat ??
+        datosSucursalExistente?.lat ??
+        null;
+
+      const lngEntrada =
+        lng ??
+        datosSucursalExistente?.lng ??
+        null;
+
+      const query =
+        construirConsultaDireccion({
+          direccion: direccionFinal,
+          sucursal,
+          ciudad,
+          estado,
+          pais
+        });
+
+      const coords =
+        await resolverCoordenadas({
+          direccion: direccionFinal,
+          sucursal,
+          ciudad,
+          estado,
+          pais,
+          lat: latEntrada,
+          lng: lngEntrada
+        });
+
+      const nuevaVacante = {
+        id: `vac-${Date.now()}`,
+
+        sucursalId: finalSucursalId,
+        branchId: finalSucursalId,
+
+        tipoVacante:
+          String(tipoVacante).trim(),
+
+        grupo:
+          String(grupo).trim(),
+
+        titulo:
+          String(titulo).trim(),
+
+        area:
+          String(area).trim(),
+
+        pais:
+          String(pais).trim(),
+
+        estado:
+          String(estado).trim(),
+
+        ciudad:
+          String(ciudad).trim(),
+
+        sucursal:
+          String(sucursal).trim(),
+
+        numeroTienda:
+          String(numeroTiendaFinal || "").trim(),
+
+        direccion:
+          String(direccionFinal || "").trim(),
+
+        googleMapsUrl:
+          googleMapsUrlFinal ||
+          crearMapsUrl(query),
+
+        appleMapsUrl:
+          appleMapsUrlFinal ||
+          crearAppleMapsUrl(query),
+
+        lat: coords.lat,
+        lng: coords.lng,
+
+        requisitos:
+          requisitosNormalizados,
+
+        configuracionPostulacion:
+          configuracionNormalizada,
+
+        preguntasPersonalizadas:
+          preguntasNormalizadas,
+
+        activa: true,
+
+        fechaCreacion:
+          new Date().toISOString(),
+
+        fechaActualizacion:
+          new Date().toISOString(),
+
+        creadaPor:
+          req.adminUser?.email || ""
+      };
+
+      await guardarVacante(nuevaVacante);
+
+      res.status(201).json({
+        ok: true,
+        message:
+          "Vacante creada correctamente.",
+        vacante: nuevaVacante
+      });
+    } catch (error) {
+      console.error(
+        "Error creando vacante:",
+        error
+      );
+
+      res.status(500).json({
+        error:
+          error.message ||
+          "No fue posible crear la vacante."
+      });
+    }
+  }
+);
+
+app.put(
+  "/api/vacantes/:id",
+  verifyAdmin,
+  async (req, res) => {
+    try {
+      const vacantes =
+        await leerVacantes();
+
+      const { id } = req.params;
+
+      const actual = vacantes.find(
+        (vacante) => vacante.id === id
+      );
+
+      if (!actual) {
+        return res.status(404).json({
+          error: "Vacante no encontrada."
+        });
+      }
+
+      const body = req.body || {};
+
+      const merged = {
+        ...actual,
+        ...body,
+        id
+      };
+
+      if (
+        !merged.tipoVacante ||
+        !merged.grupo ||
+        !merged.titulo ||
+        !merged.area ||
+        !merged.pais ||
+        !merged.estado ||
+        !merged.ciudad ||
+        !merged.sucursal
+      ) {
+        return res.status(400).json({
+          error:
+            "Faltan campos obligatorios de la vacante."
+        });
+      }
+
+      const requisitosNormalizados =
+        Array.isArray(merged.requisitos)
+          ? merged.requisitos
+              .map((item) =>
+                String(item || "").trim()
+              )
+              .filter(Boolean)
+          : String(merged.requisitos || "")
+              .split(",")
+              .map((item) => item.trim())
+              .filter(Boolean);
+
+      if (!requisitosNormalizados.length) {
+        return res.status(400).json({
+          error:
+            "La vacante debe incluir al menos un requisito."
+        });
+      }
+
+      const configuracionNormalizada =
+        normalizarConfiguracionPostulacion(
+          body.configuracionPostulacion ??
+          actual.configuracionPostulacion ??
+          {}
+        );
+
+      const preguntasNormalizadas =
+        normalizarPreguntasPersonalizadas(
+          body.preguntasPersonalizadas ??
+          actual.preguntasPersonalizadas ??
+          []
+        );
+
+      const validacionPreguntas =
+        validarPreguntasServidor(
+          preguntasNormalizadas
+        );
+
+      if (!validacionPreguntas.ok) {
+        return res.status(400).json({
+          error: validacionPreguntas.error
+        });
+      }
+
+      const finalSucursalId =
+        body.sucursalId ||
+        body.branchId ||
+        actual.sucursalId ||
+        actual.branchId ||
+        resolverSucursalId(merged);
+
+      const query =
+        construirConsultaDireccion({
+          direccion: merged.direccion,
+          sucursal: merged.sucursal,
+          ciudad: merged.ciudad,
+          estado: merged.estado,
+          pais: merged.pais
+        });
+
+      const coords =
+        await resolverCoordenadas({
+          direccion: merged.direccion,
+          sucursal: merged.sucursal,
+          ciudad: merged.ciudad,
+          estado: merged.estado,
+          pais: merged.pais,
+          lat: merged.lat,
+          lng: merged.lng
+        });
+
+      const vacanteActualizada = {
+        ...merged,
+
+        sucursalId:
+          finalSucursalId,
+
+        branchId:
+          finalSucursalId,
+
+        tipoVacante:
+          String(merged.tipoVacante).trim(),
+
+        grupo:
+          String(merged.grupo).trim(),
+
+        titulo:
+          String(merged.titulo).trim(),
+
+        area:
+          String(merged.area).trim(),
+
+        pais:
+          String(merged.pais).trim(),
+
+        estado:
+          String(merged.estado).trim(),
+
+        ciudad:
+          String(merged.ciudad).trim(),
+
+        sucursal:
+          String(merged.sucursal).trim(),
+
+        numeroTienda:
+          String(
+            merged.numeroTienda || ""
+          ).trim(),
+
+        direccion:
+          String(
+            merged.direccion || ""
+          ).trim(),
+
+        googleMapsUrl:
+          merged.googleMapsUrl ||
+          crearMapsUrl(query),
+
+        appleMapsUrl:
+          merged.appleMapsUrl ||
+          crearAppleMapsUrl(query),
+
+        lat: coords.lat,
+        lng: coords.lng,
+
+        requisitos:
+          requisitosNormalizados,
+
+        configuracionPostulacion:
+          configuracionNormalizada,
+
+        preguntasPersonalizadas:
+          preguntasNormalizadas,
+
+        activa:
+          merged.activa !== false,
+
+        fechaActualizacion:
+          new Date().toISOString(),
+
+        actualizadaPor:
+          req.adminUser?.email || ""
+      };
+
+      await actualizarVacante(
+        id,
+        vacanteActualizada
+      );
+
+      res.json({
+        ok: true,
+        message:
+          "Vacante actualizada correctamente.",
+        vacante:
+          vacanteActualizada
+      });
+    } catch (error) {
+      console.error(
+        "Error actualizando vacante:",
+        error
+      );
+
+      res.status(500).json({
+        error:
+          error.message ||
+          "No fue posible actualizar la vacante."
+      });
+    }
+  }
+);
 
 app.delete("/api/vacantes/:id", verifyAdmin, async (req, res) => {
   try {

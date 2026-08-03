@@ -1,4 +1,4 @@
-const API_URL = "https://chatbot-reclutamiento-cl32.onrender.com";
+const API_URL = "https://chatbot-reclutamiento-dcqb.onrender.com";
 
 /* =========================
    FIREBASE AUTH
@@ -59,6 +59,34 @@ const vacanteAppleMapsUrl = document.getElementById("vacanteAppleMapsUrl");
 const vacanteLat = document.getElementById("vacanteLat");
 const vacanteLng = document.getElementById("vacanteLng");
 const vacanteRequisitos = document.getElementById("vacanteRequisitos");
+const vacanteCvPolicy =
+  document.getElementById("vacanteCvPolicy");
+
+const vacanteSolicitarTelefono =
+  document.getElementById("vacanteSolicitarTelefono");
+
+const vacanteSolicitarCorreo =
+  document.getElementById("vacanteSolicitarCorreo");
+
+const vacanteSolicitarExperiencia =
+  document.getElementById("vacanteSolicitarExperiencia");
+
+const vacanteSolicitarEscolaridad =
+  document.getElementById("vacanteSolicitarEscolaridad");
+
+const vacanteSolicitarDisponibilidad =
+  document.getElementById("vacanteSolicitarDisponibilidad");
+
+const addCustomQuestionBtn =
+  document.getElementById("addCustomQuestionBtn");
+
+const customQuestionsList =
+  document.getElementById("customQuestionsList");
+
+const customQuestionsEmpty =
+  document.getElementById("customQuestionsEmpty");
+
+let preguntasPersonalizadas = [];
 
 let vacantes = [];
 let ubicaciones = {};
@@ -337,6 +365,395 @@ function renderVacantesAdmin() {
 }
 
 /* =========================
+   PREGUNTAS PERSONALIZADAS
+========================= */
+
+function generarPreguntaId() {
+  return `pregunta-${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2, 8)}`;
+}
+
+function crearPreguntaVacia() {
+  return {
+    id: generarPreguntaId(),
+    texto: "",
+    tipo: "texto_corto",
+    obligatoria: true,
+    opciones: [],
+    orden: preguntasPersonalizadas.length + 1
+  };
+}
+
+function actualizarOrdenPreguntas() {
+  preguntasPersonalizadas = preguntasPersonalizadas.map(
+    (pregunta, index) => ({
+      ...pregunta,
+      orden: index + 1
+    })
+  );
+}
+
+function eliminarPreguntaPersonalizada(id) {
+  preguntasPersonalizadas =
+    preguntasPersonalizadas.filter(
+      (pregunta) => pregunta.id !== id
+    );
+
+  actualizarOrdenPreguntas();
+  renderPreguntasPersonalizadas();
+}
+
+function moverPregunta(id, direccion) {
+  const index = preguntasPersonalizadas.findIndex(
+    (pregunta) => pregunta.id === id
+  );
+
+  if (index === -1) return;
+
+  const nuevoIndex = index + direccion;
+
+  if (
+    nuevoIndex < 0 ||
+    nuevoIndex >= preguntasPersonalizadas.length
+  ) {
+    return;
+  }
+
+  const copia = [...preguntasPersonalizadas];
+
+  [copia[index], copia[nuevoIndex]] = [
+    copia[nuevoIndex],
+    copia[index]
+  ];
+
+  preguntasPersonalizadas = copia;
+
+  actualizarOrdenPreguntas();
+  renderPreguntasPersonalizadas();
+}
+
+function actualizarPregunta(id, campo, valor) {
+  const pregunta = preguntasPersonalizadas.find(
+    (item) => item.id === id
+  );
+
+  if (!pregunta) return;
+
+  pregunta[campo] = valor;
+
+  if (campo === "tipo") {
+    if (valor === "si_no") {
+      pregunta.opciones = ["Sí", "No"];
+    } else if (valor !== "seleccion") {
+      pregunta.opciones = [];
+    }
+
+    renderPreguntasPersonalizadas();
+  }
+}
+
+function renderPreguntasPersonalizadas() {
+  if (!customQuestionsList) return;
+
+  customQuestionsList.innerHTML = "";
+
+  if (customQuestionsEmpty) {
+    customQuestionsEmpty.classList.toggle(
+      "hidden",
+      preguntasPersonalizadas.length > 0
+    );
+  }
+
+  preguntasPersonalizadas.forEach((pregunta, index) => {
+    const card = document.createElement("article");
+
+    card.className = "custom-question-card";
+    card.dataset.id = pregunta.id;
+
+    const requiereOpciones =
+      pregunta.tipo === "seleccion";
+
+    card.innerHTML = `
+      <div class="custom-question-card__head">
+        <div class="question-order">
+          ${index + 1}
+        </div>
+
+        <div>
+          <strong>Pregunta ${index + 1}</strong>
+          <small>Configura el texto y tipo de respuesta.</small>
+        </div>
+
+        <div class="question-order-actions">
+          <button
+            class="question-icon-btn move-question-up"
+            type="button"
+            title="Subir pregunta"
+            ${index === 0 ? "disabled" : ""}
+          >
+            ↑
+          </button>
+
+          <button
+            class="question-icon-btn move-question-down"
+            type="button"
+            title="Bajar pregunta"
+            ${
+              index === preguntasPersonalizadas.length - 1
+                ? "disabled"
+                : ""
+            }
+          >
+            ↓
+          </button>
+
+          <button
+            class="question-icon-btn question-icon-btn--danger delete-question"
+            type="button"
+            title="Eliminar pregunta"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <div class="custom-question-grid">
+        <div class="field custom-question-text">
+          <label>Texto de la pregunta</label>
+
+          <input
+            class="question-text-input"
+            type="text"
+            value="${escapeHtml(pregunta.texto || "")}"
+            placeholder="Ej. ¿Tienes experiencia manejando efectivo?"
+          />
+        </div>
+
+        <div class="field">
+          <label>Tipo de respuesta</label>
+
+          <select class="question-type-select">
+            <option
+              value="texto_corto"
+              ${
+                pregunta.tipo === "texto_corto"
+                  ? "selected"
+                  : ""
+              }
+            >
+              Texto corto
+            </option>
+
+            <option
+              value="texto_largo"
+              ${
+                pregunta.tipo === "texto_largo"
+                  ? "selected"
+                  : ""
+              }
+            >
+              Texto largo
+            </option>
+
+            <option
+              value="numero"
+              ${
+                pregunta.tipo === "numero"
+                  ? "selected"
+                  : ""
+              }
+            >
+              Número
+            </option>
+
+            <option
+              value="si_no"
+              ${
+                pregunta.tipo === "si_no"
+                  ? "selected"
+                  : ""
+              }
+            >
+              Sí / No
+            </option>
+
+            <option
+              value="seleccion"
+              ${
+                pregunta.tipo === "seleccion"
+                  ? "selected"
+                  : ""
+              }
+            >
+              Selección
+            </option>
+          </select>
+        </div>
+
+        ${
+          requiereOpciones
+            ? `
+              <div class="field field--full">
+                <label>Opciones de respuesta</label>
+
+                <input
+                  class="question-options-input"
+                  type="text"
+                  value="${escapeHtml(
+                    (pregunta.opciones || []).join(", ")
+                  )}"
+                  placeholder="Ej. Mañana, Tarde, Noche"
+                />
+
+                <small class="field-help">
+                  Separa cada opción con una coma.
+                </small>
+              </div>
+            `
+            : ""
+        }
+
+        <label class="question-required">
+          <input
+            class="question-required-input"
+            type="checkbox"
+            ${pregunta.obligatoria ? "checked" : ""}
+          />
+
+          <span>
+            Pregunta obligatoria
+          </span>
+        </label>
+      </div>
+    `;
+
+    const textInput =
+      card.querySelector(".question-text-input");
+
+    const typeSelect =
+      card.querySelector(".question-type-select");
+
+    const optionsInput =
+      card.querySelector(".question-options-input");
+
+    const requiredInput =
+      card.querySelector(".question-required-input");
+
+    const deleteBtn =
+      card.querySelector(".delete-question");
+
+    const moveUpBtn =
+      card.querySelector(".move-question-up");
+
+    const moveDownBtn =
+      card.querySelector(".move-question-down");
+
+    textInput?.addEventListener("input", () => {
+      actualizarPregunta(
+        pregunta.id,
+        "texto",
+        textInput.value
+      );
+    });
+
+    typeSelect?.addEventListener("change", () => {
+      actualizarPregunta(
+        pregunta.id,
+        "tipo",
+        typeSelect.value
+      );
+    });
+
+    optionsInput?.addEventListener("input", () => {
+      actualizarPregunta(
+        pregunta.id,
+        "opciones",
+        optionsInput.value
+          .split(",")
+          .map((opcion) => opcion.trim())
+          .filter(Boolean)
+      );
+    });
+
+    requiredInput?.addEventListener("change", () => {
+      actualizarPregunta(
+        pregunta.id,
+        "obligatoria",
+        requiredInput.checked
+      );
+    });
+
+    deleteBtn?.addEventListener("click", () => {
+      eliminarPreguntaPersonalizada(pregunta.id);
+    });
+
+    moveUpBtn?.addEventListener("click", () => {
+      moverPregunta(pregunta.id, -1);
+    });
+
+    moveDownBtn?.addEventListener("click", () => {
+      moverPregunta(pregunta.id, 1);
+    });
+
+    customQuestionsList.appendChild(card);
+  });
+}
+
+function validarPreguntasPersonalizadas() {
+  for (const pregunta of preguntasPersonalizadas) {
+    if (!pregunta.texto.trim()) {
+      return {
+        ok: false,
+        error:
+          `Completa el texto de la pregunta ${pregunta.orden}.`
+      };
+    }
+
+    if (
+      pregunta.tipo === "seleccion" &&
+      (!Array.isArray(pregunta.opciones) ||
+        pregunta.opciones.length < 2)
+    ) {
+      return {
+        ok: false,
+        error:
+          `La pregunta ${pregunta.orden} debe tener al menos dos opciones.`
+      };
+    }
+  }
+
+  return { ok: true };
+}
+
+if (vacanteCvPolicy) {
+  vacanteCvPolicy.value = "opcional";
+}
+
+if (vacanteSolicitarTelefono) {
+  vacanteSolicitarTelefono.checked = true;
+}
+
+if (vacanteSolicitarCorreo) {
+  vacanteSolicitarCorreo.checked = true;
+}
+
+if (vacanteSolicitarExperiencia) {
+  vacanteSolicitarExperiencia.checked = true;
+}
+
+if (vacanteSolicitarEscolaridad) {
+  vacanteSolicitarEscolaridad.checked = false;
+}
+
+if (vacanteSolicitarDisponibilidad) {
+  vacanteSolicitarDisponibilidad.checked = true;
+}
+
+preguntasPersonalizadas = [];
+renderPreguntasPersonalizadas();
+
+/* =========================
    FORMULARIO
 ========================= */
 function resetVacanteForm() {
@@ -422,6 +839,16 @@ function closeVacanteModal() {
    GUARDAR VACANTE
 ========================= */
 async function guardarVacante() {
+  const validacionPreguntas =
+    validarPreguntasPersonalizadas();
+
+  if (!validacionPreguntas.ok) {
+    setVacantesStatus(
+      `⚠️ ${validacionPreguntas.error}`
+    );
+    return;
+  }
+
   const payload = {
     tipoVacante: vacanteTipo.value,
     grupo: vacanteGrupo.value.trim(),
@@ -432,25 +859,123 @@ async function guardarVacante() {
     ciudad: vacanteCiudad.value,
     sucursal: vacanteSucursal.value.trim(),
 
-    numeroTienda: vacanteNumeroTienda?.value.trim() || "",
-    direccion: vacanteDireccion?.value.trim() || "",
-    googleMapsUrl: normalizarUrl(vacanteGoogleMapsUrl?.value || ""),
-    appleMapsUrl: normalizarUrl(vacanteAppleMapsUrl?.value || ""),
-    lat: obtenerNumero(vacanteLat?.value),
-    lng: obtenerNumero(vacanteLng?.value),
+    numeroTienda:
+      vacanteNumeroTienda?.value.trim() || "",
 
-    requisitos: vacanteRequisitos.value
-      .split(",")
-      .map((x) => x.trim())
-      .filter(Boolean)
+    direccion:
+      vacanteDireccion?.value.trim() || "",
+
+    googleMapsUrl:
+      normalizarUrl(
+        vacanteGoogleMapsUrl?.value || ""
+      ),
+
+    appleMapsUrl:
+      normalizarUrl(
+        vacanteAppleMapsUrl?.value || ""
+      ),
+
+    lat:
+      obtenerNumero(vacanteLat?.value),
+
+    lng:
+      obtenerNumero(vacanteLng?.value),
+
+    requisitos:
+      vacanteRequisitos.value
+        .split(",")
+        .map((requisito) => requisito.trim())
+        .filter(Boolean),
+
+    configuracionPostulacion: {
+      cv:
+        vacanteCvPolicy?.value ||
+        "opcional",
+
+      solicitarTelefono:
+        Boolean(
+          vacanteSolicitarTelefono?.checked
+        ),
+
+      solicitarCorreo:
+        Boolean(
+          vacanteSolicitarCorreo?.checked
+        ),
+
+      solicitarExperiencia:
+        Boolean(
+          vacanteSolicitarExperiencia?.checked
+        ),
+
+      solicitarEscolaridad:
+        Boolean(
+          vacanteSolicitarEscolaridad?.checked
+        ),
+
+      solicitarDisponibilidad:
+        Boolean(
+          vacanteSolicitarDisponibilidad?.checked
+        )
+    },
+
+    preguntasPersonalizadas:
+      preguntasPersonalizadas.map(
+        (pregunta, index) => {
+          let opciones = [];
+
+          if (pregunta.tipo === "si_no") {
+            opciones = ["Sí", "No"];
+          }
+
+          if (
+            pregunta.tipo === "seleccion"
+          ) {
+            opciones = Array.isArray(
+              pregunta.opciones
+            )
+              ? pregunta.opciones
+                  .map((opcion) =>
+                    String(opcion).trim()
+                  )
+                  .filter(Boolean)
+              : [];
+          }
+
+          return {
+            id:
+              pregunta.id ||
+              generarPreguntaId(),
+
+            texto:
+              String(
+                pregunta.texto || ""
+              ).trim(),
+
+            tipo:
+              pregunta.tipo ||
+              "texto_corto",
+
+            obligatoria:
+              Boolean(
+                pregunta.obligatoria
+              ),
+
+            opciones,
+
+            orden: index + 1
+          };
+        }
+      )
   };
 
   if (!payload.googleMapsUrl) {
-    payload.googleMapsUrl = crearGoogleMapsUrlDesdeDatos(payload);
+    payload.googleMapsUrl =
+      crearGoogleMapsUrlDesdeDatos(payload);
   }
 
   if (!payload.appleMapsUrl) {
-    payload.appleMapsUrl = crearAppleMapsUrlDesdeDatos(payload);
+    payload.appleMapsUrl =
+      crearAppleMapsUrlDesdeDatos(payload);
   }
 
   if (
@@ -464,73 +989,125 @@ async function guardarVacante() {
     !payload.sucursal ||
     !payload.requisitos.length
   ) {
-    setVacantesStatus("⚠️ Completa todos los campos obligatorios de la vacante.");
+    setVacantesStatus(
+      "⚠️ Completa todos los campos obligatorios de la vacante."
+    );
+    return;
+  }
+
+  const politicasCvValidas = [
+    "obligatorio",
+    "opcional",
+    "no_solicitar"
+  ];
+
+  if (
+    !politicasCvValidas.includes(
+      payload.configuracionPostulacion.cv
+    )
+  ) {
+    setVacantesStatus(
+      "⚠️ Selecciona una configuración válida para el currículum."
+    );
     return;
   }
 
   if (!adminToken) {
-    setVacantesStatus("⚠️ Tu sesión administrativa no está lista. Cierra sesión e inicia sesión de nuevo.");
+    setVacantesStatus(
+      "⚠️ Tu sesión administrativa no está lista. Cierra sesión e inicia sesión de nuevo."
+    );
     return;
   }
 
   try {
-    const isEdit = Boolean(vacanteIdEdit.value);
+    const isEdit = Boolean(
+      vacanteIdEdit.value
+    );
 
-    let url = `${API_URL}/api/vacantes`;
+    const vacanteId =
+      encodeURIComponent(
+        vacanteIdEdit.value
+      );
 
-    if (isEdit) {
-      url = `${API_URL}/api/vacantes/${vacanteIdEdit.value}`;
-    }
+    const url = isEdit
+      ? `${API_URL}/api/vacantes/${vacanteId}`
+      : `${API_URL}/api/vacantes`;
 
-    let method = "POST";
-
-    if (isEdit) {
-      method = "PUT";
-    }
+    const method = isEdit
+      ? "PUT"
+      : "POST";
 
     if (saveVacanteBtn) {
       saveVacanteBtn.disabled = true;
 
-      if (isEdit) {
-        saveVacanteBtn.textContent = "Actualizando...";
-      } else {
-        saveVacanteBtn.textContent = "Guardando...";
-      }
+      saveVacanteBtn.textContent =
+        isEdit
+          ? "Actualizando..."
+          : "Guardando...";
     }
+
+    setVacantesStatus(
+      isEdit
+        ? "Actualizando vacante..."
+        : "Guardando vacante..."
+    );
 
     const res = await fetch(url, {
       method,
       headers: authHeaders({
-        "Content-Type": "application/json"
+        "Content-Type":
+          "application/json"
       }),
       body: JSON.stringify(payload)
     });
 
-    const data = await res.json();
+    let data = {};
+
+    try {
+      data = await res.json();
+    } catch (jsonError) {
+      console.warn(
+        "La respuesta del servidor no contiene JSON válido:",
+        jsonError
+      );
+    }
 
     if (!res.ok) {
-      throw new Error(data.error || "No fue posible guardar la vacante.");
+      throw new Error(
+        data.error ||
+        data.message ||
+        `No fue posible guardar la vacante. Error ${res.status}`
+      );
     }
 
     closeVacanteModal();
     await cargarVacantesAdmin();
 
-    if (isEdit) {
-      setVacantesStatus("✅ Vacante actualizada correctamente.");
-    } else {
-      setVacantesStatus("✅ Vacante creada correctamente.");
-    }
+    setVacantesStatus(
+      isEdit
+        ? "✅ Vacante actualizada correctamente."
+        : "✅ Vacante creada correctamente."
+    );
   } catch (error) {
-    console.error("Error guardando vacante:", error);
-    setVacantesStatus(`⚠️ ${error.message}`);
+    console.error(
+      "Error guardando vacante:",
+      error
+    );
+
+    setVacantesStatus(
+      `⚠️ ${
+        error.message ||
+        "No fue posible guardar la vacante."
+      }`
+    );
   } finally {
     if (saveVacanteBtn) {
       saveVacanteBtn.disabled = false;
-      saveVacanteBtn.textContent = "Guardar vacante";
+      saveVacanteBtn.textContent =
+        "Guardar vacante";
     }
   }
 }
-
 /* =========================
    ELIMINAR VACANTE
 ========================= */
@@ -616,7 +1193,26 @@ if (vacantePais) {
 if (vacanteEstado) {
   vacanteEstado.addEventListener("change", llenarCiudadesModal);
 }
+if (addCustomQuestionBtn) {
+  addCustomQuestionBtn.addEventListener(
+    "click",
+    () => {
+      preguntasPersonalizadas.push(
+        crearPreguntaVacia()
+      );
 
+      renderPreguntasPersonalizadas();
+
+      const ultimaPregunta =
+        customQuestionsList?.lastElementChild;
+
+      ultimaPregunta?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest"
+      });
+    }
+  );
+}
 /* =========================
    INIT
 ========================= */

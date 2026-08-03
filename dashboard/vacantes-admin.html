@@ -178,6 +178,149 @@
             <label for="vacanteRequisitos">Requisitos</label>
             <textarea id="vacanteRequisitos" rows="4" placeholder="Separa cada requisito con coma" required></textarea>
           </div>
+          
+          <!-- ==========================================
+     CONFIGURACIÓN DEL PROCESO DE POSTULACIÓN
+=========================================== -->
+<section class="application-config field--full">
+  <div class="application-config__head">
+    <div>
+      <span class="config-eyebrow">Flujo del chatbot</span>
+      <h4>Configuración de postulación</h4>
+      <p>
+        Define qué información deberá solicitar el chatbot para esta vacante.
+      </p>
+    </div>
+  </div>
+
+  <div class="config-grid">
+    <div class="field">
+      <label for="vacanteCvPolicy">Solicitud de currículum</label>
+
+      <select id="vacanteCvPolicy">
+        <option value="obligatorio">CV obligatorio</option>
+        <option value="opcional">CV opcional</option>
+        <option value="no_solicitar">No solicitar CV</option>
+      </select>
+
+      <small class="field-help">
+        El chatbot adaptará el proceso según esta selección.
+      </small>
+    </div>
+
+    <div class="config-fields-panel">
+      <h5>Información que solicitará el chatbot</h5>
+
+      <div class="config-checks">
+        <label class="config-check">
+          <input
+            id="vacanteSolicitarTelefono"
+            type="checkbox"
+            checked
+          />
+
+          <span>
+            <strong>Teléfono</strong>
+            <small>Dato de contacto principal.</small>
+          </span>
+        </label>
+
+        <label class="config-check">
+          <input
+            id="vacanteSolicitarCorreo"
+            type="checkbox"
+            checked
+          />
+
+          <span>
+            <strong>Correo electrónico</strong>
+            <small>Para seguimiento de la solicitud.</small>
+          </span>
+        </label>
+
+        <label class="config-check">
+          <input
+            id="vacanteSolicitarExperiencia"
+            type="checkbox"
+            checked
+          />
+
+          <span>
+            <strong>Experiencia laboral</strong>
+            <small>Experiencia relacionada con el puesto.</small>
+          </span>
+        </label>
+
+        <label class="config-check">
+          <input
+            id="vacanteSolicitarEscolaridad"
+            type="checkbox"
+          />
+
+          <span>
+            <strong>Escolaridad</strong>
+            <small>Nivel académico del candidato.</small>
+          </span>
+        </label>
+
+        <label class="config-check">
+          <input
+            id="vacanteSolicitarDisponibilidad"
+            type="checkbox"
+            checked
+          />
+
+          <span>
+            <strong>Disponibilidad</strong>
+            <small>Horarios y días disponibles.</small>
+          </span>
+        </label>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==========================================
+     PREGUNTAS PERSONALIZADAS
+=========================================== -->
+<section class="custom-questions field--full">
+  <div class="custom-questions__head">
+    <div>
+      <span class="config-eyebrow">Preguntas adicionales</span>
+
+      <h4>Preguntas personalizadas</h4>
+
+      <p>
+        Agrega preguntas específicas para este puesto. El chatbot las realizará
+        en el orden mostrado.
+      </p>
+    </div>
+
+    <button
+      id="addCustomQuestionBtn"
+      class="btn btn--secondary"
+      type="button"
+    >
+      + Agregar pregunta
+    </button>
+  </div>
+
+  <div
+    id="customQuestionsEmpty"
+    class="custom-questions-empty"
+  >
+    <strong>No hay preguntas adicionales</strong>
+
+    <p>
+      Esta vacante utilizará solamente las preguntas generales seleccionadas.
+    </p>
+  </div>
+
+  <div
+    id="customQuestionsList"
+    class="custom-questions-list"
+  ></div>
+</section>
         </form>
       </div>
 
@@ -188,7 +331,6 @@
   </div>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="vacantes-admin.js?v=3"></script>
-  
+  <script src="vacantes-admin.js?v=5"></script>
 </body>
 </html>
