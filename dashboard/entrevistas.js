@@ -139,6 +139,14 @@ const closeRescheduleBackdrop = document.getElementById("closeRescheduleBackdrop
 const newDate = document.getElementById("newDate");
 const newTime = document.getElementById("newTime");
 const saveRescheduleBtn = document.getElementById("saveRescheduleBtn");
+const deleteModal = document.getElementById("deleteModal");
+const closeDeleteBtn = document.getElementById("closeDeleteBtn");
+const closeDeleteBackdrop = document.getElementById("closeDeleteBackdrop");
+const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
+const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
+const deleteCandidateName = document.getElementById("deleteCandidateName");
+
+let interviewToDelete = null;
 
 /* =========================
    HELPERS
@@ -315,6 +323,16 @@ function renderTable() {
           <button class="btn btn--secondary" data-action="confirm" data-id="${item.id}">Confirmar</button>
           <button class="btn btn--secondary" data-action="done" data-id="${item.id}">Realizada</button>
           <button class="btn btn--danger" data-action="cancel" data-id="${item.id}">Cancelar</button>
+          <button
+            class="btn btn--danger btn--icon btn--delete"
+            data-action="delete"
+            data-id="${item.id}"
+            type="button"
+            title="Eliminar entrevista"
+            aria-label="Eliminar entrevista de ${item.candidatoNombre || "candidato"}"
+          >
+            🗑️
+          </button>
         </div>
       </td>
     </tr>
@@ -425,15 +443,125 @@ async function cambiarEstado(id, estado) {
     setStatus(`⚠️ ${error.message}`);
   }
 }
-function handleTableAction(action, id) {
-  const item = findInterview(id);
+
+
+function openDeleteModal(item) {
   if (!item) return;
 
-  if (action === "detail") openDetailModal(item);
-  if (action === "confirm") cambiarEstado(id, "confirmada");
-  if (action === "done") cambiarEstado(id, "realizada");
-  if (action === "cancel") cambiarEstado(id, "cancelada");
+  interviewToDelete = item;
+
+  if (deleteCandidateName) {
+    deleteCandidateName.textContent =
+      item.candidatoNombre || "este candidato";
+  }
+
+  if (deleteModal) {
+    deleteModal.classList.remove("hidden");
+  }
 }
+
+function closeDeleteModal() {
+  if (deleteModal) {
+    deleteModal.classList.add("hidden");
+  }
+
+  interviewToDelete = null;
+
+  if (confirmDeleteBtn) {
+    confirmDeleteBtn.disabled = false;
+    confirmDeleteBtn.innerHTML = "🗑️ Eliminar";
+  }
+}
+
+function handleTableAction(action, id) {
+  const item = findInterview(id);
+
+  if (!item) {
+    setStatus("⚠️ No se encontró la entrevista seleccionada.");
+    return;
+  }
+
+  if (action === "detail") {
+    openDetailModal(item);
+    return;
+  }
+
+  if (action === "confirm") {
+    cambiarEstado(id, "confirmada");
+    return;
+  }
+
+  if (action === "done") {
+    cambiarEstado(id, "realizada");
+    return;
+  }
+
+  if (action === "cancel") {
+    cambiarEstado(id, "cancelada");
+    return;
+  }
+
+  if (action === "delete") {
+    openDeleteModal(item);
+  }
+}
+
+async function eliminarEntrevistaSeleccionada() {
+  if (!interviewToDelete?.id) {
+    setStatus("⚠️ No hay una entrevista seleccionada para eliminar.");
+    return;
+  }
+
+  const entrevistaId = interviewToDelete.id;
+  const candidatoNombre =
+    interviewToDelete.candidatoNombre || "el candidato";
+
+  try {
+    if (confirmDeleteBtn) {
+      confirmDeleteBtn.disabled = true;
+      confirmDeleteBtn.textContent = "Eliminando...";
+    }
+
+    setStatus("Eliminando entrevista...");
+
+    const res = await fetch(
+      `${API_URL}/api/entrevistas/${encodeURIComponent(entrevistaId)}`,
+      {
+        method: "DELETE",
+        headers: authHeaders()
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(
+        data.error || "No fue posible eliminar la entrevista."
+      );
+    }
+
+    closeDeleteModal();
+    closeDetailModal();
+
+    await cargarEntrevistas();
+
+    setStatus(
+      `✅ La entrevista de ${candidatoNombre} fue eliminada correctamente.`
+    );
+  } catch (error) {
+    console.error("Error eliminando entrevista:", error);
+
+    setStatus(
+      `⚠️ ${error.message || "No fue posible eliminar la entrevista."}`
+    );
+
+    if (confirmDeleteBtn) {
+      confirmDeleteBtn.disabled = false;
+      confirmDeleteBtn.innerHTML = "🗑️ Eliminar";
+    }
+  }
+}
+
 
 function openRescheduleModal() {
   if (!selectedInterview) return;
@@ -544,6 +672,33 @@ if (rescheduleBtn) rescheduleBtn.addEventListener("click", openRescheduleModal);
 if (closeRescheduleBtn) closeRescheduleBtn.addEventListener("click", closeRescheduleModal);
 if (closeRescheduleBackdrop) closeRescheduleBackdrop.addEventListener("click", closeRescheduleModal);
 if (saveRescheduleBtn) saveRescheduleBtn.addEventListener("click", guardarReprogramacion);
+
+if (closeDeleteBtn) {
+  closeDeleteBtn.addEventListener("click", closeDeleteModal);
+}
+
+if (closeDeleteBackdrop) {
+  closeDeleteBackdrop.addEventListener("click", closeDeleteModal);
+}
+
+if (cancelDeleteBtn) {
+  cancelDeleteBtn.addEventListener("click", closeDeleteModal);
+}
+
+if (confirmDeleteBtn) {
+  confirmDeleteBtn.addEventListener(
+    "click",
+    eliminarEntrevistaSeleccionada
+  );
+}
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+
+  closeDetailModal();
+  closeRescheduleModal();
+  closeDeleteModal();
+});
 
 /* =========================
    INIT

@@ -653,6 +653,1063 @@ async function resolverCoordenadas(data = {}) {
   return { lat, lng };
 }
 
+/* =========================
+   UBICACIÓN DEL CANDIDATO
+   Y CÁLCULO DE DISTANCIA
+========================= */
+
+function validarCodigoPostal(codigoPostal = "") {
+  return /^\d{5}$/.test(
+    String(codigoPostal || "").trim()
+  );
+}
+
+async function geocodificarCodigoPostal({
+  codigoPostal,
+  ciudad = "",
+  estado = "",
+  pais = "Mexico"
+} = {}) {
+  const cp = String(codigoPostal || "").trim();
+
+  if (!validarCodigoPostal(cp)) {
+    return {
+      lat: null,
+      lng: null,
+      encontrado: false
+    };
+  }
+
+  const consultas = [
+    `${cp}, ${ciudad}, ${estado}, ${pais}`,
+    `${cp}, ${estado}, ${pais}`,
+    `${cp}, ${pais}`
+  ].filter(Boolean);
+
+  for (const consulta of consultas) {
+    const coordenadas =
+      await geocodificarDireccion(consulta);
+
+    const lat =
+      limpiarNumero(coordenadas.lat);
+
+    const lng =
+      limpiarNumero(coordenadas.lng);
+
+    if (lat !== null && lng !== null) {
+      return {
+        lat,
+        lng,
+        encontrado: true,
+        consultaUtilizada: consulta
+      };
+    }
+  }
+
+  return {
+    lat: null,
+    lng: null,
+    encontrado: false
+  };
+}
+
+function gradosARadianes(grados) {
+  return grados * (Math.PI / 180);
+}
+
+function calcularDistanciaKm(
+  latOrigen,
+  lngOrigen,
+  latDestino,
+  lngDestino
+) {
+  const lat1 = limpiarNumero(latOrigen);
+  const lng1 = limpiarNumero(lngOrigen);
+  const lat2 = limpiarNumero(latDestino);
+  const lng2 = limpiarNumero(lngDestino);
+
+  if (
+    lat1 === null ||
+    lng1 === null ||
+    lat2 === null ||
+    lng2 === null
+  ) {
+    return null;
+  }
+
+  const RADIO_TIERRA_KM = 6371;
+
+  const diferenciaLatitud =
+    gradosARadianes(lat2 - lat1);
+
+  const diferenciaLongitud =
+    gradosARadianes(lng2 - lng1);
+
+  const a =
+    Math.sin(diferenciaLatitud / 2) ** 2 +
+    Math.cos(gradosARadianes(lat1)) *
+      Math.cos(gradosARadianes(lat2)) *
+      Math.sin(diferenciaLongitud / 2) ** 2;
+
+  const c =
+    2 * Math.atan2(
+      Math.sqrt(a),
+      Math.sqrt(1 - a)
+    );
+
+  return Number(
+    (RADIO_TIERRA_KM * c).toFixed(2)
+  );
+}
+
+function clasificarDistancia(
+  distanciaKm
+) {
+  const distancia =
+    limpiarNumero(distanciaKm);
+
+  if (distancia === null) {
+    return "no_disponible";
+  }
+
+  if (distancia <= 10) {
+    return "cercana";
+  }
+
+  if (distancia <= 20) {
+    return "moderada";
+  }
+
+  if (distancia <= 35) {
+    return "considerable";
+  }
+
+  return "lejana";
+}
+
+function obtenerEtiquetaDistancia(
+  clasificacion = ""
+) {
+  const etiquetas = {
+    cercana:
+      "Muy cerca de la sucursal",
+
+    moderada:
+      "Distancia moderada",
+
+    considerable:
+      "Distancia considerable",
+
+    lejana:
+      "Distancia alta",
+
+    no_disponible:
+      "Distancia no disponible"
+  };
+
+  return (
+    etiquetas[clasificacion] ||
+    etiquetas.no_disponible
+  );
+}
+
+function estimarTiempoTraslado({
+  distanciaKm,
+  medioTransporte
+} = {}) {
+  const distancia =
+    limpiarNumero(distanciaKm);
+
+  if (distancia === null) {
+    return null;
+  }
+
+  const transporte =
+    normalizarTexto(
+      medioTransporte || ""
+    );
+
+  let velocidadPromedio = 25;
+
+  if (
+    transporte.includes("automovil") ||
+    transporte.includes("vehiculo") ||
+    transporte.includes("motocicleta")
+  ) {
+    velocidadPromedio = 35;
+  } else if (
+    transporte.includes("transporte publico") ||
+    transporte.includes("servicio de transporte")
+  ) {
+    velocidadPromedio = 20;
+  } else if (
+    transporte.includes("bicicleta")
+  ) {
+    velocidadPromedio = 15;
+  } else if (
+    transporte.includes("caminando")
+  ) {
+    velocidadPromedio = 5;
+  }
+
+  const minutos =
+    (distancia / velocidadPromedio) * 60;
+
+  /*
+   * Se agrega un margen aproximado por
+   * tráfico, espera o acceso a la sucursal.
+   */
+  const margen =
+    transporte.includes("transporte publico")
+      ? 15
+      : 5;
+
+  return Math.max(
+    1,
+    Math.round(minutos + margen)
+  );
+}
+
+function obtenerMinutosMaximosTraslado(
+  tiempoMaximoTraslado = ""
+) {
+  const valor = normalizarTexto(
+    tiempoMaximoTraslado
+  );
+
+  if (valor.includes("15")) {
+    return 15;
+  }
+
+  if (valor.includes("30")) {
+    return 30;
+  }
+
+  if (valor.includes("45")) {
+    return 45;
+  }
+
+  if (valor.includes("60") &&
+      !valor.includes("mas")) {
+    return 60;
+  }
+
+  if (
+    valor.includes("mas de 60") ||
+    valor.includes("más de 60")
+  ) {
+    return 90;
+  }
+
+  return null;
+}
+
+
+
+function evaluarCompatibilidadTraslado({
+  tiempoEstimadoMin,
+  tiempoMaximoTraslado
+} = {}) {
+  const estimado =
+    limpiarNumero(tiempoEstimadoMin);
+
+  const maximo =
+    obtenerMinutosMaximosTraslado(
+      tiempoMaximoTraslado
+    );
+
+  if (
+    estimado === null ||
+    maximo === null
+  ) {
+    return {
+      estado: "no_disponible",
+      etiqueta:
+        "Compatibilidad no disponible",
+      diferenciaMinutos: null,
+      compatible: null
+    };
+  }
+
+  const diferencia =
+    Math.round(estimado - maximo);
+
+  if (diferencia <= 0) {
+    return {
+      estado: "compatible",
+      etiqueta:
+        "Traslado compatible",
+      diferenciaMinutos:
+        Math.abs(diferencia),
+      compatible: true
+    };
+  }
+
+  if (diferencia <= 15) {
+    return {
+      estado: "al_limite",
+      etiqueta:
+        "Traslado al límite",
+      diferenciaMinutos:
+        diferencia,
+      compatible: true
+    };
+  }
+
+  return {
+    estado: "no_recomendado",
+    etiqueta:
+      "Traslado no recomendado",
+    diferenciaMinutos:
+      diferencia,
+    compatible: false
+  };
+}
+
+/* =========================
+   MOTOR DE COMPATIBILIDAD
+   DEL CANDIDATO
+========================= */
+
+function limitarPuntuacion(valor, minimo = 0, maximo = 100) {
+  const numero = Number(valor);
+
+  if (!Number.isFinite(numero)) {
+    return minimo;
+  }
+
+  return Math.min(
+    maximo,
+    Math.max(minimo, numero)
+  );
+}
+
+function convertirEnPalabras(texto = "") {
+  const palabrasIgnoradas = new Set([
+    "para",
+    "con",
+    "sin",
+    "una",
+    "uno",
+    "unos",
+    "unas",
+    "del",
+    "las",
+    "los",
+    "que",
+    "por",
+    "como",
+    "muy",
+    "de",
+    "la",
+    "el",
+    "en",
+    "y",
+    "o",
+    "a"
+  ]);
+
+  return normalizarTexto(texto)
+    .replace(/[^a-z0-9ñ\s]/g, " ")
+    .split(/\s+/)
+    .map((palabra) => palabra.trim())
+    .filter(
+      (palabra) =>
+        palabra.length >= 3 &&
+        !palabrasIgnoradas.has(palabra)
+    );
+}
+
+function calcularCoincidenciaTexto(
+  textoCandidato = "",
+  textosVacante = []
+) {
+  const palabrasCandidato = new Set(
+    convertirEnPalabras(textoCandidato)
+  );
+
+  const palabrasVacante = [
+    ...new Set(
+      convertirEnPalabras(
+        Array.isArray(textosVacante)
+          ? textosVacante.join(" ")
+          : String(textosVacante || "")
+      )
+    )
+  ];
+
+  if (
+    !palabrasCandidato.size ||
+    !palabrasVacante.length
+  ) {
+    return {
+      porcentaje: 0,
+      coincidencias: [],
+      totalPalabrasVacante:
+        palabrasVacante.length
+    };
+  }
+
+  const coincidencias =
+    palabrasVacante.filter((palabra) =>
+      palabrasCandidato.has(palabra)
+    );
+
+  const porcentaje =
+    (coincidencias.length /
+      palabrasVacante.length) *
+    100;
+
+  return {
+    porcentaje:
+      limitarPuntuacion(porcentaje),
+
+    coincidencias,
+
+    totalPalabrasVacante:
+      palabrasVacante.length
+  };
+}
+
+function evaluarComponenteCv({
+  analisisIA = {},
+  vacante = {},
+  cvDisponible = false
+} = {}) {
+  if (!cvDisponible) {
+    return {
+      disponible: false,
+      puntos: 0,
+      maximo: 35,
+      porcentaje: null,
+      motivos: [],
+      alertas: []
+    };
+  }
+
+  const textoPerfil = [
+    analisisIA.resumen,
+    analisisIA.perfilRecomendado,
+    analisisIA.tipoPerfil,
+    analisisIA.nivelExperiencia,
+    ...(analisisIA.habilidadesDetectadas || []),
+    ...(analisisIA.puestosSugeridos || []),
+    ...(analisisIA.palabrasClave || []),
+    ...(analisisIA.areasCompatibles || [])
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const textosVacante = [
+    vacante.titulo,
+    vacante.area,
+    vacante.tipoVacante,
+    ...(vacante.requisitos || [])
+  ];
+
+  const coincidencia =
+    calcularCoincidenciaTexto(
+      textoPerfil,
+      textosVacante
+    );
+
+  let porcentaje =
+    coincidencia.porcentaje;
+
+  const puestoCoincidente =
+    (analisisIA.puestosSugeridos || [])
+      .some((puesto) => {
+        const sugerido =
+          normalizarTexto(puesto);
+
+        const titulo =
+          normalizarTexto(
+            vacante.titulo || ""
+          );
+
+        return (
+          sugerido.includes(titulo) ||
+          titulo.includes(sugerido)
+        );
+      });
+
+  const areaCoincidente =
+    (analisisIA.areasCompatibles || [])
+      .some((area) => {
+        const areaPerfil =
+          normalizarTexto(area);
+
+        const areaVacante =
+          normalizarTexto(
+            vacante.area || ""
+          );
+
+        return (
+          areaPerfil.includes(areaVacante) ||
+          areaVacante.includes(areaPerfil)
+        );
+      });
+
+  if (puestoCoincidente) {
+    porcentaje += 20;
+  }
+
+  if (areaCoincidente) {
+    porcentaje += 15;
+  }
+
+  porcentaje =
+    limitarPuntuacion(porcentaje);
+
+  const puntos =
+    Number(
+      ((porcentaje / 100) * 35)
+        .toFixed(1)
+    );
+
+  const motivos = [];
+
+  if (puestoCoincidente) {
+    motivos.push(
+      "El puesto aparece entre las recomendaciones obtenidas del CV."
+    );
+  }
+
+  if (areaCoincidente) {
+    motivos.push(
+      "El área de la vacante coincide con áreas detectadas en el perfil."
+    );
+  }
+
+  if (coincidencia.coincidencias.length) {
+    motivos.push(
+      `Coincidencias detectadas: ${coincidencia.coincidencias
+        .slice(0, 6)
+        .join(", ")}.`
+    );
+  }
+
+  const alertas = [];
+
+  if (porcentaje < 35) {
+    alertas.push(
+      "Se detectaron pocas coincidencias textuales entre el CV y la vacante."
+    );
+  }
+
+  return {
+    disponible: true,
+    puntos,
+    maximo: 35,
+    porcentaje:
+      Math.round(porcentaje),
+
+    motivos,
+    alertas
+  };
+}
+
+function evaluarComponenteExperiencia({
+  experiencia = "",
+  habilidades = "",
+  analisisIA = {},
+  vacante = {},
+  requerida = false
+} = {}) {
+  if (!requerida) {
+    return {
+      disponible: false,
+      puntos: 0,
+      maximo: 20,
+      porcentaje: null,
+      motivos: [],
+      alertas: []
+    };
+  }
+
+  const textoExperiencia = [
+    experiencia,
+    habilidades,
+    analisisIA.resumen,
+    ...(analisisIA.habilidadesDetectadas || []),
+    analisisIA.nivelExperiencia
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (!textoExperiencia.trim()) {
+    return {
+      disponible: true,
+      puntos: 0,
+      maximo: 20,
+      porcentaje: 0,
+      motivos: [],
+      alertas: [
+        "No se proporcionó experiencia suficiente para evaluarla."
+      ]
+    };
+  }
+
+  const coincidencia =
+    calcularCoincidenciaTexto(
+      textoExperiencia,
+      vacante.requisitos || []
+    );
+
+  /*
+   * Se reconoce que el candidato respondió,
+   * pero la mayor parte depende de coincidencias
+   * con los requisitos publicados.
+   */
+  const porcentaje =
+    limitarPuntuacion(
+      25 +
+      coincidencia.porcentaje * 0.75
+    );
+
+  const puntos =
+    Number(
+      ((porcentaje / 100) * 20)
+        .toFixed(1)
+    );
+
+  const motivos = [
+    "El candidato proporcionó información sobre su experiencia."
+  ];
+
+  if (coincidencia.coincidencias.length) {
+    motivos.push(
+      `Experiencia relacionada con: ${coincidencia.coincidencias
+        .slice(0, 5)
+        .join(", ")}.`
+    );
+  }
+
+  return {
+    disponible: true,
+    puntos,
+    maximo: 20,
+    porcentaje:
+      Math.round(porcentaje),
+
+    motivos,
+    alertas:
+      porcentaje < 40
+        ? [
+            "La experiencia registrada tiene pocas coincidencias con los requisitos."
+          ]
+        : []
+  };
+}
+
+function evaluarComponenteDisponibilidad({
+  disponibilidad = "",
+  requerida = false
+} = {}) {
+  if (!requerida) {
+    return {
+      disponible: false,
+      puntos: 0,
+      maximo: 15,
+      porcentaje: null,
+      motivos: [],
+      alertas: []
+    };
+  }
+
+  const valor =
+    String(disponibilidad || "").trim();
+
+  if (!valor) {
+    return {
+      disponible: true,
+      puntos: 0,
+      maximo: 15,
+      porcentaje: 0,
+      motivos: [],
+      alertas: [
+        "No se registró disponibilidad."
+      ]
+    };
+  }
+
+  /*
+   * Por ahora se evalúa que la información
+   * esté completa. La compatibilidad real
+   * requerirá turnos configurados por RH.
+   */
+  return {
+    disponible: true,
+    puntos: 15,
+    maximo: 15,
+    porcentaje: 100,
+    motivos: [
+      "El candidato proporcionó su disponibilidad."
+    ],
+    alertas: []
+  };
+}
+
+function evaluarComponenteGeografico({
+  compatibilidadTraslado = {},
+  solicitado = false
+} = {}) {
+  if (!solicitado) {
+    return {
+      disponible: false,
+      puntos: 0,
+      maximo: 15,
+      porcentaje: null,
+      motivos: [],
+      alertas: []
+    };
+  }
+
+  const estado =
+    compatibilidadTraslado.estado ||
+    "no_disponible";
+
+  const valores = {
+    compatible: {
+      porcentaje: 100,
+      motivo:
+        "El tiempo estimado está dentro del máximo aceptado."
+    },
+
+    al_limite: {
+      porcentaje: 65,
+      motivo:
+        "El traslado está ligeramente por encima del tiempo aceptado."
+    },
+
+    no_recomendado: {
+      porcentaje: 20,
+      motivo:
+        "El traslado supera considerablemente el tiempo aceptado."
+    },
+
+    no_disponible: {
+      porcentaje: 0,
+      motivo:
+        "No fue posible calcular la compatibilidad geográfica."
+    }
+  };
+
+  const resultado =
+    valores[estado] ||
+    valores.no_disponible;
+
+  return {
+    disponible: true,
+
+    puntos:
+      Number(
+        ((resultado.porcentaje / 100) * 15)
+          .toFixed(1)
+      ),
+
+    maximo: 15,
+    porcentaje:
+      resultado.porcentaje,
+
+    motivos:
+      estado !== "no_disponible"
+        ? [resultado.motivo]
+        : [],
+
+    alertas:
+      estado === "no_recomendado" ||
+      estado === "no_disponible"
+        ? [resultado.motivo]
+        : []
+  };
+}
+
+function obtenerValorRespuestaPersonalizada(
+  respuestas = {},
+  preguntaId = ""
+) {
+  const respuesta =
+    respuestas?.[preguntaId];
+
+  if (
+    respuesta &&
+    typeof respuesta === "object"
+  ) {
+    return String(
+      respuesta.respuesta || ""
+    ).trim();
+  }
+
+  return String(
+    respuesta || ""
+  ).trim();
+}
+
+function evaluarComponentePreguntas({
+  preguntas = [],
+  respuestas = {}
+} = {}) {
+  if (
+    !Array.isArray(preguntas) ||
+    !preguntas.length
+  ) {
+    return {
+      disponible: false,
+      puntos: 0,
+      maximo: 15,
+      porcentaje: null,
+      motivos: [],
+      alertas: []
+    };
+  }
+
+  const obligatorias =
+    preguntas.filter(
+      (pregunta) =>
+        pregunta.obligatoria !== false
+    );
+
+  const baseEvaluacion =
+    obligatorias.length
+      ? obligatorias
+      : preguntas;
+
+  const respondidas =
+    baseEvaluacion.filter(
+      (pregunta) =>
+        obtenerValorRespuestaPersonalizada(
+          respuestas,
+          pregunta.id
+        )
+    );
+
+  const porcentaje =
+    baseEvaluacion.length
+      ? (respondidas.length /
+          baseEvaluacion.length) *
+        100
+      : 100;
+
+  const puntos =
+    Number(
+      ((porcentaje / 100) * 15)
+        .toFixed(1)
+    );
+
+  return {
+    disponible: true,
+    puntos,
+    maximo: 15,
+    porcentaje:
+      Math.round(porcentaje),
+
+    motivos:
+      respondidas.length
+        ? [
+            `${respondidas.length} de ${baseEvaluacion.length} preguntas consideradas fueron respondidas.`
+          ]
+        : [],
+
+    alertas:
+      respondidas.length <
+      baseEvaluacion.length
+        ? [
+            "Existen preguntas de la vacante sin respuesta."
+          ]
+        : []
+  };
+}
+
+function obtenerNivelCompatibilidad(
+  puntuacion = 0
+) {
+  const valor =
+    limitarPuntuacion(puntuacion);
+
+  if (valor >= 85) {
+    return {
+      nivel: "muy_recomendado",
+      etiqueta: "Muy recomendado"
+    };
+  }
+
+  if (valor >= 70) {
+    return {
+      nivel: "recomendado",
+      etiqueta: "Recomendado"
+    };
+  }
+
+  if (valor >= 55) {
+    return {
+      nivel: "revisar",
+      etiqueta: "Revisar"
+    };
+  }
+
+  return {
+    nivel: "baja_compatibilidad",
+    etiqueta: "Baja compatibilidad"
+  };
+}
+
+function calcularCompatibilidadCandidato({
+  vacante = {},
+  configuracion = {},
+  analisisIA = {},
+  cvDisponible = false,
+  experiencia = "",
+  habilidades = "",
+  disponibilidad = "",
+  respuestasPersonalizadas = {},
+  compatibilidadTraslado = {}
+} = {}) {
+  const componentes = {
+    cv: evaluarComponenteCv({
+      analisisIA,
+      vacante,
+      cvDisponible
+    }),
+
+    experiencia:
+      evaluarComponenteExperiencia({
+        experiencia,
+        habilidades,
+        analisisIA,
+        vacante,
+        requerida:
+          configuracion
+            .solicitarExperiencia
+      }),
+
+    disponibilidad:
+      evaluarComponenteDisponibilidad({
+        disponibilidad,
+        requerida:
+          configuracion
+            .solicitarDisponibilidad
+      }),
+
+    geografia:
+      evaluarComponenteGeografico({
+        compatibilidadTraslado,
+        solicitado:
+          configuracion
+            .solicitarCodigoPostal
+      }),
+
+    preguntas:
+      evaluarComponentePreguntas({
+        preguntas:
+          vacante
+            .preguntasPersonalizadas ||
+          [],
+
+        respuestas:
+          respuestasPersonalizadas
+      })
+  };
+
+  const disponibles =
+    Object.values(componentes)
+      .filter(
+        (componente) =>
+          componente.disponible
+      );
+
+  const puntosObtenidos =
+    disponibles.reduce(
+      (total, componente) =>
+        total + componente.puntos,
+      0
+    );
+
+  const puntosDisponibles =
+    disponibles.reduce(
+      (total, componente) =>
+        total + componente.maximo,
+      0
+    );
+
+  /*
+   * La puntuación se normaliza para no
+   * castigar una vacante que no solicita CV,
+   * geolocalización o preguntas adicionales.
+   */
+  const puntuacion =
+    puntosDisponibles > 0
+      ? Math.round(
+          (puntosObtenidos /
+            puntosDisponibles) *
+          100
+        )
+      : 0;
+
+  const nivel =
+    obtenerNivelCompatibilidad(
+      puntuacion
+    );
+
+  const motivos =
+    disponibles.flatMap(
+      (componente) =>
+        componente.motivos || []
+    );
+
+  const alertas =
+    disponibles.flatMap(
+      (componente) =>
+        componente.alertas || []
+    );
+
+  return {
+    puntuacion:
+      limitarPuntuacion(puntuacion),
+
+    nivel:
+      nivel.nivel,
+
+    etiqueta:
+      nivel.etiqueta,
+
+    desglose: {
+      cv:
+        componentes.cv.puntos,
+
+      experiencia:
+        componentes.experiencia.puntos,
+
+      disponibilidad:
+        componentes.disponibilidad.puntos,
+
+      geografia:
+        componentes.geografia.puntos,
+
+      preguntas:
+        componentes.preguntas.puntos
+    },
+
+    detalleComponentes:
+      componentes,
+
+    puntosObtenidos:
+      Number(
+        puntosObtenidos.toFixed(1)
+      ),
+
+    puntosDisponibles,
+
+    motivos:
+      [...new Set(motivos)].slice(0, 8),
+
+    alertas:
+      [...new Set(alertas)].slice(0, 8),
+
+    versionMotor: "1.0"
+  };
+}
+
 function enriquecerVacanteConSucursal(vacante = {}) {
   const sucursales = leerSucursales();
   const sucursalId = resolverSucursalId(vacante);
@@ -1363,6 +2420,12 @@ app.post(
         escolaridad,
         experiencia,
         habilidades,
+
+        codigoPostal,
+        medioTransporte,
+        vehiculoPropio,
+        tiempoMaximoTraslado,
+
         politicaCv,
         configuracionPostulacion,
         respuestasPersonalizadas
@@ -1412,6 +2475,57 @@ app.post(
         });
       }
 
+      if (
+        configuracion.solicitarCodigoPostal &&
+        !String(codigoPostal || "").trim()
+      ) {
+        return res.status(400).json({
+          error:
+            "El código postal es obligatorio para esta vacante."
+        });
+      }
+
+      if (
+        configuracion.solicitarCodigoPostal &&
+        !validarCodigoPostal(codigoPostal)
+      ) {
+        return res.status(400).json({
+          error:
+            "El código postal debe contener exactamente 5 números."
+        });
+      }
+
+      if (
+        configuracion.solicitarTransporte &&
+        !String(medioTransporte || "").trim()
+      ) {
+        return res.status(400).json({
+          error:
+            "El medio de transporte es obligatorio para esta vacante."
+        });
+      }
+
+      if (
+        configuracion.solicitarVehiculoPropio &&
+        !String(vehiculoPropio || "").trim()
+      ) {
+        return res.status(400).json({
+          error:
+            "Indica si cuentas con vehículo propio."
+        });
+      }
+
+      if (
+        configuracion.solicitarTiempoTraslado &&
+        !String(
+          tiempoMaximoTraslado || ""
+        ).trim()
+      ) {
+        return res.status(400).json({
+          error:
+            "El tiempo máximo de traslado es obligatorio para esta vacante."
+        });
+      }
       if (
         configuracion.solicitarExperiencia &&
         !String(experiencia || "").trim()
@@ -1532,6 +2646,166 @@ app.post(
         }
       }
 
+      /* =========================
+   CÁLCULO DE UBICACIÓN
+========================= */
+
+  let ubicacionCandidato = {
+    lat: null,
+    lng: null,
+    aproximada: true,
+    encontrada: false
+  };
+
+  let distanciaSucursalKm = null;
+  let clasificacionDistancia =
+    "no_disponible";
+
+  let etiquetaDistancia =
+    "Distancia no disponible";
+
+  let tiempoTrasladoEstimadoMin = null;
+
+  let compatibilidadTraslado = {
+  estado: "no_disponible",
+  etiqueta: "Compatibilidad no disponible",
+  diferenciaMinutos: null,
+  compatible: null
+};
+
+  if (
+    configuracion.solicitarCodigoPostal &&
+    validarCodigoPostal(codigoPostal)
+  ) {
+    const ubicacion =
+      await geocodificarCodigoPostal({
+        codigoPostal,
+        ciudad: vacante.ciudad,
+        estado: vacante.estado,
+        pais: vacante.pais
+      });
+
+    ubicacionCandidato = {
+      lat: ubicacion.lat,
+      lng: ubicacion.lng,
+      aproximada: true,
+      encontrada:
+        Boolean(ubicacion.encontrado)
+    };
+
+    let sucursalLat =
+      limpiarNumero(vacante.lat);
+
+    let sucursalLng =
+      limpiarNumero(vacante.lng);
+
+    /*
+    * Si la vacante no tiene coordenadas,
+    * se intenta geocodificar su dirección.
+    */
+    if (
+      sucursalLat === null ||
+      sucursalLng === null
+    ) {
+      const coordenadasSucursal =
+        await resolverCoordenadas({
+          direccion:
+            vacante.direccion,
+
+          sucursal:
+            vacante.sucursal,
+
+          ciudad:
+            vacante.ciudad,
+
+          estado:
+            vacante.estado,
+
+          pais:
+            vacante.pais,
+
+          lat:
+            vacante.lat,
+
+          lng:
+            vacante.lng
+        });
+
+      sucursalLat =
+        limpiarNumero(
+          coordenadasSucursal.lat
+        );
+
+      sucursalLng =
+        limpiarNumero(
+          coordenadasSucursal.lng
+        );
+    }
+
+    distanciaSucursalKm =
+      calcularDistanciaKm(
+        ubicacionCandidato.lat,
+        ubicacionCandidato.lng,
+        sucursalLat,
+        sucursalLng
+      );
+
+    clasificacionDistancia =
+      clasificarDistancia(
+        distanciaSucursalKm
+      );
+
+    etiquetaDistancia =
+      obtenerEtiquetaDistancia(
+        clasificacionDistancia
+      );
+
+    tiempoTrasladoEstimadoMin =
+      estimarTiempoTraslado({
+        distanciaKm:
+          distanciaSucursalKm,
+
+        medioTransporte
+      });
+    compatibilidadTraslado =
+      evaluarCompatibilidadTraslado({
+        tiempoEstimadoMin:
+          tiempoTrasladoEstimadoMin,
+
+        tiempoMaximoTraslado
+      });
+      }
+
+      const resultadoCompatibilidad =
+  calcularCompatibilidadCandidato({
+    vacante,
+    configuracion,
+    analisisIA,
+
+    cvDisponible:
+      Boolean(cvFile),
+
+    experiencia:
+      String(
+        experiencia || ""
+      ).trim(),
+
+    habilidades:
+      String(
+        habilidades || ""
+      ).trim(),
+
+    disponibilidad:
+      String(
+        disponibilidad || ""
+      ).trim(),
+
+    respuestasPersonalizadas:
+      respuestasPersonalizadasParseadas,
+
+    compatibilidadTraslado
+  });
+
       const postulacion = {
         id: Date.now().toString(),
 
@@ -1546,6 +2820,80 @@ app.post(
 
         edad:
           String(edad || "").trim(),
+
+        
+        codigoPostal:
+          String(
+            codigoPostal || ""
+          ).trim(),
+
+        medioTransporte:
+          String(
+            medioTransporte || ""
+          ).trim(),
+
+        vehiculoPropio:
+          String(
+            vehiculoPropio || ""
+          ).trim(),
+
+        tiempoMaximoTraslado:
+          String(
+            tiempoMaximoTraslado || ""
+          ).trim(),
+
+        ubicacionCandidato,
+
+        ubicacionSucursal: {
+          lat:
+            limpiarNumero(
+              vacante.lat
+            ),
+
+          lng:
+            limpiarNumero(
+              vacante.lng
+            )
+        },
+
+        distanciaSucursalKm,
+
+        clasificacionDistancia,
+
+        etiquetaDistancia,
+
+        tiempoTrasladoEstimadoMin,
+        compatibilidadTraslado,
+
+        compatibilidadGeografica:
+          compatibilidadTraslado.estado,
+
+        etiquetaCompatibilidadGeografica:
+          compatibilidadTraslado.etiqueta,
+
+        puntuacionCompatibilidad:
+          resultadoCompatibilidad.puntuacion,
+
+        nivelCompatibilidad:
+          resultadoCompatibilidad.nivel,
+
+        etiquetaNivelCompatibilidad:
+          resultadoCompatibilidad.etiqueta,
+
+        desgloseCompatibilidad:
+          resultadoCompatibilidad.desglose,
+
+        detalleCompatibilidad:
+          resultadoCompatibilidad.detalleComponentes,
+
+        motivosCompatibilidad:
+          resultadoCompatibilidad.motivos,
+
+        alertasCompatibilidad:
+          resultadoCompatibilidad.alertas,
+
+        versionMotorCompatibilidad:
+          resultadoCompatibilidad.versionMotor,
 
         pais:
           vacante.pais,
@@ -2128,7 +3476,20 @@ function normalizarConfiguracionPostulacion(configuracion = {}) {
       Boolean(configuracion.solicitarEscolaridad),
 
     solicitarDisponibilidad:
-      configuracion.solicitarDisponibilidad !== false
+      configuracion.solicitarDisponibilidad !== false,
+
+    solicitarCodigoPostal:
+      configuracion.solicitarCodigoPostal !== false,
+    solicitarTransporte:
+  configuracion.solicitarTransporte !== false,
+
+    solicitarVehiculoPropio:
+      Boolean(
+        configuracion.solicitarVehiculoPropio
+      ),
+
+    solicitarTiempoTraslado:
+      configuracion.solicitarTiempoTraslado !== false,
   };
 }
 

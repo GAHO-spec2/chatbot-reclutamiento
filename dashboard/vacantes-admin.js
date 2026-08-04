@@ -86,6 +86,26 @@ const customQuestionsList =
 const customQuestionsEmpty =
   document.getElementById("customQuestionsEmpty");
 
+const vacanteSolicitarCodigoPostal =
+  document.getElementById(
+    "vacanteSolicitarCodigoPostal"
+  );
+
+const vacanteSolicitarTransporte =
+  document.getElementById(
+    "vacanteSolicitarTransporte"
+  );
+
+const vacanteSolicitarVehiculoPropio =
+  document.getElementById(
+    "vacanteSolicitarVehiculoPropio"
+  );
+
+const vacanteSolicitarTiempoTraslado =
+  document.getElementById(
+    "vacanteSolicitarTiempoTraslado"
+  );
+
 let preguntasPersonalizadas = [];
 
 let vacantes = [];
@@ -725,34 +745,6 @@ function validarPreguntasPersonalizadas() {
 
   return { ok: true };
 }
-
-if (vacanteCvPolicy) {
-  vacanteCvPolicy.value = "opcional";
-}
-
-if (vacanteSolicitarTelefono) {
-  vacanteSolicitarTelefono.checked = true;
-}
-
-if (vacanteSolicitarCorreo) {
-  vacanteSolicitarCorreo.checked = true;
-}
-
-if (vacanteSolicitarExperiencia) {
-  vacanteSolicitarExperiencia.checked = true;
-}
-
-if (vacanteSolicitarEscolaridad) {
-  vacanteSolicitarEscolaridad.checked = false;
-}
-
-if (vacanteSolicitarDisponibilidad) {
-  vacanteSolicitarDisponibilidad.checked = true;
-}
-
-preguntasPersonalizadas = [];
-renderPreguntasPersonalizadas();
-
 /* =========================
    FORMULARIO
 ========================= */
@@ -763,72 +755,268 @@ function resetVacanteForm() {
   vacanteTituloInput.value = "";
   vacanteArea.value = "";
   vacantePais.value = "";
-  vacanteEstado.innerHTML = `<option value="">Selecciona</option>`;
-  vacanteCiudad.innerHTML = `<option value="">Selecciona</option>`;
+
+  vacanteEstado.innerHTML =
+    `<option value="">Selecciona</option>`;
+
+  vacanteCiudad.innerHTML =
+    `<option value="">Selecciona</option>`;
+
   vacanteSucursal.value = "";
 
-  if (vacanteNumeroTienda) vacanteNumeroTienda.value = "";
-  if (vacanteDireccion) vacanteDireccion.value = "";
-  if (vacanteGoogleMapsUrl) vacanteGoogleMapsUrl.value = "";
-  if (vacanteAppleMapsUrl) vacanteAppleMapsUrl.value = "";
-  if (vacanteLat) vacanteLat.value = "";
-  if (vacanteLng) vacanteLng.value = "";
+  if (vacanteNumeroTienda) {
+    vacanteNumeroTienda.value = "";
+  }
+
+  if (vacanteDireccion) {
+    vacanteDireccion.value = "";
+  }
+
+  if (vacanteGoogleMapsUrl) {
+    vacanteGoogleMapsUrl.value = "";
+  }
+
+  if (vacanteAppleMapsUrl) {
+    vacanteAppleMapsUrl.value = "";
+  }
+
+  if (vacanteLat) {
+    vacanteLat.value = "";
+  }
+
+  if (vacanteLng) {
+    vacanteLng.value = "";
+  }
 
   vacanteRequisitos.value = "";
+
+  /* Configuración general */
+
+  if (vacanteCvPolicy) {
+    vacanteCvPolicy.value = "opcional";
+  }
+
+  if (vacanteSolicitarTelefono) {
+    vacanteSolicitarTelefono.checked = true;
+  }
+
+  if (vacanteSolicitarCorreo) {
+    vacanteSolicitarCorreo.checked = true;
+  }
+
+  if (vacanteSolicitarCodigoPostal) {
+    vacanteSolicitarCodigoPostal.checked = true;
+  }
+
+  if (vacanteSolicitarTransporte) {
+    vacanteSolicitarTransporte.checked = true;
+  }
+
+  if (vacanteSolicitarVehiculoPropio) {
+    vacanteSolicitarVehiculoPropio.checked = false;
+  }
+
+  if (vacanteSolicitarTiempoTraslado) {
+    vacanteSolicitarTiempoTraslado.checked = true;
+  }
+
+  if (vacanteSolicitarExperiencia) {
+    vacanteSolicitarExperiencia.checked = true;
+  }
+
+  if (vacanteSolicitarEscolaridad) {
+    vacanteSolicitarEscolaridad.checked = false;
+  }
+
+  if (vacanteSolicitarDisponibilidad) {
+    vacanteSolicitarDisponibilidad.checked = true;
+  }
+
+  preguntasPersonalizadas = [];
+  renderPreguntasPersonalizadas();
 }
 
 function openVacanteModal(vacante = null) {
   resetVacanteForm();
 
-  if (vacante) {
-    vacanteModalTitle.textContent = "Editar vacante";
+  if (!vacante) {
+    vacanteModalTitle.textContent =
+      "Nueva vacante";
 
-    vacanteIdEdit.value = vacante.id || "";
-    vacanteTipo.value = vacante.tipoVacante || "";
-    vacanteGrupo.value = vacante.grupo || "";
-    vacanteTituloInput.value = vacante.titulo || "";
-    vacanteArea.value = vacante.area || "";
-    vacantePais.value = vacante.pais || "";
-
-    llenarEstadosModal();
-
-    vacanteEstado.value = vacante.estado || "";
-
-    llenarCiudadesModal();
-
-    vacanteCiudad.value = vacante.ciudad || "";
-    vacanteSucursal.value = vacante.sucursal || "";
-
-    if (vacanteNumeroTienda) vacanteNumeroTienda.value = vacante.numeroTienda || "";
-    if (vacanteDireccion) vacanteDireccion.value = vacante.direccion || "";
-    if (vacanteGoogleMapsUrl) vacanteGoogleMapsUrl.value = vacante.googleMapsUrl || "";
-    if (vacanteAppleMapsUrl) vacanteAppleMapsUrl.value = vacante.appleMapsUrl || "";
-
-    if (vacanteLat) {
-      vacanteLat.value = "";
-      if (vacante.lat !== null && vacante.lat !== undefined) {
-        vacanteLat.value = vacante.lat;
-      }
-    }
-
-    if (vacanteLng) {
-      vacanteLng.value = "";
-      if (vacante.lng !== null && vacante.lng !== undefined) {
-        vacanteLng.value = vacante.lng;
-      }
-    }
-
-    if (Array.isArray(vacante.requisitos)) {
-      vacanteRequisitos.value = vacante.requisitos.join(", ");
-    } else {
-      vacanteRequisitos.value = "";
-    }
-  } else {
-    vacanteModalTitle.textContent = "Nueva vacante";
+    vacanteModal.classList.remove("hidden");
+    return;
   }
+
+  vacanteModalTitle.textContent =
+    "Editar vacante";
+
+  vacanteIdEdit.value =
+    vacante.id || "";
+
+  vacanteTipo.value =
+    vacante.tipoVacante || "";
+
+  vacanteGrupo.value =
+    vacante.grupo || "";
+
+  vacanteTituloInput.value =
+    vacante.titulo || "";
+
+  vacanteArea.value =
+    vacante.area || "";
+
+  vacantePais.value =
+    vacante.pais || "";
+
+  llenarEstadosModal();
+
+  vacanteEstado.value =
+    vacante.estado || "";
+
+  llenarCiudadesModal();
+
+  vacanteCiudad.value =
+    vacante.ciudad || "";
+
+  vacanteSucursal.value =
+    vacante.sucursal || "";
+
+  if (vacanteNumeroTienda) {
+    vacanteNumeroTienda.value =
+      vacante.numeroTienda || "";
+  }
+
+  if (vacanteDireccion) {
+    vacanteDireccion.value =
+      vacante.direccion || "";
+  }
+
+  if (vacanteGoogleMapsUrl) {
+    vacanteGoogleMapsUrl.value =
+      vacante.googleMapsUrl || "";
+  }
+
+  if (vacanteAppleMapsUrl) {
+    vacanteAppleMapsUrl.value =
+      vacante.appleMapsUrl || "";
+  }
+
+  if (vacanteLat) {
+    vacanteLat.value =
+      vacante.lat ?? "";
+  }
+
+  if (vacanteLng) {
+    vacanteLng.value =
+      vacante.lng ?? "";
+  }
+
+  vacanteRequisitos.value =
+    Array.isArray(vacante.requisitos)
+      ? vacante.requisitos.join(", ")
+      : "";
+
+  /* Configuración de postulación */
+
+  const configuracion =
+    vacante.configuracionPostulacion || {};
+
+  if (vacanteCvPolicy) {
+    vacanteCvPolicy.value =
+      configuracion.cv || "opcional";
+  }
+
+  if (vacanteSolicitarTelefono) {
+    vacanteSolicitarTelefono.checked =
+      configuracion.solicitarTelefono !== false;
+  }
+
+  if (vacanteSolicitarCorreo) {
+    vacanteSolicitarCorreo.checked =
+      configuracion.solicitarCorreo !== false;
+  }
+
+  if (vacanteSolicitarCodigoPostal) {
+    vacanteSolicitarCodigoPostal.checked =
+      configuracion.solicitarCodigoPostal !== false;
+  }
+
+  if (vacanteSolicitarTransporte) {
+    vacanteSolicitarTransporte.checked =
+      configuracion.solicitarTransporte !== false;
+  }
+
+  if (vacanteSolicitarVehiculoPropio) {
+    vacanteSolicitarVehiculoPropio.checked =
+      Boolean(
+        configuracion.solicitarVehiculoPropio
+      );
+  }
+
+  if (vacanteSolicitarTiempoTraslado) {
+    vacanteSolicitarTiempoTraslado.checked =
+      configuracion.solicitarTiempoTraslado !== false;
+  }
+
+  if (vacanteSolicitarExperiencia) {
+    vacanteSolicitarExperiencia.checked =
+      configuracion.solicitarExperiencia !== false;
+  }
+
+  if (vacanteSolicitarEscolaridad) {
+    vacanteSolicitarEscolaridad.checked =
+      Boolean(
+        configuracion.solicitarEscolaridad
+      );
+  }
+
+  if (vacanteSolicitarDisponibilidad) {
+    vacanteSolicitarDisponibilidad.checked =
+      configuracion.solicitarDisponibilidad !== false;
+  }
+
+  /* Preguntas personalizadas */
+
+  preguntasPersonalizadas =
+    Array.isArray(
+      vacante.preguntasPersonalizadas
+    )
+      ? vacante.preguntasPersonalizadas.map(
+          (pregunta, index) => ({
+            id:
+              pregunta.id ||
+              generarPreguntaId(),
+
+            texto:
+              pregunta.texto || "",
+
+            tipo:
+              pregunta.tipo ||
+              "texto_corto",
+
+            obligatoria:
+              pregunta.obligatoria !== false,
+
+            opciones:
+              Array.isArray(
+                pregunta.opciones
+              )
+                ? pregunta.opciones
+                : [],
+
+            orden:
+              pregunta.orden ||
+              index + 1
+          })
+        )
+      : [];
+
+  actualizarOrdenPreguntas();
+  renderPreguntasPersonalizadas();
 
   vacanteModal.classList.remove("hidden");
 }
+
 
 function closeVacanteModal() {
   vacanteModal.classList.add("hidden");
@@ -891,6 +1079,10 @@ async function guardarVacante() {
       cv:
         vacanteCvPolicy?.value ||
         "opcional",
+      solicitarCodigoPostal:
+      Boolean(
+        vacanteSolicitarCodigoPostal?.checked
+      ),
 
       solicitarTelefono:
         Boolean(
@@ -915,6 +1107,20 @@ async function guardarVacante() {
       solicitarDisponibilidad:
         Boolean(
           vacanteSolicitarDisponibilidad?.checked
+        ),
+      solicitarTransporte:
+        Boolean(
+          vacanteSolicitarTransporte?.checked
+        ),
+
+      solicitarVehiculoPropio:
+        Boolean(
+          vacanteSolicitarVehiculoPropio?.checked
+        ),
+
+      solicitarTiempoTraslado:
+        Boolean(
+          vacanteSolicitarTiempoTraslado?.checked
         )
     },
 

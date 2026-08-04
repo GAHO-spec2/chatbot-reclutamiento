@@ -17,8 +17,9 @@
     sizes="32x32"
     href="icons8-documento-32.png"
   />
+  
+  <link rel="stylesheet" href="entrevistas.css?v=4" />
 
-  <link rel="stylesheet" href="entrevistas.css?v=3" />
 </head>
 
 <body>
@@ -526,13 +527,95 @@
       </div>
     </div>
   </div>
+  
+  <!-- =========================
+     MODAL ELIMINAR ENTREVISTA
+========================== -->
+<div
+  id="deleteModal"
+  class="modal hidden"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="deleteModalTitle"
+>
+  <div
+    class="modal__backdrop"
+    id="closeDeleteBackdrop"
+  ></div>
 
+  <div class="modal__content modal__content--small">
+    <div class="modal__header">
+      <div>
+        <h3 id="deleteModalTitle">
+          ⚠️ Eliminar entrevista
+        </h3>
+
+        <p>
+          Esta acción eliminará definitivamente el registro.
+        </p>
+      </div>
+
+      <button
+        id="closeDeleteBtn"
+        class="chatbot-close"
+        type="button"
+        aria-label="Cerrar confirmación"
+      >
+        ✕
+      </button>
+    </div>
+
+    <div class="modal__body">
+      <div class="delete-warning">
+        <div class="delete-warning__icon" aria-hidden="true">
+          🗑️
+        </div>
+
+        <div>
+          <h4>¿Seguro que deseas eliminar esta entrevista?</h4>
+
+          <p>
+            La entrevista de
+            <strong id="deleteCandidateName">este candidato</strong>
+            será eliminada.
+          </p>
+
+          <p class="delete-warning__danger">
+            Esta acción no se puede deshacer.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal__footer">
+      <button
+        id="cancelDeleteBtn"
+        class="btn btn--secondary"
+        type="button"
+      >
+        Cancelar
+      </button>
+
+      <button
+        id="confirmDeleteBtn"
+        class="btn btn--danger"
+        type="button"
+      >
+        🗑️ Eliminar
+      </button>
+    </div>
+  </div>
+</div>
+
+  
+  
   <!-- =========================
        FIREBASE Y JAVASCRIPT
   ========================== -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  
+  <script src="entrevistas.js?v=4"></script>
 
-  <script src="entrevistas.js?v=3"></script>
 </body>
 </html>

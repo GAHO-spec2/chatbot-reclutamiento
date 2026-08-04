@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vacantes | GA Hospitality</title>
   <link rel="icon" type="image/png" sizes="32x32" href="icons8-documento-32.png">
-  <link rel="stylesheet" href="dashboard.css?v=2" />
+  <link rel="stylesheet" href="dashboard.css?v=6" />
 </head>
 <body>
 
@@ -210,72 +210,145 @@
 
     <div class="config-fields-panel">
       <h5>Información que solicitará el chatbot</h5>
-
+      
       <div class="config-checks">
-        <label class="config-check">
-          <input
-            id="vacanteSolicitarTelefono"
-            type="checkbox"
-            checked
-          />
 
-          <span>
-            <strong>Teléfono</strong>
-            <small>Dato de contacto principal.</small>
-          </span>
-        </label>
+  <label class="config-check">
+    <input
+      id="vacanteSolicitarTelefono"
+      type="checkbox"
+      checked
+    />
 
-        <label class="config-check">
-          <input
-            id="vacanteSolicitarCorreo"
-            type="checkbox"
-            checked
-          />
+    <span>
+      <strong>📞 Teléfono</strong>
+      <small>
+        Solicitar el número telefónico del candidato.
+      </small>
+    </span>
+  </label>
 
-          <span>
-            <strong>Correo electrónico</strong>
-            <small>Para seguimiento de la solicitud.</small>
-          </span>
-        </label>
+  <label class="config-check">
+    <input
+      id="vacanteSolicitarCorreo"
+      type="checkbox"
+      checked
+    />
 
-        <label class="config-check">
-          <input
-            id="vacanteSolicitarExperiencia"
-            type="checkbox"
-            checked
-          />
+    <span>
+      <strong>📧 Correo electrónico</strong>
+      <small>
+        Utilizar para seguimiento y notificaciones.
+      </small>
+    </span>
+  </label>
 
-          <span>
-            <strong>Experiencia laboral</strong>
-            <small>Experiencia relacionada con el puesto.</small>
-          </span>
-        </label>
+  <label class="config-check">
+    <input
+      id="vacanteSolicitarCodigoPostal"
+      type="checkbox"
+      checked
+    />
 
-        <label class="config-check">
-          <input
-            id="vacanteSolicitarEscolaridad"
-            type="checkbox"
-          />
+    <span>
+      <strong>📍 Código postal</strong>
+      <small>
+        Calcular la distancia aproximada entre el candidato y la sucursal.
+      </small>
+    </span>
+  </label>
 
-          <span>
-            <strong>Escolaridad</strong>
-            <small>Nivel académico del candidato.</small>
-          </span>
-        </label>
+  <label class="config-check">
+    <input
+      id="vacanteSolicitarTransporte"
+      type="checkbox"
+      checked
+    />
 
-        <label class="config-check">
-          <input
-            id="vacanteSolicitarDisponibilidad"
-            type="checkbox"
-            checked
-          />
+    <span>
+      <strong>🚌 Medio de transporte</strong>
+      <small>
+        Conocer cómo se trasladará el candidato al lugar de trabajo.
+      </small>
+    </span>
+  </label>
 
-          <span>
-            <strong>Disponibilidad</strong>
-            <small>Horarios y días disponibles.</small>
-          </span>
-        </label>
-      </div>
+  <label class="config-check">
+    <input
+      id="vacanteSolicitarVehiculoPropio"
+      type="checkbox"
+    />
+
+    <span>
+      <strong>🚗 Vehículo propio</strong>
+      <small>
+        Consultar si el candidato cuenta con automóvil o vehículo propio.
+      </small>
+    </span>
+  </label>
+
+  <label class="config-check">
+    <input
+      id="vacanteSolicitarTiempoTraslado"
+      type="checkbox"
+      checked
+    />
+
+    <span>
+      <strong>⏱ Tiempo máximo de traslado</strong>
+      <small>
+        Solicitar cuánto tiempo está dispuesto a trasladarse para trabajar.
+      </small>
+    </span>
+  </label>
+
+  <label class="config-check">
+    <input
+      id="vacanteSolicitarExperiencia"
+      type="checkbox"
+      checked
+    />
+
+    <span>
+      <strong>💼 Experiencia laboral</strong>
+      <small>
+        Conocer la experiencia relacionada con el puesto.
+      </small>
+    </span>
+  </label>
+
+  <label class="config-check">
+    <input
+      id="vacanteSolicitarEscolaridad"
+      type="checkbox"
+    />
+
+    <span>
+      <strong>🎓 Escolaridad</strong>
+      <small>
+        Solicitar el nivel académico del candidato.
+      </small>
+    </span>
+  </label>
+
+  <label class="config-check">
+    <input
+      id="vacanteSolicitarDisponibilidad"
+      type="checkbox"
+      checked
+    />
+
+    <span>
+      <strong>🗓 Disponibilidad</strong>
+      <small>
+        Conocer horarios y días disponibles para trabajar.
+      </small>
+    </span>
+  </label>
+
+</div>
+     
+     
     </div>
   </div>
 </section>
@@ -331,6 +404,6 @@
   </div>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="vacantes-admin.js?v=5"></script>
+  <script src="vacantes-admin.js?v=6"></script>
 </body>
 </html>

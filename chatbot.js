@@ -53,8 +53,15 @@ let candidateProfile = {
 
 const DEFAULT_APPLICATION_CONFIG = {
   cv: "opcional",
+
   solicitarTelefono: true,
   solicitarCorreo: true,
+
+  solicitarCodigoPostal: true,
+  solicitarTransporte: true,
+  solicitarVehiculoPropio: false,
+  solicitarTiempoTraslado: true,
+
   solicitarExperiencia: true,
   solicitarEscolaridad: false,
   solicitarDisponibilidad: true
@@ -875,7 +882,20 @@ function getVacancyApplicationConfig(vacante = {}) {
       Boolean(config.solicitarEscolaridad),
 
     solicitarDisponibilidad:
-      config.solicitarDisponibilidad !== false
+      config.solicitarDisponibilidad !== false,
+    solicitarCodigoPostal:
+      config.solicitarCodigoPostal !== false,
+
+    solicitarTransporte:
+      config.solicitarTransporte !== false,
+
+    solicitarVehiculoPropio:
+      Boolean(
+        config.solicitarVehiculoPropio
+      ),
+
+    solicitarTiempoTraslado:
+      config.solicitarTiempoTraslado !== false
   };
 }
 
@@ -1013,6 +1033,67 @@ function buildApplicationQuestions(vacante = {}) {
     });
   }
 
+  if (config.solicitarCodigoPostal) {
+  questions.push({
+    key: "codigoPostal",
+    label:
+      "¿Cuál es el código postal de la zona donde vives?",
+    type: "codigo_postal",
+    required: true,
+    custom: false
+  });
+}
+
+if (config.solicitarTransporte) {
+  questions.push({
+    key: "medioTransporte",
+    label:
+      "¿Cómo te trasladarías normalmente al lugar de trabajo?",
+    type: "seleccion",
+    required: true,
+    options: [
+      "Automóvil propio",
+      "Transporte público",
+      "Servicio de transporte",
+      "Motocicleta",
+      "Bicicleta",
+      "Caminando",
+      "Otro"
+    ],
+    custom: false
+  });
+}
+
+if (config.solicitarVehiculoPropio) {
+  questions.push({
+    key: "vehiculoPropio",
+    label:
+      "¿Cuentas con vehículo propio?",
+    type: "si_no",
+    required: true,
+    options: ["Sí", "No"],
+    custom: false
+  });
+}
+
+if (config.solicitarTiempoTraslado) {
+  questions.push({
+    key: "tiempoMaximoTraslado",
+    label:
+      "¿Cuál es el tiempo máximo que estarías dispuesto a trasladarte para llegar al trabajo?",
+    type: "seleccion",
+    required: true,
+    options: [
+      "Hasta 15 minutos",
+      "Hasta 30 minutos",
+      "Hasta 45 minutos",
+      "Hasta 60 minutos",
+      "Más de 60 minutos"
+    ],
+    custom: false
+  });
+}
+
   questions.push(
     ...normalizeCustomQuestions(vacante)
   );
@@ -1047,7 +1128,20 @@ function getQuestionPlaceholder(question = {}) {
       "Escribe tu respuesta...",
 
     texto_largo:
-      "Escribe tu respuesta..."
+      "Escribe tu respuesta...",
+    
+    codigoPostal:
+      "Ej. 32618",
+
+    medioTransporte:
+      "Selecciona tu medio de transporte...",
+
+    vehiculoPropio:
+      "Selecciona Sí o No...",
+
+    tiempoMaximoTraslado:
+      "Selecciona el tiempo máximo..."
+
   };
 
   return (
@@ -1180,6 +1274,28 @@ function validateDynamicAnswer(
       };
     }
   }
+  if (
+  question.type === "codigo_postal" &&
+  value
+) {
+  const codigoPostal = value.replace(
+    /\s+/g,
+    ""
+  );
+
+  if (!/^\d{5}$/.test(codigoPostal)) {
+    return {
+      ok: false,
+      error:
+        "El código postal debe contener exactamente 5 números. Ejemplo: 32618."
+    };
+  }
+
+  return {
+    ok: true,
+    value: codigoPostal
+  };
+}
 
   if (
     question.type === "numero" &&
@@ -1512,6 +1628,29 @@ async function submitApplicationFromChat() {
   if (config.solicitarDisponibilidad) {
     requiredFields.push("disponibilidad");
   }
+  if (config.solicitarCodigoPostal) {
+  requiredFields.push(
+    "codigoPostal"
+  );
+}
+
+if (config.solicitarTransporte) {
+  requiredFields.push(
+    "medioTransporte"
+  );
+}
+
+if (config.solicitarVehiculoPropio) {
+  requiredFields.push(
+    "vehiculoPropio"
+  );
+}
+
+if (config.solicitarTiempoTraslado) {
+  requiredFields.push(
+    "tiempoMaximoTraslado"
+  );
+}
 
   const missingField =
     requiredFields.find(

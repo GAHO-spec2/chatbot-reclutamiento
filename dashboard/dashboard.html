@@ -18,10 +18,11 @@
     href="icons8-documento-32.png"
   />
 
- <link rel="stylesheet" href="dashboard.css?v=5" />
+  <link rel="stylesheet" href="dashboard.css?v=7" />
 </head>
 
 <body>
+
   <!-- =========================
        ENCABEZADO
   ========================== -->
@@ -69,6 +70,7 @@
   ========================== -->
   <main class="container dashboard-container">
     <section class="card dashboard-main-card">
+
       <div class="section-head dashboard-head">
         <div>
           <span class="dashboard-eyebrow">
@@ -78,7 +80,8 @@
           <h1>Candidatos registrados</h1>
 
           <p>
-            Consulta postulaciones, revisa currículums y administra entrevistas.
+            Consulta postulaciones, revisa currículums, analiza compatibilidad
+            y administra entrevistas.
           </p>
         </div>
 
@@ -97,6 +100,7 @@
            ESTADÍSTICAS
       ========================== -->
       <section class="dashboard-stats">
+
         <article class="stat-box">
           <div class="stat-box__icon">👥</div>
 
@@ -132,12 +136,41 @@
             <strong id="statRechazado">0</strong>
           </div>
         </article>
+
+        <article class="stat-box">
+          <div class="stat-box__icon">⭐</div>
+
+          <div>
+            <span>Muy recomendados</span>
+            <strong id="statMuyRecomendados">0</strong>
+          </div>
+        </article>
+
+        <article class="stat-box">
+          <div class="stat-box__icon">📍</div>
+
+          <div>
+            <span>Traslado compatible</span>
+            <strong id="statTrasladoCompatible">0</strong>
+          </div>
+        </article>
+
+        <article class="stat-box">
+          <div class="stat-box__icon">🔎</div>
+
+          <div>
+            <span>Pendientes de revisar</span>
+            <strong id="statPendientesRevision">0</strong>
+          </div>
+        </article>
+
       </section>
 
       <!-- =========================
            FILTROS
       ========================== -->
       <section class="candidate-toolbar">
+
         <div class="candidate-toolbar__search">
           <label for="candidateSearch">
             Buscar candidato
@@ -146,7 +179,7 @@
           <input
             id="candidateSearch"
             type="search"
-            placeholder="Nombre, puesto, ciudad o sucursal..."
+            placeholder="Nombre, puesto, ciudad, sucursal o contacto..."
             autocomplete="off"
           />
         </div>
@@ -172,7 +205,7 @@
 
         <div class="candidate-toolbar__filter">
           <label for="candidateTypeFilter">
-            Tipo
+            Tipo de vacante
           </label>
 
           <select id="candidateTypeFilter">
@@ -182,14 +215,99 @@
           </select>
         </div>
 
+        <div class="candidate-toolbar__filter">
+          <label for="candidateCompatibilityFilter">
+            Compatibilidad
+          </label>
+
+          <select id="candidateCompatibilityFilter">
+            <option value="">Todos los niveles</option>
+            <option value="muy_recomendado">
+              Muy recomendado
+            </option>
+            <option value="recomendado">
+              Recomendado
+            </option>
+            <option value="revisar">
+              Revisar
+            </option>
+            <option value="baja_compatibilidad">
+              Baja compatibilidad
+            </option>
+            <option value="sin_evaluar">
+              Sin evaluar
+            </option>
+          </select>
+        </div>
+
+        <div class="candidate-toolbar__filter">
+          <label for="candidateTransportFilter">
+            Traslado
+          </label>
+
+          <select id="candidateTransportFilter">
+            <option value="">Todos</option>
+            <option value="compatible">
+              Compatible
+            </option>
+            <option value="al_limite">
+              Al límite
+            </option>
+            <option value="no_recomendado">
+              No recomendado
+            </option>
+            <option value="no_disponible">
+              No disponible
+            </option>
+          </select>
+        </div>
+
+        <div class="candidate-toolbar__filter">
+          <label for="candidateSort">
+            Ordenar por
+          </label>
+
+          <select id="candidateSort">
+            <option value="compatibility_desc">
+              Mayor compatibilidad
+            </option>
+            <option value="compatibility_asc">
+              Menor compatibilidad
+            </option>
+            <option value="distance_asc">
+              Menor distancia
+            </option>
+            <option value="date_desc">
+              Más recientes
+            </option>
+            <option value="date_asc">
+              Más antiguos
+            </option>
+            <option value="name_asc">
+              Nombre A–Z
+            </option>
+          </select>
+        </div>
+
         <button
           id="clearCandidateFiltersBtn"
           type="button"
           class="btn btn--secondary candidate-toolbar__clear"
         >
-          Limpiar
+          Limpiar filtros
         </button>
+
       </section>
+
+      <div class="candidate-results-summary">
+        <span id="candidateResultsCount">
+          0 candidatos encontrados
+        </span>
+
+        <span id="candidateActiveFilters">
+          Sin filtros adicionales
+        </span>
+      </div>
 
       <div
         id="dashboardStatus"
@@ -211,6 +329,7 @@
         id="postulacionesList"
         class="dashboard-grid"
       ></div>
+
     </section>
   </main>
 
@@ -230,6 +349,7 @@
     ></div>
 
     <div class="modal__content">
+
       <div class="modal__header">
         <div>
           <h3 id="modalNombre">
@@ -252,55 +372,58 @@
       </div>
 
       <div class="modal__body">
+
+        <!-- DATOS GENERALES -->
         <div class="modal-grid">
 
-  <div class="modal-item">
-    <span>Ciudad</span>
-    <strong id="modalCiudad">-</strong>
-  </div>
+          <div class="modal-item">
+            <span>Ciudad</span>
+            <strong id="modalCiudad">-</strong>
+          </div>
 
-  <div class="modal-item">
-    <span>Sucursal</span>
-    <strong id="modalSucursal">-</strong>
-  </div>
+          <div class="modal-item">
+            <span>Sucursal</span>
+            <strong id="modalSucursal">-</strong>
+          </div>
 
-  <div class="modal-item">
-    <span>Puesto de interés</span>
-    <strong id="modalPuesto">-</strong>
-  </div>
+          <div class="modal-item">
+            <span>Puesto de interés</span>
+            <strong id="modalPuesto">-</strong>
+          </div>
 
-  <div class="modal-item">
-    <span>Escolaridad</span>
-    <strong id="modalEscolaridad">-</strong>
-  </div>
+          <div class="modal-item">
+            <span>Escolaridad</span>
+            <strong id="modalEscolaridad">-</strong>
+          </div>
 
-  <div class="modal-item">
-    <span>Fecha de registro</span>
-    <strong id="modalFecha">-</strong>
-  </div>
+          <div class="modal-item">
+            <span>Fecha de registro</span>
+            <strong id="modalFecha">-</strong>
+          </div>
 
-  <div class="modal-item">
-    <span>Código postal</span>
-    <strong id="modalCodigoPostal">-</strong>
-  </div>
+          <div class="modal-item">
+            <span>Código postal</span>
+            <strong id="modalCodigoPostal">-</strong>
+          </div>
 
-  <div class="modal-item">
-    <span>Medio de transporte</span>
-    <strong id="modalMedioTransporte">-</strong>
-  </div>
+          <div class="modal-item">
+            <span>Medio de transporte</span>
+            <strong id="modalMedioTransporte">-</strong>
+          </div>
 
-  <div class="modal-item">
-    <span>Vehículo propio</span>
-    <strong id="modalVehiculoPropio">-</strong>
-  </div>
+          <div class="modal-item">
+            <span>Vehículo propio</span>
+            <strong id="modalVehiculoPropio">-</strong>
+          </div>
 
-  <div class="modal-item">
-    <span>Tiempo máximo aceptado</span>
-    <strong id="modalTiempoMaximoTraslado">-</strong>
-  </div>
+          <div class="modal-item">
+            <span>Tiempo máximo aceptado</span>
+            <strong id="modalTiempoMaximoTraslado">-</strong>
+          </div>
 
-</div>
+        </div>
 
+        <!-- DIRECCIÓN -->
         <div class="modal-section">
           <h4>Dirección de sucursal</h4>
 
@@ -328,147 +451,167 @@
             </a>
           </div>
         </div>
-        
+
+        <!-- COMPATIBILIDAD GEOGRÁFICA -->
         <div class="modal-section candidate-distance-section">
-  <div class="candidate-distance-head">
-    <div>
-      <span class="candidate-distance-eyebrow">
-        Compatibilidad geográfica
-      </span>
 
-      <h4>Distancia a la sucursal</h4>
-    </div>
+          <div class="candidate-distance-head">
+            <div>
+              <span class="candidate-distance-eyebrow">
+                Compatibilidad geográfica
+              </span>
 
-    <span
-      id="modalDistanciaBadge"
-      class="distance-badge distance-badge--unknown"
-    >
-      No disponible
-    </span>
-  </div>
+              <h4>Distancia a la sucursal</h4>
+            </div>
 
-  <div class="candidate-distance-grid">
-    <div
-  id="modalCompatibilidadAlert"
-  class="transport-compatibility transport-compatibility--unknown"
->
-  No fue posible evaluar la compatibilidad del traslado.
-</div>
+            <span
+              id="modalDistanciaBadge"
+              class="distance-badge distance-badge--unknown"
+            >
+              No disponible
+            </span>
+          </div>
 
-    <div class="candidate-distance-item">
-      <span>📍 Distancia aproximada</span>
-      <strong id="modalDistanciaSucursal">-</strong>
-    </div>
+          <div class="candidate-distance-grid">
 
-    <div class="candidate-distance-item">
-      <span>⏱ Tiempo estimado</span>
-      <strong id="modalTiempoEstimado">-</strong>
-    </div>
+            <div class="candidate-distance-item">
+              <span>📍 Distancia aproximada</span>
+              <strong id="modalDistanciaSucursal">-</strong>
+            </div>
 
-    <div class="candidate-distance-item">
-      <span>🏢 Evaluación</span>
-      <strong id="modalEtiquetaDistancia">-</strong>
-    </div>
-    <div class="candidate-distance-item">
-  <span>✅ Compatibilidad de traslado</span>
-  <strong id="modalCompatibilidadTraslado">-</strong>
-</div>
+            <div class="candidate-distance-item">
+              <span>⏱ Tiempo estimado</span>
+              <strong id="modalTiempoEstimado">-</strong>
+            </div>
 
-  </div>
+            <div class="candidate-distance-item">
+              <span>🏢 Evaluación</span>
+              <strong id="modalEtiquetaDistancia">-</strong>
+            </div>
 
-  <p class="candidate-distance-note">
-    La distancia y el tiempo son aproximados y se calculan con base en el
-    código postal y el medio de transporte indicado por el candidato.
-  </p>
-</div>
-        
+            <div class="candidate-distance-item">
+              <span>✅ Compatibilidad de traslado</span>
+              <strong id="modalCompatibilidadTraslado">-</strong>
+            </div>
+
+          </div>
+
+          <div
+            id="modalCompatibilidadAlert"
+            class="transport-compatibility transport-compatibility--unknown"
+          >
+            No fue posible evaluar la compatibilidad del traslado.
+          </div>
+
+          <p class="candidate-distance-note">
+            La distancia y el tiempo son aproximados y se calculan con base
+            en el código postal y el medio de transporte indicado por el candidato.
+          </p>
+
+        </div>
+
+        <!-- PUNTUACIÓN GENERAL -->
         <div class="modal-section candidate-score-section">
-  <div class="candidate-score-head">
-    <div>
-      <span class="candidate-score-eyebrow">
-        Evaluación automática de apoyo
-      </span>
 
-      <h4>Compatibilidad con la vacante</h4>
-    </div>
+          <div class="candidate-score-head">
+            <div>
+              <span class="candidate-score-eyebrow">
+                Evaluación automática de apoyo
+              </span>
 
-    <div
-      id="modalCompatibilityScore"
-      class="candidate-score-circle candidate-score-circle--unknown"
-    >
-      <strong id="modalCompatibilityScoreValue">-</strong>
-      <span>compatibilidad</span>
-    </div>
-  </div>
+              <h4>Compatibilidad con la vacante</h4>
+            </div>
 
-  <div class="candidate-score-summary">
-    <span
-      id="modalCompatibilityLevel"
-      class="compatibility-level compatibility-level--unknown"
-    >
-      No disponible
-    </span>
+            <div
+              id="modalCompatibilityScore"
+              class="candidate-score-circle candidate-score-circle--unknown"
+            >
+              <strong id="modalCompatibilityScoreValue">-</strong>
+              <span>compatibilidad</span>
+            </div>
+          </div>
 
-    <p>
-      Esta evaluación sirve como apoyo para RH y no aprueba ni rechaza
-      automáticamente al candidato.
-    </p>
-  </div>
+          <div class="candidate-score-summary">
+            <span
+              id="modalCompatibilityLevel"
+              class="compatibility-level compatibility-level--unknown"
+            >
+              No disponible
+            </span>
 
-  <div class="candidate-score-grid">
-    <div class="candidate-score-item">
-      <span>📄 CV y habilidades</span>
-      <strong id="modalScoreCv">-</strong>
-    </div>
+            <p>
+              Esta evaluación sirve como apoyo para RH y no aprueba ni rechaza
+              automáticamente al candidato.
+            </p>
+          </div>
 
-    <div class="candidate-score-item">
-      <span>💼 Experiencia</span>
-      <strong id="modalScoreExperience">-</strong>
-    </div>
+          <div class="candidate-score-grid">
 
-    <div class="candidate-score-item">
-      <span>🗓 Disponibilidad</span>
-      <strong id="modalScoreAvailability">-</strong>
-    </div>
+            <div class="candidate-score-item">
+              <span>📄 CV y habilidades</span>
+              <strong id="modalScoreCv">-</strong>
+            </div>
 
-    <div class="candidate-score-item">
-      <span>📍 Geografía</span>
-      <strong id="modalScoreGeography">-</strong>
-    </div>
+            <div class="candidate-score-item">
+              <span>💼 Experiencia</span>
+              <strong id="modalScoreExperience">-</strong>
+            </div>
 
-    <div class="candidate-score-item">
-      <span>💬 Preguntas</span>
-      <strong id="modalScoreQuestions">-</strong>
-    </div>
-  </div>
+            <div class="candidate-score-item">
+              <span>🗓 Disponibilidad</span>
+              <strong id="modalScoreAvailability">-</strong>
+            </div>
 
-  <div class="candidate-evaluation-columns">
-    <div class="candidate-evaluation-box">
-      <h5>✅ Motivos favorables</h5>
-      <ul id="modalCompatibilityReasons">
-        <li>No hay información disponible.</li>
-      </ul>
-    </div>
+            <div class="candidate-score-item">
+              <span>📍 Geografía</span>
+              <strong id="modalScoreGeography">-</strong>
+            </div>
 
-    <div class="candidate-evaluation-box candidate-evaluation-box--alerts">
-      <h5>⚠️ Puntos por revisar</h5>
-      <ul id="modalCompatibilityAlerts">
-        <li>No hay alertas registradas.</li>
-      </ul>
-    </div>
-  </div>
-</div>
+            <div class="candidate-score-item">
+              <span>💬 Preguntas</span>
+              <strong id="modalScoreQuestions">-</strong>
+            </div>
 
+          </div>
+
+          <div class="candidate-evaluation-columns">
+
+            <div class="candidate-evaluation-box">
+              <h5>✅ Motivos favorables</h5>
+
+              <ul id="modalCompatibilityReasons">
+                <li>No hay información disponible.</li>
+              </ul>
+            </div>
+
+            <div
+              class="candidate-evaluation-box
+                     candidate-evaluation-box--alerts"
+            >
+              <h5>⚠️ Puntos por revisar</h5>
+
+              <ul id="modalCompatibilityAlerts">
+                <li>No hay alertas registradas.</li>
+              </ul>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- EXPERIENCIA -->
         <div class="modal-section">
           <h4>Experiencia</h4>
           <p id="modalExperiencia">-</p>
         </div>
 
+        <!-- HABILIDADES -->
         <div class="modal-section">
           <h4>Habilidades</h4>
           <p id="modalHabilidades">-</p>
         </div>
 
+        <!-- CV -->
         <div class="modal-section">
           <h4>CV adjunto</h4>
 
@@ -482,6 +625,7 @@
             Ver CV PDF
           </a>
         </div>
+
       </div>
 
       <div class="modal__footer">
@@ -509,6 +653,7 @@
           Rechazar
         </button>
       </div>
+
     </div>
   </div>
 
@@ -528,6 +673,7 @@
     ></div>
 
     <div class="modal__content modal__content--interview">
+
       <div class="modal__header">
         <div>
           <h3 id="interviewModalTitle">
@@ -551,6 +697,7 @@
 
       <div class="modal__body">
         <div class="form-grid">
+
           <div class="field">
             <label for="interviewDate">
               Fecha
@@ -615,6 +762,7 @@
               placeholder="Indicaciones adicionales para el candidato"
             ></textarea>
           </div>
+
         </div>
       </div>
 
@@ -627,6 +775,7 @@
           Guardar entrevista
         </button>
       </div>
+
     </div>
   </div>
 
@@ -635,8 +784,8 @@
   ========================== -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  
-  <script src="dashboard.js?v=5"></script>
+
+  <script src="dashboard.js?v=7"></script>
 
 </body>
 </html>
