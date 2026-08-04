@@ -48,6 +48,9 @@ const VACANTES_COLLECTION = "vacantes";
 const POSTULACIONES_COLLECTION = "postulaciones";
 const ENTREVISTAS_COLLECTION = "entrevistas";
 
+const DISPONIBILIDADES_ENTREVISTA_COLLECTION =
+  "disponibilidades_entrevista";
+
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
   .split(",")
   .map((email) => email.trim().toLowerCase())
@@ -87,10 +90,23 @@ const dataDir = path.join(__dirname, "data");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
 
-const postulacionesFile = path.join(dataDir, "postulaciones.json");
-const vacantesFile = path.join(dataDir, "vacantes.json");
-const sucursalesFile = path.join(dataDir, "sucursales.json");
-const entrevistasFile = path.join(dataDir, "entrevistas.json");
+const postulacionesFile =
+  path.join(dataDir, "postulaciones.json");
+
+const vacantesFile =
+  path.join(dataDir, "vacantes.json");
+
+const sucursalesFile =
+  path.join(dataDir, "sucursales.json");
+
+const entrevistasFile =
+  path.join(dataDir, "entrevistas.json");
+
+const disponibilidadesEntrevistaFile =
+  path.join(
+    dataDir,
+    "disponibilidades-entrevista.json"
+  );
 
 const sucursalesIniciales = [
   {
@@ -281,6 +297,17 @@ if (!fs.existsSync(vacantesFile)) {
 if (!fs.existsSync(entrevistasFile)) {
   fs.writeFileSync(entrevistasFile, "[]", "utf-8");
 }
+if (
+  !fs.existsSync(
+    disponibilidadesEntrevistaFile
+  )
+) {
+  fs.writeFileSync(
+    disponibilidadesEntrevistaFile,
+    "[]",
+    "utf-8"
+  );
+}
 
 function leerJson(filePath, fallback = []) {
   try {
@@ -442,6 +469,487 @@ async function eliminarEntrevista(id) {
   }
 
   await entrevistaRef.delete();
+
+  return true;
+}
+/* =========================
+   GENERACIÓN DE HORARIOS
+========================= */
+
+function sumarMinutosAHora(
+  hora = "",
+  minutosAgregar = 0
+) {
+  const minutosBase =
+    convertirHoraAMinutos(hora);
+
+  if (minutosBase === null) {
+    return null;
+  }
+
+  const total =
+    minutosBase + Number(minutosAgregar || 0);
+
+  const horas =
+    Math.floor(total / 60);
+
+  const minutos =
+    total % 60;
+
+  if (horas < 0 || horas > 23) {
+    return null;
+  }
+
+  return `${String(horas).padStart(
+    2,
+    "0"
+  )}:${String(minutos).padStart(2, "0")}`;
+}
+
+function obtenerFechaLocal(
+  fecha = ""
+) {
+  const date =
+    new Date(`${fecha}T12:00:00`);
+
+  return Number.isNaN(date.getTime())
+    ? null
+    : date;
+}
+
+function obtenerDiaSemanaFecha(
+  fecha = ""
+) {
+  const date =
+    obtenerFechaLocal(fecha);
+
+  return date
+    ? date.getDay()
+    : null;
+}
+
+function fechaDentroDePeriodo(
+  fecha,
+  fechaInicio,
+  fechaFin
+) {
+  if (
+    !fecha ||
+    !fechaInicio ||
+    !fechaFin
+  ) {
+    return false;
+  }
+
+  return (
+    fecha >= fechaInicio &&
+    fecha <= fechaFin
+  );
+}
+
+function generarEspaciosDisponibilidad({
+  disponibilidad,
+  fecha
+} = {}) {
+  if (
+    !disponibilidad ||
+    disponibilidad.activo === false
+  ) {
+    return [];
+  }
+
+  if (
+    !fechaDentroDePeriodo(
+      fecha,
+      disponibilidad.fechaInicio,
+      disponibilidad.fechaFin
+    )
+  ) {
+    return [];
+  }
+
+  const diaSemana =
+    obtenerDiaSemanaFecha(fecha);
+
+  const dias =
+    Array.isArray(
+      disponibilidad.diasSemana
+    )
+      ? disponibilidad.diasSemana.map(Number)
+      : [];
+
+  if (!dias.includes(diaSemana)) {
+    return [];
+  }
+
+  const inicio =
+    convertirHoraAMinutos(
+      disponibilidad.horaInicio
+    );
+
+  const fin =
+    convertirHoraAMinutos(
+      disponibilidad.horaFin
+    );
+
+  const duracion =
+    Number(
+      disponibilidad.duracionMinutos || 30
+    );
+
+  const descanso =
+    Number(
+      disponibilidad.descansoMinutos || 0
+    );
+
+  if (
+    inicio === null ||
+    fin === null ||
+    !duracion ||
+    fin <= inicio
+  ) {
+    return [];
+  }
+
+  const espacios = [];
+  let cursor = inicio;
+
+  while (
+    cursor + duracion <= fin
+  ) {
+    const horaInicio =
+      `${String(
+        Math.floor(cursor / 60)
+      ).padStart(2, "0")}:${String(
+        cursor % 60
+      ).padStart(2, "0")}`;
+
+    const horaFin =
+      sumarMinutosAHora(
+        horaInicio,
+        duracion
+      );
+
+    if (!horaFin) {
+      break;
+    }
+
+    espacios.push({
+      disponibilidadId:
+        disponibilidad.id,
+
+      reclutador:
+        disponibilidad.reclutador,
+
+      reclutadorId:
+        disponibilidad.reclutadorId || "",
+
+      fecha,
+
+      hora:
+        horaInicio,
+
+      horaFin,
+
+      duracionMinutos:
+        duracion,
+
+      descansoMinutos:
+        descanso,
+
+      tipo:
+        disponibilidad.tipo,
+
+      sucursal:
+        disponibilidad.sucursal || "",
+
+      sucursalId:
+        disponibilidad.sucursalId || "",
+
+      vacanteId:
+        disponibilidad.vacanteId || "",
+
+      vacanteTitulo:
+        disponibilidad.vacanteTitulo || ""
+    });
+
+    cursor +=
+      duracion + descanso;
+  }
+
+  return espacios;
+}
+
+function horarioCoincideConEntrevista(
+  horario,
+  entrevista
+) {
+  if (
+    !horario ||
+    !entrevista
+  ) {
+    return false;
+  }
+
+  if (
+    entrevista.estado === "cancelada"
+  ) {
+    return false;
+  }
+
+  return (
+    horario.fecha === entrevista.fecha &&
+    horario.hora === entrevista.hora &&
+    (
+      !horario.reclutador ||
+      !entrevista.reclutador ||
+      normalizarTexto(
+        horario.reclutador
+      ) ===
+        normalizarTexto(
+          entrevista.reclutador
+        )
+    )
+  );
+}
+
+function filtrarHorariosOcupados(
+  horarios = [],
+  entrevistas = []
+) {
+  return horarios.filter(
+    (horario) =>
+      !entrevistas.some(
+        (entrevista) =>
+          horarioCoincideConEntrevista(
+            horario,
+            entrevista
+          )
+      )
+  );
+}
+/* =========================
+   DISPONIBILIDAD DE
+   RECLUTADORES
+========================= */
+
+async function leerDisponibilidadesEntrevista(
+  limit = 200
+) {
+  if (!db) {
+    return leerJson(
+      disponibilidadesEntrevistaFile,
+      []
+    )
+      .sort((a, b) => {
+        return (
+          new Date(
+            b.fechaCreacion || 0
+          ) -
+          new Date(
+            a.fechaCreacion || 0
+          )
+        );
+      })
+      .slice(0, limit);
+  }
+
+  const snapshot = await db
+    .collection(
+      DISPONIBILIDADES_ENTREVISTA_COLLECTION
+    )
+    .limit(limit)
+    .get();
+
+  return snapshot.docs
+    .map((doc) => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+    .sort((a, b) => {
+      return (
+        new Date(
+          b.fechaCreacion || 0
+        ) -
+        new Date(
+          a.fechaCreacion || 0
+        )
+      );
+    });
+}
+
+async function obtenerDisponibilidadEntrevista(
+  id
+) {
+  if (!id) {
+    return null;
+  }
+
+  if (!db) {
+    const disponibilidades =
+      leerJson(
+        disponibilidadesEntrevistaFile,
+        []
+      );
+
+    return (
+      disponibilidades.find(
+        (item) => item.id === id
+      ) || null
+    );
+  }
+
+  const doc = await db
+    .collection(
+      DISPONIBILIDADES_ENTREVISTA_COLLECTION
+    )
+    .doc(id)
+    .get();
+
+  if (!doc.exists) {
+    return null;
+  }
+
+  return {
+    id: doc.id,
+    ...doc.data()
+  };
+}
+
+async function guardarDisponibilidadEntrevista(
+  disponibilidad
+) {
+  if (!db) {
+    const disponibilidades =
+      leerJson(
+        disponibilidadesEntrevistaFile,
+        []
+      );
+
+    disponibilidades.push(
+      disponibilidad
+    );
+
+    guardarJson(
+      disponibilidadesEntrevistaFile,
+      disponibilidades
+    );
+
+    return;
+  }
+
+  await db
+    .collection(
+      DISPONIBILIDADES_ENTREVISTA_COLLECTION
+    )
+    .doc(disponibilidad.id)
+    .set(disponibilidad);
+}
+
+async function actualizarDisponibilidadEntrevista(
+  id,
+  data
+) {
+  if (!db) {
+    const disponibilidades =
+      leerJson(
+        disponibilidadesEntrevistaFile,
+        []
+      );
+
+    const index =
+      disponibilidades.findIndex(
+        (item) => item.id === id
+      );
+
+    if (index === -1) {
+      return false;
+    }
+
+    disponibilidades[index] = {
+      ...disponibilidades[index],
+      ...data,
+      id
+    };
+
+    guardarJson(
+      disponibilidadesEntrevistaFile,
+      disponibilidades
+    );
+
+    return true;
+  }
+
+  const ref = db
+    .collection(
+      DISPONIBILIDADES_ENTREVISTA_COLLECTION
+    )
+    .doc(id);
+
+  const doc = await ref.get();
+
+  if (!doc.exists) {
+    return false;
+  }
+
+  await ref.set(
+    {
+      ...data,
+      id
+    },
+    {
+      merge: true
+    }
+  );
+
+  return true;
+}
+
+async function eliminarDisponibilidadEntrevista(
+  id
+) {
+  if (!db) {
+    const disponibilidades =
+      leerJson(
+        disponibilidadesEntrevistaFile,
+        []
+      );
+
+    const existe =
+      disponibilidades.some(
+        (item) => item.id === id
+      );
+
+    if (!existe) {
+      return false;
+    }
+
+    const actualizadas =
+      disponibilidades.filter(
+        (item) => item.id !== id
+      );
+
+    guardarJson(
+      disponibilidadesEntrevistaFile,
+      actualizadas
+    );
+
+    return true;
+  }
+
+  const ref = db
+    .collection(
+      DISPONIBILIDADES_ENTREVISTA_COLLECTION
+    )
+    .doc(id);
+
+  const doc = await ref.get();
+
+  if (!doc.exists) {
+    return false;
+  }
+
+  await ref.delete();
 
   return true;
 }
@@ -651,6 +1159,269 @@ async function resolverCoordenadas(data = {}) {
   lng = limpiarNumero(coords.lng);
 
   return { lat, lng };
+}
+
+function normalizarDiasDisponibles(
+  dias = []
+) {
+  if (!Array.isArray(dias)) {
+    return [];
+  }
+
+  return [
+    ...new Set(
+      dias
+        .map((dia) => Number(dia))
+        .filter(
+          (dia) =>
+            Number.isInteger(dia) &&
+            dia >= 0 &&
+            dia <= 6
+        )
+    )
+  ].sort((a, b) => a - b);
+}
+
+function validarFormatoHora(
+  hora = ""
+) {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(
+    String(hora || "").trim()
+  );
+}
+
+function convertirHoraAMinutos(
+  hora = ""
+) {
+  if (!validarFormatoHora(hora)) {
+    return null;
+  }
+
+  const [horas, minutos] =
+    hora.split(":").map(Number);
+
+  return horas * 60 + minutos;
+}
+
+function validarDisponibilidadEntrevista(
+  data = {}
+) {
+  const reclutador =
+    String(
+      data.reclutador || ""
+    ).trim();
+
+  const fechaInicio =
+    String(
+      data.fechaInicio || ""
+    ).trim();
+
+  const fechaFin =
+    String(
+      data.fechaFin || ""
+    ).trim();
+
+  const horaInicio =
+    String(
+      data.horaInicio || ""
+    ).trim();
+
+  const horaFin =
+    String(
+      data.horaFin || ""
+    ).trim();
+
+  const duracionMinutos =
+    Number(data.duracionMinutos);
+
+  const descansoMinutos =
+    Number(data.descansoMinutos || 0);
+
+  const diasSemana =
+    normalizarDiasDisponibles(
+      data.diasSemana
+    );
+
+  const tiposValidos = [
+    "presencial",
+    "videollamada",
+    "telefonica"
+  ];
+
+  if (!reclutador) {
+    return {
+      ok: false,
+      error:
+        "El nombre del reclutador es obligatorio."
+    };
+  }
+
+  if (
+    !fechaInicio ||
+    !fechaFin
+  ) {
+    return {
+      ok: false,
+      error:
+        "Debes indicar el periodo de vigencia."
+    };
+  }
+
+  const inicio =
+    new Date(
+      `${fechaInicio}T00:00:00`
+    );
+
+  const fin =
+    new Date(
+      `${fechaFin}T00:00:00`
+    );
+
+  if (
+    Number.isNaN(inicio.getTime()) ||
+    Number.isNaN(fin.getTime())
+  ) {
+    return {
+      ok: false,
+      error:
+        "Las fechas de vigencia no son válidas."
+    };
+  }
+
+  if (fin < inicio) {
+    return {
+      ok: false,
+      error:
+        "La fecha final no puede ser anterior a la fecha inicial."
+    };
+  }
+
+  if (
+    !validarFormatoHora(horaInicio) ||
+    !validarFormatoHora(horaFin)
+  ) {
+    return {
+      ok: false,
+      error:
+        "El horario debe tener un formato válido."
+    };
+  }
+
+  const minutosInicio =
+    convertirHoraAMinutos(horaInicio);
+
+  const minutosFin =
+    convertirHoraAMinutos(horaFin);
+
+  if (minutosFin <= minutosInicio) {
+    return {
+      ok: false,
+      error:
+        "La hora final debe ser posterior a la hora inicial."
+    };
+  }
+
+  if (
+    ![15, 30, 45, 60].includes(
+      duracionMinutos
+    )
+  ) {
+    return {
+      ok: false,
+      error:
+        "La duración de la entrevista no es válida."
+    };
+  }
+
+  if (
+    ![0, 10, 15, 30].includes(
+      descansoMinutos
+    )
+  ) {
+    return {
+      ok: false,
+      error:
+        "El espacio entre entrevistas no es válido."
+    };
+  }
+
+  if (!diasSemana.length) {
+    return {
+      ok: false,
+      error:
+        "Selecciona al menos un día disponible."
+    };
+  }
+
+  if (
+    !tiposValidos.includes(
+      data.tipo
+    )
+  ) {
+    return {
+      ok: false,
+      error:
+        "La modalidad de entrevista no es válida."
+    };
+  }
+
+  if (
+    minutosInicio +
+      duracionMinutos >
+    minutosFin
+  ) {
+    return {
+      ok: false,
+      error:
+        "El rango horario no permite completar al menos una entrevista."
+    };
+  }
+
+  return {
+    ok: true,
+
+    data: {
+      reclutador,
+
+      reclutadorId:
+        String(
+          data.reclutadorId || ""
+        ).trim(),
+
+      sucursal:
+        String(
+          data.sucursal || ""
+        ).trim(),
+
+      sucursalId:
+        String(
+          data.sucursalId || ""
+        ).trim(),
+
+      vacanteId:
+        String(
+          data.vacanteId || ""
+        ).trim(),
+
+      vacanteTitulo:
+        String(
+          data.vacanteTitulo || ""
+        ).trim(),
+
+      fechaInicio,
+      fechaFin,
+      horaInicio,
+      horaFin,
+      diasSemana,
+      duracionMinutos,
+      descansoMinutos,
+
+      tipo: data.tipo,
+
+      activo:
+        data.activo !== false
+    }
+  };
 }
 
 /* =========================
@@ -2149,6 +2920,305 @@ app.get("/dashboard.html", (req, res) => {
 app.get("/vacantes-admin.html", (req, res) => {
   res.sendFile(path.join(__dirname, "vacantes-admin.html"));
 });
+/* =========================
+   API DISPONIBILIDADES
+   DE ENTREVISTA
+========================= */
+
+app.get(
+  "/api/disponibilidades-entrevista",
+  verifyAdmin,
+  async (req, res) => {
+    try {
+      const disponibilidades =
+        await leerDisponibilidadesEntrevista();
+
+      res.json(disponibilidades);
+    } catch (error) {
+      console.error(
+        "Error cargando disponibilidades:",
+        error
+      );
+
+      res.status(500).json({
+        error:
+          "No fue posible cargar las disponibilidades."
+      });
+    }
+  }
+);
+
+app.get(
+  "/api/disponibilidades-entrevista/:id",
+  verifyAdmin,
+  async (req, res) => {
+    try {
+      const disponibilidad =
+        await obtenerDisponibilidadEntrevista(
+          req.params.id
+        );
+
+      if (!disponibilidad) {
+        return res.status(404).json({
+          error:
+            "Disponibilidad no encontrada."
+        });
+      }
+
+      res.json(disponibilidad);
+    } catch (error) {
+      console.error(
+        "Error consultando disponibilidad:",
+        error
+      );
+
+      res.status(500).json({
+        error:
+          "No fue posible consultar la disponibilidad."
+      });
+    }
+  }
+);
+
+app.post(
+  "/api/disponibilidades-entrevista",
+  verifyAdmin,
+  async (req, res) => {
+    try {
+      const validacion =
+        validarDisponibilidadEntrevista(
+          req.body
+        );
+
+      if (!validacion.ok) {
+        return res.status(400).json({
+          error: validacion.error
+        });
+      }
+
+      const fechaActual =
+        new Date().toISOString();
+
+      const disponibilidad = {
+        id:
+          `disp-${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2, 7)}`,
+
+        ...validacion.data,
+
+        creadoPor:
+          req.adminUser?.email || "",
+
+        fechaCreacion:
+          fechaActual,
+
+        fechaActualizacion:
+          fechaActual
+      };
+
+      await guardarDisponibilidadEntrevista(
+        disponibilidad
+      );
+
+      res.status(201).json({
+        ok: true,
+
+        message:
+          "Disponibilidad creada correctamente.",
+
+        disponibilidad
+      });
+    } catch (error) {
+      console.error(
+        "Error creando disponibilidad:",
+        error
+      );
+
+      res.status(500).json({
+        error:
+          "No fue posible crear la disponibilidad."
+      });
+    }
+  }
+);
+
+app.put(
+  "/api/disponibilidades-entrevista/:id",
+  verifyAdmin,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const existente =
+        await obtenerDisponibilidadEntrevista(
+          id
+        );
+
+      if (!existente) {
+        return res.status(404).json({
+          error:
+            "Disponibilidad no encontrada."
+        });
+      }
+
+      const validacion =
+        validarDisponibilidadEntrevista({
+          ...existente,
+          ...req.body
+        });
+
+      if (!validacion.ok) {
+        return res.status(400).json({
+          error: validacion.error
+        });
+      }
+
+      const cambios = {
+        ...validacion.data,
+
+        fechaActualizacion:
+          new Date().toISOString(),
+
+        actualizadoPor:
+          req.adminUser?.email || ""
+      };
+
+      const actualizado =
+        await actualizarDisponibilidadEntrevista(
+          id,
+          cambios
+        );
+
+      if (!actualizado) {
+        return res.status(404).json({
+          error:
+            "Disponibilidad no encontrada."
+        });
+      }
+
+      res.json({
+        ok: true,
+
+        message:
+          "Disponibilidad actualizada correctamente.",
+
+        disponibilidad: {
+          ...existente,
+          ...cambios,
+          id
+        }
+      });
+    } catch (error) {
+      console.error(
+        "Error actualizando disponibilidad:",
+        error
+      );
+
+      res.status(500).json({
+        error:
+          "No fue posible actualizar la disponibilidad."
+      });
+    }
+  }
+);
+
+app.patch(
+  "/api/disponibilidades-entrevista/:id/estado",
+  verifyAdmin,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      if (
+        typeof req.body.activo !==
+        "boolean"
+      ) {
+        return res.status(400).json({
+          error:
+            "El estado activo debe ser verdadero o falso."
+        });
+      }
+
+      const actualizado =
+        await actualizarDisponibilidadEntrevista(
+          id,
+          {
+            activo: req.body.activo,
+
+            fechaActualizacion:
+              new Date().toISOString(),
+
+            actualizadoPor:
+              req.adminUser?.email || ""
+          }
+        );
+
+      if (!actualizado) {
+        return res.status(404).json({
+          error:
+            "Disponibilidad no encontrada."
+        });
+      }
+
+      res.json({
+        ok: true,
+
+        message:
+          req.body.activo
+            ? "Disponibilidad activada correctamente."
+            : "Disponibilidad desactivada correctamente."
+      });
+    } catch (error) {
+      console.error(
+        "Error cambiando estado de disponibilidad:",
+        error
+      );
+
+      res.status(500).json({
+        error:
+          "No fue posible cambiar el estado."
+      });
+    }
+  }
+);
+
+app.delete(
+  "/api/disponibilidades-entrevista/:id",
+  verifyAdmin,
+  async (req, res) => {
+    try {
+      const eliminado =
+        await eliminarDisponibilidadEntrevista(
+          req.params.id
+        );
+
+      if (!eliminado) {
+        return res.status(404).json({
+          error:
+            "Disponibilidad no encontrada."
+        });
+      }
+
+      res.json({
+        ok: true,
+
+        message:
+          "Disponibilidad eliminada correctamente."
+      });
+    } catch (error) {
+      console.error(
+        "Error eliminando disponibilidad:",
+        error
+      );
+
+      res.status(500).json({
+        error:
+          "No fue posible eliminar la disponibilidad."
+      });
+    }
+  }
+);
 
 app.get("/entrevistas.html", (req, res) => {
   res.sendFile(path.join(__dirname, "entrevistas.html"));
@@ -3125,6 +4195,338 @@ app.patch("/api/postulaciones/:id/estado", verifyAdmin, async (req, res) => {
     res.status(500).json({ error: "No fue posible actualizar la postulacion." });
   }
 });
+
+app.get(
+  "/api/entrevistas/horarios-disponibles",
+  async (req, res) => {
+    try {
+      const {
+        fecha,
+        vacanteId = "",
+        sucursal = "",
+        sucursalId = "",
+        tipo = ""
+      } = req.query;
+
+      if (!fecha) {
+        return res.status(400).json({
+          error:
+            "Debes indicar una fecha."
+        });
+      }
+
+      const date =
+        obtenerFechaLocal(fecha);
+
+      if (!date) {
+        return res.status(400).json({
+          error:
+            "La fecha indicada no es válida."
+        });
+      }
+
+      const disponibilidades =
+        await leerDisponibilidadesEntrevista();
+
+      const entrevistas =
+        await leerEntrevistas(500);
+
+      const aplicables =
+        disponibilidades.filter(
+          (item) => {
+            if (item.activo === false) {
+              return false;
+            }
+
+            if (
+              vacanteId &&
+              item.vacanteId &&
+              item.vacanteId !== vacanteId
+            ) {
+              return false;
+            }
+
+            if (
+              sucursalId &&
+              item.sucursalId &&
+              item.sucursalId !== sucursalId
+            ) {
+              return false;
+            }
+
+            if (
+              sucursal &&
+              item.sucursal &&
+              normalizarTexto(
+                item.sucursal
+              ) !==
+                normalizarTexto(
+                  sucursal
+                )
+            ) {
+              return false;
+            }
+
+            if (
+              tipo &&
+              item.tipo &&
+              item.tipo !== tipo
+            ) {
+              return false;
+            }
+
+            return true;
+          }
+        );
+
+      const horariosGenerados =
+        aplicables.flatMap(
+          (disponibilidad) =>
+            generarEspaciosDisponibilidad({
+              disponibilidad,
+              fecha
+            })
+        );
+
+      const horariosLibres =
+        filtrarHorariosOcupados(
+          horariosGenerados,
+          entrevistas
+        ).sort((a, b) =>
+          a.hora.localeCompare(b.hora)
+        );
+
+      res.json({
+        ok: true,
+        fecha,
+        total:
+          horariosLibres.length,
+        horarios:
+          horariosLibres
+      });
+    } catch (error) {
+      console.error(
+        "Error consultando horarios disponibles:",
+        error
+      );
+
+      res.status(500).json({
+        error:
+          "No fue posible consultar los horarios disponibles."
+      });
+    }
+  }
+);
+
+app.post(
+  "/api/entrevistas/reservar",
+  async (req, res) => {
+    try {
+      const {
+        disponibilidadId,
+        candidatoId,
+        candidatoNombre,
+        correo = "",
+        telefono = "",
+        puesto = "",
+        marca = "",
+        vacanteId = "",
+        sucursal = "",
+        sucursalId = "",
+        ciudad = "",
+        fecha,
+        hora,
+        comentarios = ""
+      } = req.body;
+
+      if (
+        !disponibilidadId ||
+        !candidatoId ||
+        !candidatoNombre ||
+        !fecha ||
+        !hora
+      ) {
+        return res.status(400).json({
+          error:
+            "Faltan datos obligatorios para reservar la entrevista."
+        });
+      }
+
+      const disponibilidad =
+        await obtenerDisponibilidadEntrevista(
+          disponibilidadId
+        );
+
+      if (
+        !disponibilidad ||
+        disponibilidad.activo === false
+      ) {
+        return res.status(400).json({
+          error:
+            "La disponibilidad seleccionada ya no está activa."
+        });
+      }
+
+      const horariosPermitidos =
+        generarEspaciosDisponibilidad({
+          disponibilidad,
+          fecha
+        });
+
+      const horarioSeleccionado =
+        horariosPermitidos.find(
+          (item) =>
+            item.hora === hora
+        );
+
+      if (!horarioSeleccionado) {
+        return res.status(400).json({
+          error:
+            "El horario seleccionado no pertenece a la disponibilidad configurada."
+        });
+      }
+
+      const entrevistas =
+        await leerEntrevistas(500);
+
+      const ocupado =
+        entrevistas.some(
+          (entrevista) =>
+            horarioCoincideConEntrevista(
+              horarioSeleccionado,
+              entrevista
+            )
+        );
+
+      if (ocupado) {
+        return res.status(409).json({
+          error:
+            "Ese horario acaba de ser reservado. Selecciona otro horario."
+        });
+      }
+
+      const fechaActual =
+        new Date().toISOString();
+
+      const entrevista = {
+        id:
+          `ent-${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2, 7)}`,
+
+        disponibilidadId,
+
+        candidatoId,
+        candidatoNombre,
+        correo,
+        telefono,
+        puesto,
+        marca,
+
+        vacanteId:
+          vacanteId ||
+          disponibilidad.vacanteId ||
+          "",
+
+        sucursal:
+          sucursal ||
+          disponibilidad.sucursal ||
+          "",
+
+        sucursalId:
+          sucursalId ||
+          disponibilidad.sucursalId ||
+          "",
+
+        ciudad,
+
+        fecha,
+        hora,
+
+        horaFin:
+          horarioSeleccionado.horaFin,
+
+        duracionMinutos:
+          horarioSeleccionado
+            .duracionMinutos,
+
+        reclutador:
+          disponibilidad.reclutador,
+
+        reclutadorId:
+          disponibilidad.reclutadorId ||
+          "",
+
+        tipo:
+          disponibilidad.tipo,
+
+        comentarios,
+
+        estado:
+          "pendiente_confirmacion",
+
+        origen:
+          "chatbot",
+
+        fechaCreacion:
+          fechaActual,
+
+        fechaActualizacion:
+          fechaActual
+      };
+
+      await guardarEntrevista(
+        entrevista
+      );
+
+      await actualizarPostulacion(
+        candidatoId,
+        {
+          estadoSolicitud:
+            "entrevista_agendada",
+
+          entrevistaId:
+            entrevista.id,
+
+          fechaEntrevista:
+            fecha,
+
+          horaEntrevista:
+            hora,
+
+          reclutadorEntrevista:
+            entrevista.reclutador,
+
+          tipoEntrevista:
+            entrevista.tipo,
+
+          fechaActualizacion:
+            fechaActual
+        }
+      );
+
+      res.status(201).json({
+        ok: true,
+
+        message:
+          "Entrevista reservada correctamente.",
+
+        entrevista
+      });
+    } catch (error) {
+      console.error(
+        "Error reservando entrevista:",
+        error
+      );
+
+      res.status(500).json({
+        error:
+          "No fue posible reservar la entrevista."
+      });
+    }
+  }
+);
+
 app.get("/api/entrevistas", verifyAdmin, async (req, res) => {
   try {
     const entrevistas = await leerEntrevistas();

@@ -88,24 +88,34 @@
     </aside>
 
     <section class="content">
-      <div class="section-head">
-        <div>
-          <h1>Entrevistas</h1>
+    <div class="section-head">
+  <div>
+    <h1>Entrevistas</h1>
 
-          <p>
-            Administra, confirma, reprograma y da seguimiento a entrevistas laborales.
-          </p>
-        </div>
+    <p>
+      Administra entrevistas, configura horarios disponibles y coordina
+      la agenda de los reclutadores.
+    </p>
+  </div>
 
-        <button
-          id="refreshBtn"
-          class="btn btn--primary"
-          type="button"
-        >
-          Actualizar
-        </button>
-      </div>
+  <div class="section-head__actions">
+    <button
+      id="openAvailabilityModalBtn"
+      class="btn btn--secondary"
+      type="button"
+    >
+      Configurar disponibilidad
+    </button>
 
+    <button
+      id="refreshBtn"
+      class="btn btn--primary"
+      type="button"
+    >
+      Actualizar
+    </button>
+  </div>
+</div>
       <div
         id="statusBox"
         class="status hidden"
@@ -143,6 +153,41 @@
         </div>
       </section>
 
+      <!-- =========================
+     DISPONIBILIDAD RH
+========================== -->
+<section class="availability-card">
+  <div class="availability-card__head">
+    <div>
+      <span class="calendar-label">
+        Agenda inteligente
+      </span>
+
+      <h2>Disponibilidad de reclutadores</h2>
+
+      <p>
+        Estos horarios serán utilizados por el chatbot para mostrar espacios
+        disponibles a los candidatos.
+      </p>
+    </div>
+
+    <span
+      id="availabilitySummaryBadge"
+      class="availability-summary-badge"
+    >
+      0 configuraciones activas
+    </span>
+  </div>
+
+  <div
+    id="availabilityList"
+    class="availability-list"
+  >
+    <div class="availability-empty">
+      Aún no hay horarios de reclutadores configurados.
+    </div>
+  </div>
+</section>
       <!-- =========================
            CALENDARIO
       ========================== -->
@@ -608,6 +653,327 @@
 </div>
 
   
+  <!-- =========================
+     MODAL DISPONIBILIDAD RH
+========================== -->
+<div
+  id="availabilityModal"
+  class="modal hidden"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="availabilityModalTitle"
+>
+  <div
+    id="closeAvailabilityBackdrop"
+    class="modal__backdrop"
+  ></div>
+
+  <div class="modal__content modal__content--availability">
+    <div class="modal__header">
+      <div>
+        <h3 id="availabilityModalTitle">
+          Configurar disponibilidad
+        </h3>
+
+        <p>
+          Define los horarios que el chatbot podrá ofrecer a los candidatos.
+        </p>
+      </div>
+
+      <button
+        id="closeAvailabilityModalBtn"
+        class="chatbot-close"
+        type="button"
+        aria-label="Cerrar disponibilidad"
+      >
+        ✕
+      </button>
+    </div>
+
+    <div class="modal__body">
+      <form
+        id="availabilityForm"
+        class="availability-form"
+      >
+        <input
+          id="availabilityId"
+          type="hidden"
+        />
+
+        <div class="filters-grid filters-grid--two">
+          <div class="field">
+            <label for="availabilityRecruiter">
+              Reclutador
+            </label>
+
+            <input
+              id="availabilityRecruiter"
+              type="text"
+              placeholder="Ej. Alejandro Ayala"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label for="availabilityType">
+              Modalidad
+            </label>
+
+            <select
+              id="availabilityType"
+              required
+            >
+              <option value="presencial">
+                Presencial
+              </option>
+
+              <option value="videollamada">
+                Videollamada
+              </option>
+
+              <option value="telefonica">
+                Telefónica
+              </option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="availabilitySucursal">
+              Sucursal
+            </label>
+
+            <input
+              id="availabilitySucursal"
+              type="text"
+              placeholder="Ej. Las Misiones"
+            />
+          </div>
+
+          <div class="field">
+            <label for="availabilityVacancy">
+              Vacante
+            </label>
+
+            <select id="availabilityVacancy">
+              <option value="">
+                Todas las vacantes
+              </option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="availabilityStartDate">
+              Vigente desde
+            </label>
+
+            <input
+              id="availabilityStartDate"
+              type="date"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label for="availabilityEndDate">
+              Vigente hasta
+            </label>
+
+            <input
+              id="availabilityEndDate"
+              type="date"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label for="availabilityStartTime">
+              Hora inicial
+            </label>
+
+            <input
+              id="availabilityStartTime"
+              type="time"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label for="availabilityEndTime">
+              Hora final
+            </label>
+
+            <input
+              id="availabilityEndTime"
+              type="time"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label for="availabilityDuration">
+              Duración de entrevista
+            </label>
+
+            <select
+              id="availabilityDuration"
+              required
+            >
+              <option value="15">
+                15 minutos
+              </option>
+
+              <option value="30" selected>
+                30 minutos
+              </option>
+
+              <option value="45">
+                45 minutos
+              </option>
+
+              <option value="60">
+                60 minutos
+              </option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="availabilityBreak">
+              Espacio entre entrevistas
+            </label>
+
+            <select id="availabilityBreak">
+              <option value="0">
+                Sin espacio adicional
+              </option>
+
+              <option value="10">
+                10 minutos
+              </option>
+
+              <option value="15" selected>
+                15 minutos
+              </option>
+
+              <option value="30">
+                30 minutos
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <fieldset class="availability-days">
+          <legend>
+            Días disponibles
+          </legend>
+
+          <div class="availability-days__grid">
+            <label>
+              <input
+                type="checkbox"
+                name="availabilityDay"
+                value="1"
+                checked
+              />
+              Lunes
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                name="availabilityDay"
+                value="2"
+                checked
+              />
+              Martes
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                name="availabilityDay"
+                value="3"
+                checked
+              />
+              Miércoles
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                name="availabilityDay"
+                value="4"
+                checked
+              />
+              Jueves
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                name="availabilityDay"
+                value="5"
+                checked
+              />
+              Viernes
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                name="availabilityDay"
+                value="6"
+              />
+              Sábado
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                name="availabilityDay"
+                value="0"
+              />
+              Domingo
+            </label>
+          </div>
+        </fieldset>
+
+        <label class="availability-active">
+          <input
+            id="availabilityActive"
+            type="checkbox"
+            checked
+          />
+
+          <span>
+            <strong>Disponibilidad activa</strong>
+            <small>
+              El chatbot podrá ofrecer estos horarios a los candidatos.
+            </small>
+          </span>
+        </label>
+      </form>
+    </div>
+
+    <div class="modal__footer">
+      <button
+        id="cancelAvailabilityBtn"
+        class="btn btn--secondary"
+        type="button"
+      >
+        Cancelar
+      </button>
+
+      <button
+        id="saveAvailabilityBtn"
+        class="btn btn--primary"
+        type="button"
+      >
+        Guardar disponibilidad
+      </button>
+    </div>
+  </div>
+</div>
+  
   
   <!-- =========================
        FIREBASE Y JAVASCRIPT
@@ -615,7 +981,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   
-  <script src="entrevistas.js?v=4"></script>
+<script src="entrevistas.js?v=6"></script>
 
 </body>
 </html>

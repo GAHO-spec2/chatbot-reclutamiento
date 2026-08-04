@@ -35,7 +35,15 @@ let applicationFlow = {
   currentQuestionIndex: 0,
 
   waitingForCvDecision: false,
-  waitingForCvUpload: false
+  waitingForCvUpload: false,
+
+  /* Agenda inteligente */
+  submittedApplication: null,
+  availableDates: [],
+  availableSlots: [],
+  selectedInterviewDate: "",
+  selectedInterviewSlot: null,
+  bookingInterview: false
 };
 
 let candidateProfile = {
@@ -455,6 +463,115 @@ function handleFaqResponse(text = "") {
 }
 
 /* =========================
+   AGENDA INTELIGENTE
+========================= */
+
+function getLocalDateString(date) {
+  const year = date.getFullYear();
+
+  const month = String(
+    date.getMonth() + 1
+  ).padStart(2, "0");
+
+  const day = String(
+    date.getDate()
+  ).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function getUpcomingDates(days = 14) {
+  const dates = [];
+  const today = new Date();
+
+  today.setHours(12, 0, 0, 0);
+
+  for (let index = 1; index <= days; index += 1) {
+    const date = new Date(today);
+
+    date.setDate(
+      today.getDate() + index
+    );
+
+    dates.push(
+      getLocalDateString(date)
+    );
+  }
+
+  return dates;
+}
+
+function formatChatDate(dateString = "") {
+  if (!dateString) {
+    return "Fecha no disponible";
+  }
+
+  const date = new Date(
+    `${dateString}T12:00:00`
+  );
+
+  if (Number.isNaN(date.getTime())) {
+    return dateString;
+  }
+
+  return new Intl.DateTimeFormat(
+    "es-MX",
+    {
+      weekday: "long",
+      day: "numeric",
+      month: "long"
+    }
+  ).format(date);
+}
+
+function formatChatTime(time = "") {
+  if (!time) return "-";
+
+  const [hours, minutes] =
+    time.split(":").map(Number);
+
+  if (
+    !Number.isInteger(hours) ||
+    !Number.isInteger(minutes)
+  ) {
+    return time;
+  }
+
+  const date = new Date();
+
+  date.setHours(
+    hours,
+    minutes,
+    0,
+    0
+  );
+
+  return new Intl.DateTimeFormat(
+    "es-MX",
+    {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true
+    }
+  ).format(date);
+}
+
+function resetInterviewBookingFlow() {
+  applicationFlow.availableDates = [];
+  applicationFlow.availableSlots = [];
+  applicationFlow.selectedInterviewDate = "";
+  applicationFlow.selectedInterviewSlot = null;
+  applicationFlow.bookingInterview = false;
+}
+
+function getBookingApplication() {
+  return (
+    applicationFlow.submittedApplication ||
+    null
+  );
+}
+
+/* =========================
    RENDER
 ========================= */
 
@@ -577,11 +694,422 @@ function resetChatHistory() {
   chatHistory = [];
   renderMessages();
 }
+async function selectInterviewDate(
+  optionIndex
+) {
+  const selectedDate =
+    applicationFlow.availableDates[
+      optionIndex
+    ];
 
+  if (!selectedDate?.date) {
+    addAssistantText(
+      "⚠️ La fecha seleccionada ya no está disponible."
+    );
+
+    return;
+  }
+
+  applicationFlow.selectedInterviewDate =
+    selectedDate.date;
+
+  addUserText(
+    formatChatDate(
+      selectedDate.date
+    )
+  );
+
+  addAssistantText(
+    "🕒 Consultando los horarios libres..."
+  );
+
+  const indicator =
+    showTypingIndicator();
+
+  try {
+    const slots =
+      await fetchAvailableSlotsForDate(
+        selectedDate.date
+      );
+
+    indicator.remove();
+
+    applicationFlow.availableSlots =
+      slots;
+
+    if (!slots.length) {
+      addAssistantText(
+        "⚠️ Los horarios de ese día ya fueron ocupados. Selecciona otra fecha."
+      );
+
+     addOptions(
+  "Selecciona otra fecha:",
+  applicationFlow.availableDates
+    .map((item, originalIndex) => ({
+      item,
+      originalIndex
+    }))
+    .filter(
+      ({ item }) =>
+        item.date !==
+        selectedDate.date
+    )
+    .map(
+      ({ item, originalIndex }) => ({
+        label:
+          formatChatDate(item.date),
+
+        value:
+          `interview_date:${originalIndex}`
+      })
+    )
+);
+
+      return;
+    }
+
+    addOptions(
+      `Horarios disponibles para ${formatChatDate(
+        selectedDate.date
+      )}:`,
+      slots.map(
+        (slot, index) => ({
+          label:
+            `${formatChatTime(
+              slot.hora
+            )} · ${
+              slot.tipo ||
+              "presencial"
+            } · ${
+              slot.reclutador ||
+              "Reclutamiento"
+            }`,
+
+          value:
+            `interview_slot:${index}`
+        })
+      )
+    );
+  } catch (error) {
+    indicator.remove();
+
+    console.error(
+      "Error cargando horarios:",
+      error
+    );
+
+    addAssistantText(
+      `❌ ${
+        error.message ||
+        "No fue posible cargar los horarios."
+      }`
+    );
+  }
+}
+
+function selectInterviewSlot(
+  optionIndex
+) {
+  const slot =
+    applicationFlow.availableSlots[
+      optionIndex
+    ];
+
+  if (!slot) {
+    addAssistantText(
+      "⚠️ El horario seleccionado ya no está disponible."
+    );
+
+    return;
+  }
+
+  applicationFlow.selectedInterviewSlot =
+    slot;
+
+  addUserText(
+    `${formatChatDate(
+      slot.fecha
+    )} a las ${formatChatTime(
+      slot.hora
+    )}`
+  );
+
+  addAssistantText(
+    `📋 Confirma los datos de tu entrevista:
+
+📅 Fecha: ${formatChatDate(slot.fecha)}
+🕒 Hora: ${formatChatTime(slot.hora)}
+⏱ Duración: ${slot.duracionMinutos || 30} minutos
+👤 Reclutador: ${slot.reclutador || "Equipo de reclutamiento"}
+💬 Modalidad: ${slot.tipo || "Presencial"}
+📍 Sucursal: ${slot.sucursal || "Por confirmar"}`
+  );
+
+  addOptions(
+    "¿Deseas reservar este horario?",
+    [
+      {
+        label:
+          "✅ Confirmar entrevista",
+
+        value:
+          "confirm_interview_booking"
+      },
+      {
+        label:
+          "🕒 Elegir otro horario",
+
+        value:
+          "choose_another_slot"
+      },
+      {
+        label:
+          "📆 Elegir otra fecha",
+
+        value:
+          "choose_another_date"
+      }
+    ]
+  );
+}
+
+async function confirmInterviewBooking() {
+  const slot =
+    applicationFlow.selectedInterviewSlot;
+
+  const postulacion =
+    getBookingApplication();
+
+  const vacante =
+    applicationFlow.selectedVacancy;
+
+  if (
+    !slot ||
+    !postulacion?.id ||
+    !vacante
+  ) {
+    addAssistantText(
+      "⚠️ No se pudo recuperar la información necesaria para reservar."
+    );
+
+    return;
+  }
+
+  if (applicationFlow.bookingInterview === "saving") {
+    return;
+  }
+
+  applicationFlow.bookingInterview =
+    "saving";
+
+  addAssistantText(
+    "📅 Reservando tu entrevista..."
+  );
+
+  const indicator =
+    showTypingIndicator();
+
+  try {
+    const response = await fetch(
+      `${API_URL}/api/entrevistas/reservar`,
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
+
+        body: JSON.stringify({
+          disponibilidadId:
+            slot.disponibilidadId,
+
+          candidatoId:
+            postulacion.id,
+
+          candidatoNombre:
+            postulacion.nombre ||
+            applicationFlow.data.nombre ||
+            candidateProfile.nombre ||
+            "",
+
+          correo:
+            postulacion.correo ||
+            applicationFlow.data.correo ||
+            candidateProfile.correo ||
+            "",
+
+          telefono:
+            postulacion.telefono ||
+            applicationFlow.data.telefono ||
+            candidateProfile.telefono ||
+            "",
+
+          puesto:
+            postulacion.vacanteTitulo ||
+            vacante.titulo ||
+            "",
+
+          marca:
+            postulacion.grupoSeleccionado ||
+            vacante.grupo ||
+            "",
+
+          vacanteId:
+            vacante.id,
+
+          sucursal:
+            postulacion.sucursal ||
+            vacante.sucursal ||
+            "",
+
+          sucursalId:
+            vacante.sucursalId ||
+            vacante.branchId ||
+            postulacion.sucursalId ||
+            "",
+
+          ciudad:
+            postulacion.ciudad ||
+            vacante.ciudad ||
+            "",
+
+          fecha:
+            slot.fecha,
+
+          hora:
+            slot.hora,
+
+          comentarios:
+            "Entrevista reservada por el candidato desde el chatbot."
+        })
+      }
+    );
+
+    const data =
+      await response.json();
+
+    indicator.remove();
+
+    if (!response.ok) {
+      if (response.status === 409) {
+        applicationFlow
+          .selectedInterviewSlot =
+          null;
+
+        applicationFlow
+          .bookingInterview =
+          true;
+
+        addAssistantText(
+          "⚠️ Otra persona reservó ese horario hace unos momentos. Te mostraré nuevamente los horarios disponibles."
+        );
+
+        await selectInterviewDate(
+          applicationFlow
+            .availableDates
+            .findIndex(
+              (item) =>
+                item.date ===
+                applicationFlow
+                  .selectedInterviewDate
+            )
+        );
+
+        return;
+      }
+
+      throw new Error(
+        data.error ||
+        "No fue posible reservar la entrevista."
+      );
+    }
+
+    const entrevista =
+      data.entrevista || {};
+
+    applicationFlow.bookingInterview =
+      false;
+
+    applicationFlow.mode = "";
+
+    applicationFlow.selectedInterviewSlot =
+      entrevista;
+
+    updateProgressBar(100);
+
+    addAssistantText(
+      `🎉 ¡Tu entrevista quedó reservada!
+
+📅 Fecha: ${formatChatDate(
+        entrevista.fecha
+      )}
+
+🕒 Hora: ${formatChatTime(
+        entrevista.hora
+      )}
+
+👤 Reclutador: ${
+        entrevista.reclutador ||
+        "Equipo de reclutamiento"
+      }
+
+💬 Modalidad: ${
+        entrevista.tipo ||
+        "Presencial"
+      }
+
+📍 Sucursal: ${
+        entrevista.sucursal ||
+        "Por confirmar"
+      }
+
+⏳ Estado: Pendiente de confirmación por RH
+
+El equipo de reclutamiento podrá confirmar o proponerte un nuevo horario.`
+    );
+
+    addOptions(
+      "Puedes continuar con:",
+      [
+        {
+          label:
+            "🔍 Consultar estatus",
+
+          value:
+            "consultar_estatus"
+        },
+        {
+          label:
+            "📍 Buscar otra vacante",
+
+          value:
+            "buscar_ubicacion"
+        }
+      ]
+    );
+  } catch (error) {
+    indicator.remove();
+
+    applicationFlow.bookingInterview =
+      true;
+
+    console.error(
+      "Error reservando entrevista:",
+      error
+    );
+
+    addAssistantText(
+      `❌ ${
+        error.message ||
+        "No fue posible reservar la entrevista."
+      }`
+    );
+  }
+}
 /* =========================
    OPCIONES
 ========================= */
-
 function handleOption(value, label = "") {
   if (value === "analizar_cv") {
     startCvAnalysisFlow();
@@ -610,102 +1138,237 @@ function handleOption(value, label = "") {
     return;
   }
 
-  if (
-  value.startsWith(
-    "dynamic_answer:"
-  )
-) {
-  const [
-    ,
-    questionKey,
-    optionIndexText
-  ] = value.split(":");
-
-  const question =
-    applicationFlow.questions[
-      applicationFlow.currentQuestionIndex
-    ];
+  /* =========================
+     RESPUESTAS DINÁMICAS
+  ========================= */
 
   if (
-    !question ||
-    question.key !== questionKey
+    value.startsWith(
+      "dynamic_answer:"
+    )
   ) {
-    addAssistantText(
-      "⚠️ La pregunta ya no está disponible. Intenta continuar nuevamente."
+    const [
+      ,
+      questionKey,
+      optionIndexText
+    ] = value.split(":");
+
+    const question =
+      applicationFlow.questions[
+        applicationFlow.currentQuestionIndex
+      ];
+
+    if (
+      !question ||
+      question.key !== questionKey
+    ) {
+      addAssistantText(
+        "⚠️ La pregunta ya no está disponible. Intenta continuar nuevamente."
+      );
+      return;
+    }
+
+    const optionIndex =
+      Number(optionIndexText);
+
+    const selectedOption =
+      question.options?.[
+        optionIndex
+      ];
+
+    if (
+      selectedOption === undefined
+    ) {
+      addAssistantText(
+        "⚠️ La opción seleccionada no es válida."
+      );
+      return;
+    }
+
+    addUserText(selectedOption);
+
+    saveDynamicAnswer(
+      question,
+      selectedOption
     );
+
     return;
   }
 
-  const optionIndex =
-    Number(optionIndexText);
+  /* =========================
+     CV OPCIONAL
+  ========================= */
 
-  const selectedOption =
-    question.options?.[
-      optionIndex
-    ];
-
-  if (
-    selectedOption === undefined
-  ) {
-    addAssistantText(
-      "⚠️ La opción seleccionada no es válida."
+  if (value === "cv_opcional_si") {
+    addUserText(
+      "Sí, adjuntar mi CV"
     );
+
+    applicationFlow.waitingForCvDecision =
+      false;
+
+    applicationFlow.waitingForCvUpload =
+      true;
+
+    if (chatCvFile) {
+      chatCvFile.click();
+    }
+
     return;
   }
 
-  addUserText(selectedOption);
+  if (value === "cv_opcional_no") {
+    addUserText(
+      "Continuar sin CV"
+    );
 
-  saveDynamicAnswer(
-    question,
-    selectedOption
-  );
+    applicationFlow.waitingForCvDecision =
+      false;
 
-  return;
-}
+    applicationFlow.waitingForCvUpload =
+      false;
 
-if (value === "cv_opcional_si") {
-  addUserText(
-    "Sí, adjuntar mi CV"
-  );
+    addOptions(
+      "✅ Perfecto. Puedes enviar tu postulación sin currículum.",
+      [
+        {
+          label:
+            "🚀 Enviar postulación",
+          value:
+            "enviar_postulacion"
+        }
+      ]
+    );
 
-  applicationFlow.waitingForCvDecision =
-    false;
-
-  applicationFlow.waitingForCvUpload =
-    true;
-
-  if (chatCvFile) {
-    chatCvFile.click();
+    return;
   }
 
-  return;
-}
+  /* =========================
+     AGENDA INTELIGENTE
+  ========================= */
 
-if (value === "cv_opcional_no") {
-  addUserText(
-    "Continuar sin CV"
-  );
+  if (value === "schedule_interview") {
+    startInterviewBookingFlow();
+    return;
+  }
 
-  applicationFlow.waitingForCvDecision =
-    false;
+  if (
+    value.startsWith(
+      "interview_date:"
+    )
+  ) {
+    const index =
+      Number(
+        value.split(":")[1]
+      );
 
-  applicationFlow.waitingForCvUpload =
-    false;
+    selectInterviewDate(index);
+    return;
+  }
 
-  addOptions(
-    "✅ Perfecto. Puedes enviar tu postulación sin currículum.",
-    [
-      {
-        label:
-          "🚀 Enviar postulación",
-        value:
-          "enviar_postulacion"
-      }
-    ]
-  );
+  if (
+    value.startsWith(
+      "interview_slot:"
+    )
+  ) {
+    const index =
+      Number(
+        value.split(":")[1]
+      );
 
-  return;
-}
+    selectInterviewSlot(index);
+    return;
+  }
+
+  if (
+    value ===
+    "confirm_interview_booking"
+  ) {
+    confirmInterviewBooking();
+    return;
+  }
+
+  if (
+    value ===
+    "choose_another_slot"
+  ) {
+    const dateIndex =
+      applicationFlow
+        .availableDates
+        .findIndex(
+          (item) =>
+            item.date ===
+            applicationFlow
+              .selectedInterviewDate
+        );
+
+    if (dateIndex >= 0) {
+      selectInterviewDate(
+        dateIndex
+      );
+    } else {
+      addAssistantText(
+        "⚠️ No fue posible recuperar la fecha seleccionada."
+      );
+    }
+
+    return;
+  }
+
+  if (
+    value ===
+    "choose_another_date"
+  ) {
+    const availableDates =
+      Array.isArray(
+        applicationFlow.availableDates
+      )
+        ? applicationFlow.availableDates
+        : [];
+
+    if (!availableDates.length) {
+      addAssistantText(
+        "⚠️ No hay fechas disponibles para mostrar en este momento."
+      );
+      return;
+    }
+
+    addOptions(
+      "📆 Selecciona otra fecha:",
+      availableDates.map(
+        (item, index) => ({
+          label:
+            formatChatDate(
+              item.date
+            ),
+
+          value:
+            `interview_date:${index}`
+        })
+      )
+    );
+
+    return;
+  }
+
+  if (
+    value ===
+    "skip_interview_booking"
+  ) {
+    applicationFlow.mode = "";
+
+    resetInterviewBookingFlow();
+
+    addAssistantText(
+      "✅ No hay problema. El equipo de reclutamiento podrá contactarte para coordinar la entrevista."
+    );
+
+    return;
+  }
+
+  /* =========================
+     OPCIÓN NO RECONOCIDA
+  ========================= */
 
   if (label) {
     addUserText(label);
@@ -899,6 +1562,217 @@ function getVacancyApplicationConfig(vacante = {}) {
   };
 }
 
+async function findAvailableInterviewDates(
+  maximumDates = 5
+) {
+  const upcomingDates =
+    getUpcomingDates(21);
+
+  const availableDates = [];
+
+  for (const dateString of upcomingDates) {
+    try {
+      const slots =
+        await fetchAvailableSlotsForDate(
+          dateString
+        );
+
+      if (slots.length) {
+        availableDates.push({
+          date: dateString,
+          total: slots.length
+        });
+      }
+
+      if (
+        availableDates.length >=
+        maximumDates
+      ) {
+        break;
+      }
+    } catch (error) {
+      console.warn(
+        `No se pudieron consultar horarios para ${dateString}:`,
+        error
+      );
+    }
+  }
+
+  return availableDates;
+}
+
+async function startInterviewBookingFlow() {
+  const postulacion =
+    getBookingApplication();
+
+  if (!postulacion?.id) {
+    addAssistantText(
+      "⚠️ No encontré una postulación válida para agendar la entrevista."
+    );
+
+    return;
+  }
+
+  applicationFlow.mode =
+    "interview_booking";
+
+  resetInterviewBookingFlow();
+
+  applicationFlow.mode =
+    "interview_booking";
+
+  applicationFlow.bookingInterview =
+    true;
+
+  addAssistantText(
+    "📅 Consultando las próximas fechas disponibles para tu entrevista..."
+  );
+
+  const indicator =
+    showTypingIndicator();
+
+  try {
+    const dates =
+      await findAvailableInterviewDates();
+
+    indicator.remove();
+
+    applicationFlow.availableDates =
+      dates;
+
+    if (!dates.length) {
+      applicationFlow.bookingInterview =
+        false;
+
+      addAssistantText(
+        "😕 Por ahora no encontré horarios disponibles para esta vacante. El equipo de reclutamiento podrá contactarte para coordinar la entrevista."
+      );
+
+      addOptions(
+        "Puedes continuar con:",
+        [
+          {
+            label: "🔍 Consultar estatus",
+            value: "consultar_estatus"
+          },
+          {
+            label: "📍 Buscar otra vacante",
+            value: "buscar_ubicacion"
+          }
+        ]
+      );
+
+      return;
+    }
+
+    addOptions(
+      "📆 Selecciona el día que más te convenga:",
+      dates.map(
+        (item, index) => ({
+          label:
+            `${formatChatDate(item.date)} · ${item.total} ${
+              item.total === 1
+                ? "horario"
+                : "horarios"
+            }`,
+
+          value:
+            `interview_date:${index}`
+        })
+      )
+    );
+  } catch (error) {
+    indicator.remove();
+
+    applicationFlow.bookingInterview =
+      false;
+
+    console.error(
+      "Error iniciando agenda:",
+      error
+    );
+
+    addAssistantText(
+      `❌ ${
+        error.message ||
+        "No fue posible consultar la agenda."
+      }`
+    );
+  }
+}
+
+async function fetchAvailableSlotsForDate(
+  dateString
+) {
+  const postulacion =
+    getBookingApplication();
+
+  const vacante =
+    applicationFlow.selectedVacancy;
+
+  if (!postulacion || !vacante) {
+    throw new Error(
+      "No se encontró la postulación o la vacante seleccionada."
+    );
+  }
+
+  const params =
+    new URLSearchParams();
+
+  params.set(
+    "fecha",
+    dateString
+  );
+
+  if (vacante.id) {
+    params.set(
+      "vacanteId",
+      vacante.id
+    );
+  }
+
+  const sucursalId =
+    vacante.sucursalId ||
+    vacante.branchId ||
+    postulacion.sucursalId ||
+    "";
+
+  if (sucursalId) {
+    params.set(
+      "sucursalId",
+      sucursalId
+    );
+  }
+
+  const sucursal =
+    vacante.sucursal ||
+    postulacion.sucursal ||
+    "";
+
+  if (sucursal) {
+    params.set(
+      "sucursal",
+      sucursal
+    );
+  }
+
+  const response = await fetch(
+    `${API_URL}/api/entrevistas/horarios-disponibles?${params.toString()}`
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.error ||
+      "No fue posible consultar los horarios."
+    );
+  }
+
+  return Array.isArray(data.horarios)
+    ? data.horarios
+    : [];
+}
 function normalizeCustomQuestions(vacante = {}) {
   const questions = Array.isArray(
     vacante.preguntasPersonalizadas
@@ -1758,14 +2632,32 @@ if (config.solicitarTiempoTraslado) {
     const postulacion =
       data.postulacion || {};
 
-    applicationFlow.active = false;
-    applicationFlow.mode = "";
-    applicationFlow.step = 0;
-    applicationFlow.questions = [];
-    applicationFlow.currentQuestionIndex = 0;
-    applicationFlow.answers = {};
-    applicationFlow.waitingForCvDecision = false;
-    applicationFlow.waitingForCvUpload = false;
+    applicationFlow.submittedApplication =
+  postulacion;
+    applicationFlow.submittedApplication =
+  postulacion;
+  applicationFlow.active = false;
+applicationFlow.mode = "";
+applicationFlow.step = 0;
+
+applicationFlow.questions = [];
+applicationFlow.currentQuestionIndex = 0;
+applicationFlow.answers = {};
+
+applicationFlow.waitingForCvDecision =
+  false;
+
+applicationFlow.waitingForCvUpload =
+  false;
+
+/*
+ * No eliminamos selectedVacancy ni
+ * submittedApplication porque se usarán
+ * para reservar la entrevista.
+ */
+resetInterviewBookingFlow();
+    
+
 
     updateProgressBar(100);
 
@@ -1785,28 +2677,31 @@ if (config.solicitarTiempoTraslado) {
     );
 
     addOptions(
-      "¿Qué te gustaría hacer ahora?",
-      [
-        {
-          label:
-            "🔍 Consultar estatus",
-          value:
-            "consultar_estatus"
-        },
-        {
-          label:
-            "📍 Buscar otra vacante",
-          value:
-            "buscar_ubicacion"
-        },
-        {
-          label:
-            "🎯 Ver recomendaciones",
-          value:
-            "recomendar_vacantes"
-        }
-      ]
-    );
+  "¿Qué te gustaría hacer ahora?",
+  [
+    {
+      label:
+        "📅 Agendar mi entrevista",
+
+      value:
+        "schedule_interview"
+    },
+    {
+      label:
+        "🔍 Consultar estatus",
+
+      value:
+        "consultar_estatus"
+    },
+    {
+      label:
+        "Ahora no, continuar después",
+
+      value:
+        "skip_interview_booking"
+    }
+  ]
+);
   } catch (error) {
     console.error(
       "Error enviando postulación:",
@@ -1872,6 +2767,39 @@ async function consultarEstatus() {
 
 async function handleFreeText(text) {
   const normalized = normalizeText(text);
+
+  if (
+  applicationFlow.mode ===
+  "interview_booking"
+) {
+  if (
+    normalized.includes(
+      "cancelar"
+    ) ||
+    normalized.includes(
+      "despues"
+    ) ||
+    normalized.includes(
+      "ahora no"
+    )
+  ) {
+    applicationFlow.mode = "";
+
+    resetInterviewBookingFlow();
+
+    addAssistantText(
+      "✅ La agenda quedó pendiente. RH podrá contactarte para coordinar tu entrevista."
+    );
+
+    return;
+  }
+
+  addAssistantText(
+    "📅 Para continuar con la agenda, selecciona una de las fechas u horarios disponibles en los botones."
+  );
+
+  return;
+}
 
   /* =========================
      FLUJO DE POSTULACIÓN DINÁMICA

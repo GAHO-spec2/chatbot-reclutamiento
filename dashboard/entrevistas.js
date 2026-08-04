@@ -81,6 +81,12 @@ let entrevistas = [];
 let selectedInterview = null;
 
 /* =========================
+   DISPONIBILIDADES RH
+========================= */
+let disponibilidadesEntrevista = [];
+let selectedAvailability = null;
+
+/* =========================
    ELEMENTOS
 ========================= */
 const logoutBtn = document.getElementById("logoutBtn");
@@ -145,6 +151,119 @@ const closeDeleteBackdrop = document.getElementById("closeDeleteBackdrop");
 const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
 const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
 const deleteCandidateName = document.getElementById("deleteCandidateName");
+/* =========================
+   ELEMENTOS DISPONIBILIDAD
+========================= */
+
+const openAvailabilityModalBtn =
+  document.getElementById(
+    "openAvailabilityModalBtn"
+  );
+
+const availabilitySummaryBadge =
+  document.getElementById(
+    "availabilitySummaryBadge"
+  );
+
+const availabilityList =
+  document.getElementById(
+    "availabilityList"
+  );
+
+const availabilityModal =
+  document.getElementById(
+    "availabilityModal"
+  );
+
+const closeAvailabilityBackdrop =
+  document.getElementById(
+    "closeAvailabilityBackdrop"
+  );
+
+const closeAvailabilityModalBtn =
+  document.getElementById(
+    "closeAvailabilityModalBtn"
+  );
+
+const cancelAvailabilityBtn =
+  document.getElementById(
+    "cancelAvailabilityBtn"
+  );
+
+const saveAvailabilityBtn =
+  document.getElementById(
+    "saveAvailabilityBtn"
+  );
+
+const availabilityModalTitle =
+  document.getElementById(
+    "availabilityModalTitle"
+  );
+
+const availabilityForm =
+  document.getElementById(
+    "availabilityForm"
+  );
+
+const availabilityId =
+  document.getElementById(
+    "availabilityId"
+  );
+
+const availabilityRecruiter =
+  document.getElementById(
+    "availabilityRecruiter"
+  );
+
+const availabilityType =
+  document.getElementById(
+    "availabilityType"
+  );
+
+const availabilitySucursal =
+  document.getElementById(
+    "availabilitySucursal"
+  );
+
+const availabilityVacancy =
+  document.getElementById(
+    "availabilityVacancy"
+  );
+
+const availabilityStartDate =
+  document.getElementById(
+    "availabilityStartDate"
+  );
+
+const availabilityEndDate =
+  document.getElementById(
+    "availabilityEndDate"
+  );
+
+const availabilityStartTime =
+  document.getElementById(
+    "availabilityStartTime"
+  );
+
+const availabilityEndTime =
+  document.getElementById(
+    "availabilityEndTime"
+  );
+
+const availabilityDuration =
+  document.getElementById(
+    "availabilityDuration"
+  );
+
+const availabilityBreak =
+  document.getElementById(
+    "availabilityBreak"
+  );
+
+const availabilityActive =
+  document.getElementById(
+    "availabilityActive"
+  );
 
 let interviewToDelete = null;
 
@@ -177,7 +296,9 @@ function estadoLabel(estado = "") {
     confirmada: "Confirmada",
     realizada: "Realizada",
     cancelada: "Cancelada",
-    reagendada: "Reagendada"
+    reagendada: "Reagendada",
+    pendiente_confirmacion:
+  "Pendiente de confirmación",
   };
 
   return labels[estado] || "Agendada";
@@ -185,6 +306,106 @@ function estadoLabel(estado = "") {
 
 function estadoBadge(estado = "") {
   return `badge badge--${estado || "agendada"}`;
+}
+
+/* =========================
+   HELPERS DISPONIBILIDAD
+========================= */
+
+const DAY_NAMES = {
+  0: "Domingo",
+  1: "Lunes",
+  2: "Martes",
+  3: "Miércoles",
+  4: "Jueves",
+  5: "Viernes",
+  6: "Sábado"
+};
+
+function getAvailabilityDayInputs() {
+  return [
+    ...document.querySelectorAll(
+      'input[name="availabilityDay"]'
+    )
+  ];
+}
+
+function getSelectedAvailabilityDays() {
+  return getAvailabilityDayInputs()
+    .filter((input) => input.checked)
+    .map((input) => Number(input.value));
+}
+
+function setSelectedAvailabilityDays(
+  days = []
+) {
+  const normalizedDays =
+    Array.isArray(days)
+      ? days.map(Number)
+      : [];
+
+  getAvailabilityDayInputs()
+    .forEach((input) => {
+      input.checked =
+        normalizedDays.includes(
+          Number(input.value)
+        );
+    });
+}
+
+function formatAvailabilityDays(
+  days = []
+) {
+  if (!Array.isArray(days) || !days.length) {
+    return "Sin días configurados";
+  }
+
+  return days
+    .map((day) => DAY_NAMES[day])
+    .filter(Boolean)
+    .join(", ");
+}
+
+function formatAvailabilityPeriod(
+  startDate,
+  endDate
+) {
+  if (!startDate && !endDate) {
+    return "Sin periodo definido";
+  }
+
+  if (startDate === endDate) {
+    return formatDate(startDate);
+  }
+
+  return `${formatDate(startDate)} al ${formatDate(endDate)}`;
+}
+
+function getTodayInputValue() {
+  return new Date()
+    .toISOString()
+    .slice(0, 10);
+}
+
+function getDatePlusDays(days = 30) {
+  const date = new Date();
+
+  date.setDate(
+    date.getDate() + days
+  );
+
+  return date
+    .toISOString()
+    .slice(0, 10);
+}
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function normalizar(text = "") {
@@ -224,6 +445,378 @@ async function cargarEntrevistas() {
     setStatus(
       `⚠️ ${error.message || "No fue posible cargar entrevistas."}`
     );
+  }
+}
+
+/* =========================
+   CARGAR DISPONIBILIDADES
+========================= */
+
+async function cargarDisponibilidades() {
+  try {
+    const res = await fetch(
+      `${API_URL}/api/disponibilidades-entrevista`,
+      {
+        headers: authHeaders()
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(
+        data.error ||
+        "No fue posible cargar las disponibilidades."
+      );
+    }
+
+    disponibilidadesEntrevista =
+      Array.isArray(data)
+        ? data
+        : [];
+
+    renderDisponibilidades();
+  } catch (error) {
+    console.error(
+      "Error cargando disponibilidades:",
+      error
+    );
+
+    setStatus(
+      `⚠️ ${
+        error.message ||
+        "No fue posible cargar las disponibilidades."
+      }`
+    );
+  }
+}
+
+/* =========================
+   RENDER DISPONIBILIDADES
+========================= */
+
+function renderDisponibilidades() {
+  if (!availabilityList) return;
+
+  const activeCount =
+    disponibilidadesEntrevista.filter(
+      (item) => item.activo !== false
+    ).length;
+
+  if (availabilitySummaryBadge) {
+    availabilitySummaryBadge.textContent =
+      `${activeCount} ${
+        activeCount === 1
+          ? "configuración activa"
+          : "configuraciones activas"
+      }`;
+  }
+
+  if (!disponibilidadesEntrevista.length) {
+    availabilityList.innerHTML = `
+      <div class="availability-empty">
+        Aún no hay horarios de reclutadores configurados.
+      </div>
+    `;
+
+    return;
+  }
+
+  availabilityList.innerHTML =
+    disponibilidadesEntrevista
+      .map((item) => {
+        const active =
+          item.activo !== false;
+
+        const vacancy =
+          item.vacanteTitulo ||
+          "Todas las vacantes";
+
+        const branch =
+          item.sucursal ||
+          "Todas las sucursales";
+
+        return `
+          <article class="availability-item">
+            <div class="availability-item__main">
+              <div class="availability-item__header">
+                <div>
+                  <strong>
+                    ${escapeHtml(
+                      item.reclutador ||
+                      "Reclutador sin nombre"
+                    )}
+                  </strong>
+
+                  <span
+                    class="availability-status ${
+                      active
+                        ? "availability-status--active"
+                        : "availability-status--inactive"
+                    }"
+                  >
+                    ${
+                      active
+                        ? "Activa"
+                        : "Inactiva"
+                    }
+                  </span>
+                </div>
+
+                <small>
+                  ${escapeHtml(
+                    item.tipo ||
+                    "presencial"
+                  )}
+                </small>
+              </div>
+
+              <div class="availability-item__details">
+                <span>
+                  📅 ${escapeHtml(
+                    formatAvailabilityDays(
+                      item.diasSemana
+                    )
+                  )}
+                </span>
+
+                <span>
+                  🕒 ${escapeHtml(
+                    item.horaInicio || "-"
+                  )}
+                  a
+                  ${escapeHtml(
+                    item.horaFin || "-"
+                  )}
+                </span>
+
+                <span>
+                  ⏱ ${
+                    Number(
+                      item.duracionMinutos
+                    ) || 30
+                  } min
+                </span>
+
+                <span>
+                  🏢 ${escapeHtml(branch)}
+                </span>
+
+                <span>
+                  💼 ${escapeHtml(vacancy)}
+                </span>
+
+                <span>
+                  📆 ${escapeHtml(
+                    formatAvailabilityPeriod(
+                      item.fechaInicio,
+                      item.fechaFin
+                    )
+                  )}
+                </span>
+              </div>
+            </div>
+
+            <div class="availability-item__actions">
+              <button
+                type="button"
+                class="btn btn--secondary"
+                data-availability-action="edit"
+                data-id="${escapeHtml(item.id)}"
+              >
+                Editar
+              </button>
+
+              <button
+                type="button"
+                class="btn btn--secondary"
+                data-availability-action="toggle"
+                data-id="${escapeHtml(item.id)}"
+              >
+                ${
+                  active
+                    ? "Desactivar"
+                    : "Activar"
+                }
+              </button>
+
+              <button
+                type="button"
+                class="btn btn--danger"
+                data-availability-action="delete"
+                data-id="${escapeHtml(item.id)}"
+              >
+                Eliminar
+              </button>
+            </div>
+          </article>
+        `;
+      })
+      .join("");
+
+  document
+    .querySelectorAll(
+      "[data-availability-action]"
+    )
+    .forEach((button) => {
+      button.addEventListener(
+        "click",
+        () => {
+          handleAvailabilityAction(
+            button.dataset
+              .availabilityAction,
+            button.dataset.id
+          );
+        }
+      );
+    });
+}
+
+/* =========================
+   MODAL DISPONIBILIDAD
+========================= */
+
+function resetAvailabilityForm() {
+  selectedAvailability = null;
+
+  if (availabilityForm) {
+    availabilityForm.reset();
+  }
+
+  if (availabilityId) {
+    availabilityId.value = "";
+  }
+
+  if (availabilityModalTitle) {
+    availabilityModalTitle.textContent =
+      "Configurar disponibilidad";
+  }
+
+  if (availabilityStartDate) {
+    availabilityStartDate.value =
+      getTodayInputValue();
+  }
+
+  if (availabilityEndDate) {
+    availabilityEndDate.value =
+      getDatePlusDays(30);
+  }
+
+  if (availabilityStartTime) {
+    availabilityStartTime.value =
+      "09:00";
+  }
+
+  if (availabilityEndTime) {
+    availabilityEndTime.value =
+      "17:00";
+  }
+
+  if (availabilityDuration) {
+    availabilityDuration.value =
+      "30";
+  }
+
+  if (availabilityBreak) {
+    availabilityBreak.value =
+      "15";
+  }
+
+  if (availabilityType) {
+    availabilityType.value =
+      "presencial";
+  }
+
+  if (availabilityActive) {
+    availabilityActive.checked =
+      true;
+  }
+
+  setSelectedAvailabilityDays([
+    1, 2, 3, 4, 5
+  ]);
+}
+
+function openAvailabilityModal(
+  item = null
+) {
+  resetAvailabilityForm();
+
+  if (item) {
+    selectedAvailability = item;
+
+    availabilityId.value =
+      item.id || "";
+
+    availabilityModalTitle.textContent =
+      "Editar disponibilidad";
+
+    availabilityRecruiter.value =
+      item.reclutador || "";
+
+    availabilityType.value =
+      item.tipo || "presencial";
+
+    availabilitySucursal.value =
+      item.sucursal || "";
+
+    availabilityVacancy.value =
+      item.vacanteId || "";
+
+    availabilityStartDate.value =
+      item.fechaInicio || "";
+
+    availabilityEndDate.value =
+      item.fechaFin || "";
+
+    availabilityStartTime.value =
+      item.horaInicio || "";
+
+    availabilityEndTime.value =
+      item.horaFin || "";
+
+    availabilityDuration.value =
+      String(
+        item.duracionMinutos || 30
+      );
+
+    availabilityBreak.value =
+      String(
+        item.descansoMinutos || 0
+      );
+
+    availabilityActive.checked =
+      item.activo !== false;
+
+    setSelectedAvailabilityDays(
+      item.diasSemana || []
+    );
+  }
+
+  if (availabilityModal) {
+    availabilityModal.classList.remove(
+      "hidden"
+    );
+  }
+
+  availabilityRecruiter?.focus();
+}
+
+function closeAvailabilityModal() {
+  if (availabilityModal) {
+    availabilityModal.classList.add(
+      "hidden"
+    );
+  }
+
+  resetAvailabilityForm();
+
+  if (saveAvailabilityBtn) {
+    saveAvailabilityBtn.disabled =
+      false;
+
+    saveAvailabilityBtn.textContent =
+      "Guardar disponibilidad";
   }
 }
 /* =========================
@@ -369,6 +962,239 @@ if (nextWeekBtn) {
     render();
   });
 }
+
+function getSelectedVacancyData() {
+  const option =
+    availabilityVacancy
+      ?.selectedOptions?.[0];
+
+  if (
+    !option ||
+    !availabilityVacancy.value
+  ) {
+    return {
+      vacanteId: "",
+      vacanteTitulo: ""
+    };
+  }
+
+  return {
+    vacanteId:
+      availabilityVacancy.value,
+
+    vacanteTitulo:
+      option.textContent.trim()
+  };
+}
+
+function buildAvailabilityPayload() {
+  const vacancy =
+    getSelectedVacancyData();
+
+  return {
+    reclutador:
+      availabilityRecruiter
+        ?.value.trim() || "",
+
+    tipo:
+      availabilityType?.value ||
+      "presencial",
+
+    sucursal:
+      availabilitySucursal
+        ?.value.trim() || "",
+
+    vacanteId:
+      vacancy.vacanteId,
+
+    vacanteTitulo:
+      vacancy.vacanteTitulo,
+
+    fechaInicio:
+      availabilityStartDate?.value ||
+      "",
+
+    fechaFin:
+      availabilityEndDate?.value ||
+      "",
+
+    horaInicio:
+      availabilityStartTime?.value ||
+      "",
+
+    horaFin:
+      availabilityEndTime?.value ||
+      "",
+
+    diasSemana:
+      getSelectedAvailabilityDays(),
+
+    duracionMinutos:
+      Number(
+        availabilityDuration?.value ||
+        30
+      ),
+
+    descansoMinutos:
+      Number(
+        availabilityBreak?.value ||
+        0
+      ),
+
+    activo:
+      Boolean(
+        availabilityActive?.checked
+      )
+  };
+}
+
+function validateAvailabilityPayload(
+  payload
+) {
+  if (!payload.reclutador) {
+    return "Ingresa el nombre del reclutador.";
+  }
+
+  if (
+    !payload.fechaInicio ||
+    !payload.fechaFin
+  ) {
+    return "Selecciona el periodo de vigencia.";
+  }
+
+  if (
+    payload.fechaFin <
+    payload.fechaInicio
+  ) {
+    return "La fecha final no puede ser anterior a la inicial.";
+  }
+
+  if (
+    !payload.horaInicio ||
+    !payload.horaFin
+  ) {
+    return "Selecciona el horario inicial y final.";
+  }
+
+  if (
+    payload.horaFin <=
+    payload.horaInicio
+  ) {
+    return "La hora final debe ser posterior a la inicial.";
+  }
+
+  if (!payload.diasSemana.length) {
+    return "Selecciona al menos un día disponible.";
+  }
+
+  return "";
+}
+
+
+/* =========================
+   GUARDAR DISPONIBILIDAD
+========================= */
+
+async function guardarDisponibilidad() {
+  const payload =
+    buildAvailabilityPayload();
+
+  const validationError =
+    validateAvailabilityPayload(
+      payload
+    );
+
+  if (validationError) {
+    setStatus(
+      `⚠️ ${validationError}`
+    );
+    return;
+  }
+
+  const editingId =
+    availabilityId?.value || "";
+
+  const isEditing =
+    Boolean(editingId);
+
+  try {
+    if (saveAvailabilityBtn) {
+      saveAvailabilityBtn.disabled =
+        true;
+
+      saveAvailabilityBtn.textContent =
+        isEditing
+          ? "Actualizando..."
+          : "Guardando...";
+    }
+
+    setStatus(
+      isEditing
+        ? "Actualizando disponibilidad..."
+        : "Guardando disponibilidad..."
+    );
+
+    const url =
+      isEditing
+        ? `${API_URL}/api/disponibilidades-entrevista/${encodeURIComponent(
+            editingId
+          )}`
+        : `${API_URL}/api/disponibilidades-entrevista`;
+
+    const res = await fetch(url, {
+      method:
+        isEditing
+          ? "PUT"
+          : "POST",
+
+      headers: authHeaders({
+        "Content-Type":
+          "application/json"
+      }),
+
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(
+        data.error ||
+        "No fue posible guardar la disponibilidad."
+      );
+    }
+
+    closeAvailabilityModal();
+
+    await cargarDisponibilidades();
+
+    setStatus(
+      isEditing
+        ? "✅ Disponibilidad actualizada correctamente."
+        : "✅ Disponibilidad creada correctamente."
+    );
+  } catch (error) {
+    console.error(
+      "Error guardando disponibilidad:",
+      error
+    );
+
+    setStatus(
+      `⚠️ ${
+        error.message ||
+        "No fue posible guardar la disponibilidad."
+      }`
+    );
+  } finally {
+    if (saveAvailabilityBtn) {
+      saveAvailabilityBtn.disabled =
+        false;
+
+      saveAvailabilityBtn.textContent =
+        "Guardar disponibilidad";
+    }
+  }
+}
 /* =========================
    MODAL DETALLE
 ========================= */
@@ -432,7 +1258,11 @@ async function cambiarEstado(id, estado) {
       );
     }
 
-    await cargarEntrevistas();
+    await Promise.all([
+  cargarEntrevistas(),
+  cargarDisponibilidades(),
+  cargarVacantesDisponibilidad()
+]);
     closeDetailModal();
 
     setStatus(
@@ -543,7 +1373,11 @@ async function eliminarEntrevistaSeleccionada() {
     closeDeleteModal();
     closeDetailModal();
 
-    await cargarEntrevistas();
+    await Promise.all([
+  cargarEntrevistas(),
+  cargarDisponibilidades(),
+  cargarVacantesDisponibilidad()
+]);
 
     setStatus(
       `✅ La entrevista de ${candidatoNombre} fue eliminada correctamente.`
@@ -562,6 +1396,122 @@ async function eliminarEntrevistaSeleccionada() {
   }
 }
 
+async function cambiarEstadoDisponibilidad(
+  item
+) {
+  if (!item?.id) return;
+
+  const nuevoEstado =
+    item.activo === false;
+
+  try {
+    setStatus(
+      nuevoEstado
+        ? "Activando disponibilidad..."
+        : "Desactivando disponibilidad..."
+    );
+
+    const res = await fetch(
+      `${API_URL}/api/disponibilidades-entrevista/${encodeURIComponent(
+        item.id
+      )}/estado`,
+      {
+        method: "PATCH",
+
+        headers: authHeaders({
+          "Content-Type":
+            "application/json"
+        }),
+
+        body: JSON.stringify({
+          activo: nuevoEstado
+        })
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(
+        data.error ||
+        "No fue posible cambiar el estado."
+      );
+    }
+
+    await cargarDisponibilidades();
+
+    setStatus(
+      nuevoEstado
+        ? "✅ Disponibilidad activada."
+        : "✅ Disponibilidad desactivada."
+    );
+  } catch (error) {
+    console.error(
+      "Error cambiando disponibilidad:",
+      error
+    );
+
+    setStatus(
+      `⚠️ ${error.message}`
+    );
+  }
+}
+
+async function eliminarDisponibilidad(
+  item
+) {
+  if (!item?.id) return;
+
+  const confirmed =
+    window.confirm(
+      `¿Seguro que deseas eliminar la disponibilidad de ${
+        item.reclutador ||
+        "este reclutador"
+      }?\n\nEsta acción no se puede deshacer.`
+    );
+
+  if (!confirmed) return;
+
+  try {
+    setStatus(
+      "Eliminando disponibilidad..."
+    );
+
+    const res = await fetch(
+      `${API_URL}/api/disponibilidades-entrevista/${encodeURIComponent(
+        item.id
+      )}`,
+      {
+        method: "DELETE",
+        headers: authHeaders()
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(
+        data.error ||
+        "No fue posible eliminar la disponibilidad."
+      );
+    }
+
+    await cargarDisponibilidades();
+
+    setStatus(
+      "✅ Disponibilidad eliminada correctamente."
+    );
+  } catch (error) {
+    console.error(
+      "Error eliminando disponibilidad:",
+      error
+    );
+
+    setStatus(
+      `⚠️ ${error.message}`
+    );
+  }
+}
 
 function openRescheduleModal() {
   if (!selectedInterview) return;
@@ -620,7 +1570,11 @@ async function guardarReprogramacion() {
     closeRescheduleModal();
     closeDetailModal();
 
-    await cargarEntrevistas();
+   await Promise.all([
+  cargarEntrevistas(),
+  cargarDisponibilidades(),
+  cargarVacantesDisponibilidad()
+]);
 
     setStatus("✅ Entrevista reprogramada correctamente.");
   } catch (error) {
@@ -631,6 +1585,42 @@ async function guardarReprogramacion() {
       saveRescheduleBtn.disabled = false;
       saveRescheduleBtn.textContent = "Guardar cambios";
     }
+  }
+}
+
+function findAvailability(id) {
+  return disponibilidadesEntrevista
+    .find(
+      (item) => item.id === id
+    );
+}
+
+function handleAvailabilityAction(
+  action,
+  id
+) {
+  const item =
+    findAvailability(id);
+
+  if (!item) {
+    setStatus(
+      "⚠️ No se encontró la disponibilidad seleccionada."
+    );
+    return;
+  }
+
+  if (action === "edit") {
+    openAvailabilityModal(item);
+    return;
+  }
+
+  if (action === "toggle") {
+    cambiarEstadoDisponibilidad(item);
+    return;
+  }
+
+  if (action === "delete") {
+    eliminarDisponibilidad(item);
   }
 }
 
@@ -649,6 +1639,128 @@ async function cerrarSesion() {
     console.error(error);
     setStatus("⚠️ No fue posible cerrar sesión.");
   }
+}
+
+async function cargarVacantesDisponibilidad() {
+  if (!availabilityVacancy) return;
+
+  try {
+    const res = await fetch(
+      `${API_URL}/api/vacantes`
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(
+        data.error ||
+        "No fue posible cargar vacantes."
+      );
+    }
+
+    const currentValue =
+      availabilityVacancy.value;
+
+    availabilityVacancy.innerHTML = `
+      <option value="">
+        Todas las vacantes
+      </option>
+    `;
+
+    (Array.isArray(data) ? data : [])
+      .sort((a, b) =>
+        String(a.titulo || "")
+          .localeCompare(
+            String(b.titulo || ""),
+            "es",
+            {
+              sensitivity: "base"
+            }
+          )
+      )
+      .forEach((vacante) => {
+        const option =
+          document.createElement(
+            "option"
+          );
+
+        option.value =
+          vacante.id;
+
+        option.textContent =
+          `${vacante.titulo || "Vacante"} — ${
+            vacante.sucursal ||
+            vacante.ciudad ||
+            "General"
+          }`;
+
+        availabilityVacancy
+          .appendChild(option);
+      });
+
+    availabilityVacancy.value =
+      currentValue;
+  } catch (error) {
+    console.error(
+      "Error cargando vacantes:",
+      error
+    );
+  }
+}
+
+/* =========================
+   EVENTOS DISPONIBILIDAD
+========================= */
+
+if (openAvailabilityModalBtn) {
+  openAvailabilityModalBtn
+    .addEventListener(
+      "click",
+      () =>
+        openAvailabilityModal()
+    );
+}
+
+if (closeAvailabilityModalBtn) {
+  closeAvailabilityModalBtn
+    .addEventListener(
+      "click",
+      closeAvailabilityModal
+    );
+}
+
+if (closeAvailabilityBackdrop) {
+  closeAvailabilityBackdrop
+    .addEventListener(
+      "click",
+      closeAvailabilityModal
+    );
+}
+
+if (cancelAvailabilityBtn) {
+  cancelAvailabilityBtn
+    .addEventListener(
+      "click",
+      closeAvailabilityModal
+    );
+}
+
+if (saveAvailabilityBtn) {
+  saveAvailabilityBtn
+    .addEventListener(
+      "click",
+      guardarDisponibilidad
+    );
+}
+
+if (availabilityForm) {
+  availabilityForm.addEventListener(
+    "submit",
+    (event) => {
+      event.preventDefault();
+      guardarDisponibilidad();
+    }
+  );
 }
 
 /* =========================
@@ -704,7 +1816,11 @@ document.addEventListener("keydown", (event) => {
    INIT
 ========================= */
 async function init() {
-  await cargarEntrevistas();
+  await Promise.all([
+  cargarEntrevistas(),
+  cargarDisponibilidades(),
+  cargarVacantesDisponibilidad()
+]);
 }
 
 if (auth) {
