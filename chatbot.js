@@ -1,4 +1,4 @@
-const API_URL = "https://chatbot-reclutamiento-dcqb.onrender.com";
+const API_URL = window.location.origin;
 
 const toggle = document.getElementById("chatbot-toggle");
 const closeBtn = document.getElementById("chatbot-close");
