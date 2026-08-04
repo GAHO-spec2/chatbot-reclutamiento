@@ -18,7 +18,7 @@
     href="icons8-documento-32.png"
   />
 
-  <link rel="stylesheet" href="dashboard.css?v=4" />
+ <link rel="stylesheet" href="dashboard.css?v=5" />
 </head>
 
 <body>
@@ -253,31 +253,53 @@
 
       <div class="modal__body">
         <div class="modal-grid">
-          <div class="modal-item">
-            <span>Ciudad</span>
-            <strong id="modalCiudad">-</strong>
-          </div>
 
-          <div class="modal-item">
-            <span>Sucursal</span>
-            <strong id="modalSucursal">-</strong>
-          </div>
+  <div class="modal-item">
+    <span>Ciudad</span>
+    <strong id="modalCiudad">-</strong>
+  </div>
 
-          <div class="modal-item">
-            <span>Puesto de interés</span>
-            <strong id="modalPuesto">-</strong>
-          </div>
+  <div class="modal-item">
+    <span>Sucursal</span>
+    <strong id="modalSucursal">-</strong>
+  </div>
 
-          <div class="modal-item">
-            <span>Escolaridad</span>
-            <strong id="modalEscolaridad">-</strong>
-          </div>
+  <div class="modal-item">
+    <span>Puesto de interés</span>
+    <strong id="modalPuesto">-</strong>
+  </div>
 
-          <div class="modal-item">
-            <span>Fecha de registro</span>
-            <strong id="modalFecha">-</strong>
-          </div>
-        </div>
+  <div class="modal-item">
+    <span>Escolaridad</span>
+    <strong id="modalEscolaridad">-</strong>
+  </div>
+
+  <div class="modal-item">
+    <span>Fecha de registro</span>
+    <strong id="modalFecha">-</strong>
+  </div>
+
+  <div class="modal-item">
+    <span>Código postal</span>
+    <strong id="modalCodigoPostal">-</strong>
+  </div>
+
+  <div class="modal-item">
+    <span>Medio de transporte</span>
+    <strong id="modalMedioTransporte">-</strong>
+  </div>
+
+  <div class="modal-item">
+    <span>Vehículo propio</span>
+    <strong id="modalVehiculoPropio">-</strong>
+  </div>
+
+  <div class="modal-item">
+    <span>Tiempo máximo aceptado</span>
+    <strong id="modalTiempoMaximoTraslado">-</strong>
+  </div>
+
+</div>
 
         <div class="modal-section">
           <h4>Dirección de sucursal</h4>
@@ -306,6 +328,136 @@
             </a>
           </div>
         </div>
+        
+        <div class="modal-section candidate-distance-section">
+  <div class="candidate-distance-head">
+    <div>
+      <span class="candidate-distance-eyebrow">
+        Compatibilidad geográfica
+      </span>
+
+      <h4>Distancia a la sucursal</h4>
+    </div>
+
+    <span
+      id="modalDistanciaBadge"
+      class="distance-badge distance-badge--unknown"
+    >
+      No disponible
+    </span>
+  </div>
+
+  <div class="candidate-distance-grid">
+    <div
+  id="modalCompatibilidadAlert"
+  class="transport-compatibility transport-compatibility--unknown"
+>
+  No fue posible evaluar la compatibilidad del traslado.
+</div>
+
+    <div class="candidate-distance-item">
+      <span>📍 Distancia aproximada</span>
+      <strong id="modalDistanciaSucursal">-</strong>
+    </div>
+
+    <div class="candidate-distance-item">
+      <span>⏱ Tiempo estimado</span>
+      <strong id="modalTiempoEstimado">-</strong>
+    </div>
+
+    <div class="candidate-distance-item">
+      <span>🏢 Evaluación</span>
+      <strong id="modalEtiquetaDistancia">-</strong>
+    </div>
+    <div class="candidate-distance-item">
+  <span>✅ Compatibilidad de traslado</span>
+  <strong id="modalCompatibilidadTraslado">-</strong>
+</div>
+
+  </div>
+
+  <p class="candidate-distance-note">
+    La distancia y el tiempo son aproximados y se calculan con base en el
+    código postal y el medio de transporte indicado por el candidato.
+  </p>
+</div>
+        
+        <div class="modal-section candidate-score-section">
+  <div class="candidate-score-head">
+    <div>
+      <span class="candidate-score-eyebrow">
+        Evaluación automática de apoyo
+      </span>
+
+      <h4>Compatibilidad con la vacante</h4>
+    </div>
+
+    <div
+      id="modalCompatibilityScore"
+      class="candidate-score-circle candidate-score-circle--unknown"
+    >
+      <strong id="modalCompatibilityScoreValue">-</strong>
+      <span>compatibilidad</span>
+    </div>
+  </div>
+
+  <div class="candidate-score-summary">
+    <span
+      id="modalCompatibilityLevel"
+      class="compatibility-level compatibility-level--unknown"
+    >
+      No disponible
+    </span>
+
+    <p>
+      Esta evaluación sirve como apoyo para RH y no aprueba ni rechaza
+      automáticamente al candidato.
+    </p>
+  </div>
+
+  <div class="candidate-score-grid">
+    <div class="candidate-score-item">
+      <span>📄 CV y habilidades</span>
+      <strong id="modalScoreCv">-</strong>
+    </div>
+
+    <div class="candidate-score-item">
+      <span>💼 Experiencia</span>
+      <strong id="modalScoreExperience">-</strong>
+    </div>
+
+    <div class="candidate-score-item">
+      <span>🗓 Disponibilidad</span>
+      <strong id="modalScoreAvailability">-</strong>
+    </div>
+
+    <div class="candidate-score-item">
+      <span>📍 Geografía</span>
+      <strong id="modalScoreGeography">-</strong>
+    </div>
+
+    <div class="candidate-score-item">
+      <span>💬 Preguntas</span>
+      <strong id="modalScoreQuestions">-</strong>
+    </div>
+  </div>
+
+  <div class="candidate-evaluation-columns">
+    <div class="candidate-evaluation-box">
+      <h5>✅ Motivos favorables</h5>
+      <ul id="modalCompatibilityReasons">
+        <li>No hay información disponible.</li>
+      </ul>
+    </div>
+
+    <div class="candidate-evaluation-box candidate-evaluation-box--alerts">
+      <h5>⚠️ Puntos por revisar</h5>
+      <ul id="modalCompatibilityAlerts">
+        <li>No hay alertas registradas.</li>
+      </ul>
+    </div>
+  </div>
+</div>
 
         <div class="modal-section">
           <h4>Experiencia</h4>
@@ -483,7 +635,8 @@
   ========================== -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  
+  <script src="dashboard.js?v=5"></script>
 
-  <script src="dashboard.js?v=4"></script>
 </body>
 </html>
