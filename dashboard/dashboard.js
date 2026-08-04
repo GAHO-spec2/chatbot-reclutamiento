@@ -1,4 +1,4 @@
-const API_URL = "https://chatbot-reclutamiento-dcqb.onrender.com";
+const API_URL ="https://chatbot-reclutamiento-dcqb.onrender.com";
 const DASHBOARD_CACHE_KEY = "rh_postulaciones_cache";
 const DASHBOARD_CACHE_TIME = 2 * 60 * 1000;
 /* =========================
@@ -1074,6 +1074,28 @@ function renderPostulaciones() {
         postulacion.distanciaSucursalKm
       ).toFixed(1)} km`
     : "Distancia no disponible";
+    
+    const compatibilityScore =
+  Number(
+    postulacion.puntuacionCompatibilidad
+  );
+
+const compatibilityAvailable =
+  Number.isFinite(
+    compatibilityScore
+  );
+
+const compatibilityText =
+  compatibilityAvailable
+    ? `${Math.round(
+        compatibilityScore
+      )}%`
+    : "Sin evaluar";
+
+const compatibilityLabel =
+  postulacion
+    .etiquetaNivelCompatibilidad ||
+  "Compatibilidad no disponible";
 
     card.innerHTML = `
       <div class="candidate-primary">
@@ -1177,27 +1199,6 @@ function renderPostulaciones() {
 
   updateStats();
 }
-const compatibilityScore =
-  Number(
-    postulacion.puntuacionCompatibilidad
-  );
-
-const compatibilityAvailable =
-  Number.isFinite(compatibilityScore);
-
-const compatibilityText =
-  compatibilityAvailable
-    ? `${Math.round(
-        compatibilityScore
-      )}%`
-    : "Sin evaluar";
-
-const compatibilityLabel =
-  postulacion
-    .etiquetaNivelCompatibilidad ||
-  "Compatibilidad no disponible";
-
-
 /* =========================
    MODAL CANDIDATO
 ========================= */
