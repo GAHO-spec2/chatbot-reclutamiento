@@ -18,7 +18,7 @@
     href="icons8-documento-32.png"
   />
   
-  <link rel="stylesheet" href="entrevistas.css?v=4" />
+  <link rel="stylesheet" href="entrevistas.css?v=7" />
 
 </head>
 
@@ -412,56 +412,57 @@
           ✕
         </button>
       </div>
-
+      
       <div class="modal__body">
-        <div class="modal-grid">
-          <div class="modal-item">
-            <span>Candidato</span>
-            <strong id="detailNombre">-</strong>
-          </div>
+  <div class="modal-grid">
+    <div class="modal-item">
+      <span>Candidato</span>
+      <strong id="detailNombre">-</strong>
+    </div>
 
-          <div class="modal-item">
-            <span>Puesto</span>
-            <strong id="detailPuesto">-</strong>
-          </div>
+    <div class="modal-item">
+      <span>Puesto</span>
+      <strong id="detailPuesto">-</strong>
+    </div>
 
-          <div class="modal-item">
-            <span>Marca</span>
-            <strong id="detailMarca">-</strong>
-          </div>
+    <div class="modal-item">
+      <span>Marca</span>
+      <strong id="detailMarca">-</strong>
+    </div>
 
-          <div class="modal-item">
-            <span>Sucursal</span>
-            <strong id="detailSucursal">-</strong>
-          </div>
+    <div class="modal-item">
+      <span>Sucursal</span>
+      <strong id="detailSucursal">-</strong>
+    </div>
 
-          <div class="modal-item">
-            <span>Fecha</span>
-            <strong id="detailFecha">-</strong>
-          </div>
+    <div class="modal-item">
+      <span>Fecha</span>
+      <strong id="detailFecha">-</strong>
+    </div>
 
-          <div class="modal-item">
-            <span>Hora</span>
-            <strong id="detailHora">-</strong>
-          </div>
+    <div class="modal-item">
+      <span>Hora</span>
+      <strong id="detailHora">-</strong>
+    </div>
 
-          <div class="modal-item">
-            <span>Entrevistador</span>
-            <strong id="detailEntrevistador">-</strong>
-          </div>
+    <div class="modal-item">
+      <span>Entrevistador</span>
+      <strong id="detailEntrevistador">-</strong>
+    </div>
 
-          <div class="modal-item">
-            <span>Tipo</span>
-            <strong id="detailTipo">-</strong>
-          </div>
-        </div>
+    <div class="modal-item">
+      <span>Tipo</span>
+      <strong id="detailTipo">-</strong>
+    </div>
+  </div>
 
-        <div class="modal-section">
-          <h4>Comentarios internos</h4>
-          <p id="detailComentarios">-</p>
-        </div>
-      </div>
+  <div class="modal-section">
+    <h4>Comentarios internos</h4>
+    <p id="detailComentarios">-</p>
+  </div>
+</div>
 
+     
       <div class="modal__footer">
         <button
           id="confirmBtn"
@@ -671,12 +672,16 @@
   <div class="modal__content modal__content--availability">
     <div class="modal__header">
       <div>
+       <span class="availability-modal-eyebrow">
+          Agenda inteligente
+        </span>
+
         <h3 id="availabilityModalTitle">
-          Configurar disponibilidad
+          Configuración de disponibilidad
         </h3>
 
         <p>
-          Define los horarios que el chatbot podrá ofrecer a los candidatos.
+          Define cuándo, dónde y para cuáles vacantes estará disponible el reclutador.
         </p>
       </div>
 
@@ -736,30 +741,64 @@
               </option>
             </select>
           </div>
-
+          
           <div class="field">
-            <label for="availabilitySucursal">
-              Sucursal
-            </label>
+  <label for="availabilityRegion">
+    Región de reclutamiento
+    <span class="field-required">*</span>
+  </label>
 
-            <input
-              id="availabilitySucursal"
-              type="text"
-              placeholder="Ej. Las Misiones"
-            />
-          </div>
+  <select
+    id="availabilityRegion"
+    required
+  >
+    <option value="">
+      Selecciona una región
+    </option>
+  </select>
 
-          <div class="field">
-            <label for="availabilityVacancy">
-              Vacante
-            </label>
+  <small class="field-help">
+    Ej. Ciudad Juárez, Chihuahua, Guadalajara, Mexicali o El Paso.
+  </small>
+</div>
 
-            <select id="availabilityVacancy">
-              <option value="">
-                Todas las vacantes
-              </option>
-            </select>
-          </div>
+         <div class="field">
+  <label for="availabilitySucursal">
+    Sucursal
+  </label>
+
+  <select
+    id="availabilitySucursal"
+    disabled
+  >
+    <option value="">
+      Primero selecciona una región
+    </option>
+  </select>
+
+  <small class="field-help">
+    Puedes aplicar la agenda a todas las sucursales de la región.
+  </small>
+</div>
+
+          <div class="field field--full">
+  <label for="availabilityVacancy">
+    Vacante
+  </label>
+
+  <select
+    id="availabilityVacancy"
+    disabled
+  >
+    <option value="">
+      Primero selecciona una región
+    </option>
+  </select>
+
+  <small class="field-help">
+    Si eliges una vacante específica, estos horarios solamente se ofrecerán a los candidatos de esa vacante.
+  </small>
+</div>
 
           <div class="field">
             <label for="availabilityStartDate">
@@ -965,10 +1004,10 @@
 
       <button
         id="saveAvailabilityBtn"
-        class="btn btn--primary"
+        class="btn btn--primary availability-save-btn"
         type="button"
       >
-        Guardar disponibilidad
+        💾 Guardar configuración
       </button>
     </div>
   </div>
@@ -981,7 +1020,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   
-<script src="entrevistas.js?v=6"></script>
-
+<script src="entrevistas.js?v=8"></script>
+  
 </body>
 </html>

@@ -86,6 +86,9 @@ let selectedInterview = null;
 let disponibilidadesEntrevista = [];
 let selectedAvailability = null;
 
+/* Vacantes utilizadas para construir región, sucursal y puesto */
+let vacantesDisponibilidad = [];
+
 /* =========================
    ELEMENTOS
 ========================= */
@@ -218,6 +221,15 @@ const availabilityRecruiter =
 const availabilityType =
   document.getElementById(
     "availabilityType"
+  );
+const availabilityRegion =
+  document.getElementById(
+    "availabilityRegion"
+  );
+
+const availabilityCoverageSummary =
+  document.getElementById(
+    "availabilityCoverageSummary"
   );
 
 const availabilitySucursal =
@@ -415,7 +427,387 @@ function normalizar(text = "") {
     .replace(/[\u0300-\u036f]/g, "")
     .trim();
 }
+/* =========================
+   COBERTURA DE RECLUTAMIENTO
+========================= */
 
+function obtenerRegionVacante(
+  vacante = {}
+) {
+  return String(
+    vacante.ciudad ||
+    vacante.region ||
+    vacante.zona ||
+    ""
+  ).trim();
+}
+
+function obtenerSucursalId(
+  vacante = {}
+) {
+  return String(
+    vacante.sucursalId ||
+    vacante.numeroTienda ||
+    vacante.sucursal ||
+    ""
+  ).trim();
+}
+
+function obtenerSucursalNombre(
+  vacante = {}
+) {
+  return String(
+    vacante.sucursal ||
+    vacante.sucursalNombre ||
+    "Sucursal sin nombre"
+  ).trim();
+}
+
+function obtenerVacantesPorRegion(
+  region = ""
+) {
+  if (!region) return [];
+
+  return vacantesDisponibilidad.filter(
+    (vacante) =>
+      normalizar(
+        obtenerRegionVacante(vacante)
+      ) === normalizar(region)
+  );
+}
+
+function obtenerVacantesPorCobertura({
+  region = "",
+  sucursalId = ""
+} = {}) {
+  let resultado =
+    obtenerVacantesPorRegion(region);
+
+  if (sucursalId) {
+    resultado = resultado.filter(
+      (vacante) =>
+        normalizar(
+          obtenerSucursalId(vacante)
+        ) === normalizar(sucursalId)
+    );
+  }
+
+  return resultado;
+}
+
+function obtenerOpcionSeleccionada(
+  select
+) {
+  return select
+    ?.selectedOptions?.[0] || null;
+}
+
+function obtenerTextoSeleccionado(
+  select
+) {
+  const option =
+    obtenerOpcionSeleccionada(select);
+
+  return option
+    ? option.textContent.trim()
+    : "";
+}
+
+function crearOpcion({
+  value = "",
+  text = "",
+  dataset = {}
+} = {}) {
+  const option =
+    document.createElement("option");
+
+  option.value = value;
+  option.textContent = text;
+
+  Object.entries(dataset)
+    .forEach(([key, datasetValue]) => {
+      option.dataset[key] =
+        String(datasetValue ?? "");
+    });
+
+  return option;
+}
+
+function actualizarResumenCobertura() {
+  if (!availabilityCoverageSummary) {
+    return;
+  }
+
+  const region =
+    availabilityRegion?.value || "";
+
+  const sucursal =
+    availabilitySucursal?.value
+      ? obtenerTextoSeleccionado(
+          availabilitySucursal
+        )
+      : "Todas las sucursales";
+
+  const vacante =
+    availabilityVacancy?.value
+      ? obtenerTextoSeleccionado(
+          availabilityVacancy
+        )
+      : "Todas las vacantes";
+
+  if (!region) {
+    availabilityCoverageSummary.innerHTML = `
+      <span class="availability-coverage-summary__icon">
+        ℹ️
+      </span>
+
+      <p>
+        Selecciona una región para configurar la cobertura del reclutador.
+      </p>
+    `;
+
+    return;
+  }
+
+  availabilityCoverageSummary.innerHTML = `
+    <span class="availability-coverage-summary__icon">
+      📍
+    </span>
+
+    <p>
+      Esta agenda se aplicará en
+      <strong>${escapeHtml(region)}</strong>,
+      para
+      <strong>${escapeHtml(sucursal)}</strong>
+      y
+      <strong>${escapeHtml(vacante)}</strong>.
+    </p>
+  `;
+}
+function poblarRegionesDisponibilidad(
+  selectedRegion = ""
+) {
+  if (!availabilityRegion) return;
+
+  const regiones = [
+    ...new Set(
+      vacantesDisponibilidad
+        .map(obtenerRegionVacante)
+        .filter(Boolean)
+    )
+  ].sort((a, b) =>
+    a.localeCompare(
+      b,
+      "es",
+      {
+        sensitivity: "base"
+      }
+    )
+  );
+
+  availabilityRegion.innerHTML = `
+    <option value="">
+      Selecciona una región
+    </option>
+  `;
+
+  regiones.forEach((region) => {
+    availabilityRegion.appendChild(
+      crearOpcion({
+        value: region,
+        text: region
+      })
+    );
+  });
+
+  availabilityRegion.value =
+    selectedRegion;
+
+  poblarSucursalesDisponibilidad();
+}
+
+function poblarSucursalesDisponibilidad(
+  selectedSucursalId = ""
+) {
+  if (!availabilitySucursal) return;
+
+  const region =
+    availabilityRegion?.value || "";
+
+  availabilitySucursal.innerHTML = "";
+
+  if (!region) {
+    availabilitySucursal.disabled = true;
+
+    availabilitySucursal.appendChild(
+      crearOpcion({
+        value: "",
+        text:
+          "Primero selecciona una región"
+      })
+    );
+
+    poblarVacantesDisponibilidad();
+
+    actualizarResumenCobertura();
+    return;
+  }
+
+  const vacantesRegion =
+    obtenerVacantesPorRegion(region);
+
+  const mapaSucursales = new Map();
+
+  vacantesRegion.forEach((vacante) => {
+    const id =
+      obtenerSucursalId(vacante);
+
+    const nombre =
+      obtenerSucursalNombre(vacante);
+
+    if (!id || mapaSucursales.has(id)) {
+      return;
+    }
+
+    mapaSucursales.set(id, nombre);
+  });
+
+  availabilitySucursal.disabled =
+    false;
+
+  availabilitySucursal.appendChild(
+    crearOpcion({
+      value: "",
+      text:
+        "Todas las sucursales"
+    })
+  );
+
+  [...mapaSucursales.entries()]
+    .sort((a, b) =>
+      a[1].localeCompare(
+        b[1],
+        "es",
+        {
+          sensitivity: "base"
+        }
+      )
+    )
+    .forEach(([id, nombre]) => {
+      availabilitySucursal.appendChild(
+        crearOpcion({
+          value: id,
+          text: nombre
+        })
+      );
+    });
+
+  availabilitySucursal.value =
+    selectedSucursalId;
+
+  poblarVacantesDisponibilidad();
+
+  actualizarResumenCobertura();
+}
+
+function poblarVacantesDisponibilidad(
+  selectedVacanteId = ""
+) {
+  if (!availabilityVacancy) return;
+
+  const region =
+    availabilityRegion?.value || "";
+
+  const sucursalId =
+    availabilitySucursal?.value || "";
+
+  availabilityVacancy.innerHTML = "";
+
+  if (!region) {
+    availabilityVacancy.disabled = true;
+
+    availabilityVacancy.appendChild(
+      crearOpcion({
+        value: "",
+        text:
+          "Primero selecciona una región"
+      })
+    );
+
+    actualizarResumenCobertura();
+    return;
+  }
+
+  const vacantesFiltradas =
+    obtenerVacantesPorCobertura({
+      region,
+      sucursalId
+    });
+
+  availabilityVacancy.disabled =
+    false;
+
+  availabilityVacancy.appendChild(
+    crearOpcion({
+      value: "",
+      text:
+        "Todas las vacantes"
+    })
+  );
+
+  vacantesFiltradas
+    .sort((a, b) => {
+      const tituloA =
+        String(a.titulo || "");
+
+      const tituloB =
+        String(b.titulo || "");
+
+      return tituloA.localeCompare(
+        tituloB,
+        "es",
+        {
+          sensitivity: "base"
+        }
+      );
+    })
+    .forEach((vacante) => {
+      const titulo =
+        vacante.titulo ||
+        "Vacante";
+
+      const sucursal =
+        obtenerSucursalNombre(vacante);
+
+      availabilityVacancy.appendChild(
+        crearOpcion({
+          value: vacante.id,
+          text:
+            `${titulo} — ${sucursal}`,
+
+          dataset: {
+            sucursalId:
+              obtenerSucursalId(
+                vacante
+              ),
+
+            sucursalNombre:
+              sucursal,
+
+            region:
+              obtenerRegionVacante(
+                vacante
+              )
+          }
+        })
+      );
+    });
+
+  availabilityVacancy.value =
+    selectedVacanteId;
+
+  actualizarResumenCobertura();
+}
 /* =========================
    CARGA DE DATOS
 ========================= */
@@ -528,13 +920,32 @@ function renderDisponibilidades() {
         const active =
           item.activo !== false;
 
-        const vacancy =
-          item.vacanteTitulo ||
-          "Todas las vacantes";
+        const region =
+  item.region ||
+  item.zona ||
+  item.ciudad ||
+  "Región no configurada";
 
-        const branch =
-          item.sucursal ||
-          "Todas las sucursales";
+const vacancy =
+  item.vacanteTitulo ||
+  "Todas las vacantes";
+
+const branch =
+  item.sucursal ||
+  "Todas las sucursales";
+
+const recruiterInitials =
+  String(
+    item.reclutador ||
+    "RH"
+  )
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) =>
+      part.charAt(0).toUpperCase()
+    )
+    .join("");
 
         return `
           <article class="availability-item">
@@ -689,7 +1100,7 @@ function resetAvailabilityForm() {
 
   if (availabilityModalTitle) {
     availabilityModalTitle.textContent =
-      "Configurar disponibilidad";
+      "Configuración de disponibilidad";
   }
 
   if (availabilityStartDate) {
@@ -735,7 +1146,12 @@ function resetAvailabilityForm() {
   setSelectedAvailabilityDays([
     1, 2, 3, 4, 5
   ]);
+
+  poblarRegionesDisponibilidad();
+
+  actualizarResumenCobertura();
 }
+
 
 function openAvailabilityModal(
   item = null
@@ -745,62 +1161,129 @@ function openAvailabilityModal(
   if (item) {
     selectedAvailability = item;
 
-    availabilityId.value =
-      item.id || "";
+    if (availabilityId) {
+      availabilityId.value =
+        item.id || "";
+    }
 
-    availabilityModalTitle.textContent =
-      "Editar disponibilidad";
+    if (availabilityModalTitle) {
+      availabilityModalTitle.textContent =
+        "Editar configuración";
+    }
 
-    availabilityRecruiter.value =
-      item.reclutador || "";
+    if (availabilityRecruiter) {
+      availabilityRecruiter.value =
+        item.reclutador || "";
+    }
 
-    availabilityType.value =
-      item.tipo || "presencial";
+    if (availabilityType) {
+      availabilityType.value =
+        item.tipo || "presencial";
+    }
 
-    availabilitySucursal.value =
-      item.sucursal || "";
+    if (availabilityStartDate) {
+      availabilityStartDate.value =
+        item.fechaInicio || "";
+    }
 
-    availabilityVacancy.value =
-      item.vacanteId || "";
+    if (availabilityEndDate) {
+      availabilityEndDate.value =
+        item.fechaFin || "";
+    }
 
-    availabilityStartDate.value =
-      item.fechaInicio || "";
+    if (availabilityStartTime) {
+      availabilityStartTime.value =
+        item.horaInicio || "";
+    }
 
-    availabilityEndDate.value =
-      item.fechaFin || "";
+    if (availabilityEndTime) {
+      availabilityEndTime.value =
+        item.horaFin || "";
+    }
 
-    availabilityStartTime.value =
-      item.horaInicio || "";
+    if (availabilityDuration) {
+      availabilityDuration.value =
+        String(
+          item.duracionMinutos || 30
+        );
+    }
 
-    availabilityEndTime.value =
-      item.horaFin || "";
+    if (availabilityBreak) {
+      availabilityBreak.value =
+        String(
+          item.descansoMinutos || 0
+        );
+    }
 
-    availabilityDuration.value =
-      String(
-        item.duracionMinutos || 30
-      );
-
-    availabilityBreak.value =
-      String(
-        item.descansoMinutos || 0
-      );
-
-    availabilityActive.checked =
-      item.activo !== false;
+    if (availabilityActive) {
+      availabilityActive.checked =
+        item.activo !== false;
+    }
 
     setSelectedAvailabilityDays(
       item.diasSemana || []
     );
+
+    const region =
+      item.region ||
+      item.zona ||
+      item.ciudad ||
+      "";
+
+    poblarRegionesDisponibilidad(
+      region
+    );
+
+    const sucursalId =
+      item.sucursalId ||
+      item.numeroTienda ||
+      "";
+
+    poblarSucursalesDisponibilidad(
+      sucursalId
+    );
+
+    if (
+      !sucursalId &&
+      item.sucursal &&
+      availabilitySucursal
+    ) {
+      const option =
+        [...availabilitySucursal.options]
+          .find(
+            (currentOption) =>
+              normalizar(
+                currentOption.textContent
+              ) ===
+              normalizar(
+                item.sucursal
+              )
+          );
+
+      if (option) {
+        availabilitySucursal.value =
+          option.value;
+
+        poblarVacantesDisponibilidad(
+          item.vacanteId || ""
+        );
+      }
+    } else {
+      poblarVacantesDisponibilidad(
+        item.vacanteId || ""
+      );
+    }
   }
 
-  if (availabilityModal) {
-    availabilityModal.classList.remove(
-      "hidden"
-    );
-  }
+  actualizarResumenCobertura();
+
+  availabilityModal?.classList.remove(
+    "hidden"
+  );
 
   availabilityRecruiter?.focus();
 }
+
 
 function closeAvailabilityModal() {
   if (availabilityModal) {
@@ -816,7 +1299,7 @@ function closeAvailabilityModal() {
       false;
 
     saveAvailabilityBtn.textContent =
-      "Guardar disponibilidad";
+  "💾 Guardar configuración";
   }
 }
 /* =========================
@@ -965,8 +1448,9 @@ if (nextWeekBtn) {
 
 function getSelectedVacancyData() {
   const option =
-    availabilityVacancy
-      ?.selectedOptions?.[0];
+    obtenerOpcionSeleccionada(
+      availabilityVacancy
+    );
 
   if (
     !option ||
@@ -978,11 +1462,19 @@ function getSelectedVacancyData() {
     };
   }
 
+  const vacante =
+    vacantesDisponibilidad.find(
+      (item) =>
+        item.id ===
+        availabilityVacancy.value
+    );
+
   return {
     vacanteId:
       availabilityVacancy.value,
 
     vacanteTitulo:
+      vacante?.titulo ||
       option.textContent.trim()
   };
 }
@@ -990,6 +1482,24 @@ function getSelectedVacancyData() {
 function buildAvailabilityPayload() {
   const vacancy =
     getSelectedVacancyData();
+
+  const selectedBranch =
+    obtenerOpcionSeleccionada(
+      availabilitySucursal
+    );
+
+  const region =
+    availabilityRegion?.value || "";
+
+  const sucursalId =
+    availabilitySucursal?.value || "";
+
+  const sucursal =
+    sucursalId
+      ? selectedBranch
+          ?.textContent
+          ?.trim() || ""
+      : "";
 
   return {
     reclutador:
@@ -1000,9 +1510,12 @@ function buildAvailabilityPayload() {
       availabilityType?.value ||
       "presencial",
 
-    sucursal:
-      availabilitySucursal
-        ?.value.trim() || "",
+    region,
+    zona: region,
+    ciudad: region,
+
+    sucursalId,
+    sucursal,
 
     vacanteId:
       vacancy.vacanteId,
@@ -1054,6 +1567,10 @@ function validateAvailabilityPayload(
   if (!payload.reclutador) {
     return "Ingresa el nombre del reclutador.";
   }
+  
+  if (!payload.region) {
+  return "Selecciona la región de reclutamiento.";
+}
 
   if (
     !payload.fechaInicio ||
@@ -1191,7 +1708,7 @@ async function guardarDisponibilidad() {
         false;
 
       saveAvailabilityBtn.textContent =
-        "Guardar disponibilidad";
+        "💾 Guardar configuración";
     }
   }
 }
@@ -1641,9 +2158,8 @@ async function cerrarSesion() {
   }
 }
 
-async function cargarVacantesDisponibilidad() {
-  if (!availabilityVacancy) return;
 
+async function cargarVacantesDisponibilidad() {
   try {
     const res = await fetch(
       `${API_URL}/api/vacantes`
@@ -1658,55 +2174,79 @@ async function cargarVacantesDisponibilidad() {
       );
     }
 
-    const currentValue =
-      availabilityVacancy.value;
+    vacantesDisponibilidad =
+      Array.isArray(data)
+        ? data
+        : [];
 
-    availabilityVacancy.innerHTML = `
-      <option value="">
-        Todas las vacantes
-      </option>
-    `;
-
-    (Array.isArray(data) ? data : [])
-      .sort((a, b) =>
-        String(a.titulo || "")
-          .localeCompare(
-            String(b.titulo || ""),
-            "es",
-            {
-              sensitivity: "base"
-            }
-          )
-      )
-      .forEach((vacante) => {
-        const option =
-          document.createElement(
-            "option"
-          );
-
-        option.value =
-          vacante.id;
-
-        option.textContent =
-          `${vacante.titulo || "Vacante"} — ${
-            vacante.sucursal ||
-            vacante.ciudad ||
-            "General"
-          }`;
-
-        availabilityVacancy
-          .appendChild(option);
-      });
-
-    availabilityVacancy.value =
-      currentValue;
+    poblarRegionesDisponibilidad(
+      availabilityRegion?.value || ""
+    );
   } catch (error) {
     console.error(
       "Error cargando vacantes:",
       error
     );
+
+    vacantesDisponibilidad = [];
+
+    if (availabilityRegion) {
+      availabilityRegion.innerHTML = `
+        <option value="">
+          No fue posible cargar las regiones
+        </option>
+      `;
+    }
+
+    if (availabilitySucursal) {
+      availabilitySucursal.innerHTML = `
+        <option value="">
+          No fue posible cargar sucursales
+        </option>
+      `;
+
+      availabilitySucursal.disabled =
+        true;
+    }
+
+    if (availabilityVacancy) {
+      availabilityVacancy.innerHTML = `
+        <option value="">
+          No fue posible cargar vacantes
+        </option>
+      `;
+
+      availabilityVacancy.disabled =
+        true;
+    }
   }
 }
+
+if (availabilityRegion) {
+  availabilityRegion.addEventListener(
+    "change",
+    () => {
+      poblarSucursalesDisponibilidad();
+    }
+  );
+}
+
+if (availabilitySucursal) {
+  availabilitySucursal.addEventListener(
+    "change",
+    () => {
+      poblarVacantesDisponibilidad();
+    }
+  );
+}
+
+if (availabilityVacancy) {
+  availabilityVacancy.addEventListener(
+    "change",
+    actualizarResumenCobertura
+  );
+}
+
 
 /* =========================
    EVENTOS DISPONIBILIDAD
