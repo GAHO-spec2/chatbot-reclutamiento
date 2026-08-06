@@ -51,6 +51,9 @@ const ENTREVISTAS_COLLECTION = "entrevistas";
 const DISPONIBILIDADES_ENTREVISTA_COLLECTION =
   "disponibilidades_entrevista";
 
+const BLOQUEOS_ENTREVISTA_COLLECTION =
+  "bloqueos_entrevista";
+
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
   .split(",")
   .map((email) => email.trim().toLowerCase())
@@ -691,11 +694,19 @@ function horarioCoincideConEntrevista(
     return false;
   }
 
-  if (
-    entrevista.estado === "cancelada"
-  ) {
-    return false;
-  }
+  const estadosQueLiberanHorario = [
+  "cancelada",
+  "eliminada"
+];
+
+if (
+  estadosQueLiberanHorario.includes(
+    entrevista.estado
+  ) ||
+  entrevista.bloqueoLiberado === true
+) {
+  return false;
+}
 
   return (
     horario.fecha === entrevista.fecha &&
@@ -1024,7 +1035,316 @@ async function eliminarVacanteFirestore(id) {
 function leerSucursales() {
   return leerJson(sucursalesFile, sucursalesIniciales);
 }
+/* =========================================================
+   MOTOR DE ASIGNACIÓN DE AGENDA
+========================================================= */
 
+function obtenerRegionDisponibilidad(
+  disponibilidad = {}
+) {
+  return String(
+    disponibilidad.region ||
+    disponibilidad.zona ||
+    disponibilidad.ciudad ||
+    ""
+  ).trim();
+}
+
+function obtenerRegionVacante(
+  vacante = {}
+) {
+  return String(
+    vacante.region ||
+    vacante.zona ||
+    vacante.ciudad ||
+    ""
+  ).trim();
+}
+
+function valoresIguales(
+  valorA = "",
+  valorB = ""
+) {
+  return (
+    normalizarTexto(valorA) ===
+    normalizarTexto(valorB)
+  );
+}
+
+function disponibilidadCoincideConRegion(
+  disponibilidad,
+  region
+) {
+  if (!region) {
+    return false;
+  }
+
+  const regionDisponibilidad =
+    obtenerRegionDisponibilidad(
+      disponibilidad
+    );
+
+  if (!regionDisponibilidad) {
+    return false;
+  }
+
+  return valoresIguales(
+    regionDisponibilidad,
+    region
+  );
+}
+
+function disponibilidadCoincideConSucursal({
+  disponibilidad,
+  sucursalId = "",
+  sucursal = ""
+} = {}) {
+  if (!disponibilidad) {
+    return false;
+  }
+
+  if (
+    sucursalId &&
+    disponibilidad.sucursalId
+  ) {
+    return valoresIguales(
+      disponibilidad.sucursalId,
+      sucursalId
+    );
+  }
+
+  if (
+    sucursal &&
+    disponibilidad.sucursal
+  ) {
+    return valoresIguales(
+      disponibilidad.sucursal,
+      sucursal
+    );
+  }
+
+  return false;
+}
+
+function disponibilidadEsGeneralSucursal(
+  disponibilidad = {}
+) {
+  return (
+    !String(
+      disponibilidad.sucursalId || ""
+    ).trim() &&
+    !String(
+      disponibilidad.sucursal || ""
+    ).trim()
+  );
+}
+
+function disponibilidadEsGeneralVacante(
+  disponibilidad = {}
+) {
+  return !String(
+    disponibilidad.vacanteId || ""
+  ).trim();
+}
+
+function disponibilidadCoincideConVacante(
+  disponibilidad,
+  vacanteId = ""
+) {
+  if (
+    !disponibilidad ||
+    !vacanteId
+  ) {
+    return false;
+  }
+
+  return valoresIguales(
+    disponibilidad.vacanteId,
+    vacanteId
+  );
+}
+function seleccionarDisponibilidadesIdeales({
+  disponibilidades = [],
+  region = "",
+  sucursalId = "",
+  sucursal = "",
+  vacanteId = "",
+  tipo = ""
+} = {}) {
+  const activas =
+    disponibilidades.filter(
+      (item) => {
+        if (!item) return false;
+
+        if (item.activo === false) {
+          return false;
+        }
+
+        if (
+          tipo &&
+          item.tipo &&
+          !valoresIguales(
+            item.tipo,
+            tipo
+          )
+        ) {
+          return false;
+        }
+
+        return disponibilidadCoincideConRegion(
+          item,
+          region
+        );
+      }
+    );
+
+  /*
+   * PRIORIDAD 1
+   * Región + sucursal + vacante.
+   */
+  const prioridad1 =
+    activas.filter(
+      (item) =>
+        disponibilidadCoincideConSucursal({
+          disponibilidad: item,
+          sucursalId,
+          sucursal
+        }) &&
+        disponibilidadCoincideConVacante(
+          item,
+          vacanteId
+        )
+    );
+
+  if (prioridad1.length) {
+    return {
+      nivel: 1,
+      criterio:
+        "region_sucursal_vacante",
+      disponibilidades:
+        prioridad1
+    };
+  }
+
+  /*
+   * PRIORIDAD 2
+   * Región + sucursal +
+   * todas las vacantes.
+   */
+  const prioridad2 =
+    activas.filter(
+      (item) =>
+        disponibilidadCoincideConSucursal({
+          disponibilidad: item,
+          sucursalId,
+          sucursal
+        }) &&
+        disponibilidadEsGeneralVacante(
+          item
+        )
+    );
+
+  if (prioridad2.length) {
+    return {
+      nivel: 2,
+      criterio:
+        "region_sucursal_general",
+      disponibilidades:
+        prioridad2
+    };
+  }
+
+  /*
+   * PRIORIDAD 3
+   * Región completa:
+   * todas las sucursales y
+   * todas las vacantes.
+   */
+  const prioridad3 =
+    activas.filter(
+      (item) =>
+        disponibilidadEsGeneralSucursal(
+          item
+        ) &&
+        disponibilidadEsGeneralVacante(
+          item
+        )
+    );
+
+  if (prioridad3.length) {
+    return {
+      nivel: 3,
+      criterio:
+        "region_general",
+      disponibilidades:
+        prioridad3
+    };
+  }
+
+  return {
+    nivel: 0,
+    criterio:
+      "sin_disponibilidad",
+    disponibilidades: []
+  };
+}
+
+async function resolverContextoAgenda({
+  vacanteId = "",
+  region = "",
+  ciudad = "",
+  sucursalId = "",
+  sucursal = ""
+} = {}) {
+  let vacante = null;
+
+  if (vacanteId) {
+    const vacantes =
+      await leerVacantes();
+
+    vacante =
+      vacantes.find(
+        (item) =>
+          item.id === vacanteId
+      ) || null;
+  }
+
+  return {
+    vacante,
+
+    region:
+      String(
+        region ||
+        ciudad ||
+        obtenerRegionVacante(
+          vacante || {}
+        ) ||
+        ""
+      ).trim(),
+
+    sucursalId:
+      String(
+        sucursalId ||
+        vacante?.sucursalId ||
+        vacante?.branchId ||
+        ""
+      ).trim(),
+
+    sucursal:
+      String(
+        sucursal ||
+        vacante?.sucursal ||
+        ""
+      ).trim(),
+
+    vacanteId:
+      String(
+        vacanteId ||
+        vacante?.id ||
+        ""
+      ).trim()
+  };
+}
 function normalizarTexto(texto = "") {
   return String(texto)
     .normalize("NFD")
@@ -1034,6 +1354,723 @@ function normalizarTexto(texto = "") {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+async function reagendarEntrevistaAtomica({
+  entrevistaActual,
+  nuevaFecha,
+  nuevaHora,
+  cambiosAdicionales = {},
+  actualizadoPor = ""
+} = {}) {
+  if (
+    !entrevistaActual?.id ||
+    !nuevaFecha ||
+    !nuevaHora
+  ) {
+    throw new Error(
+      "Faltan datos para reprogramar la entrevista."
+    );
+  }
+
+  const disponibilidadId =
+    entrevistaActual.disponibilidadId ||
+    "";
+
+  if (!disponibilidadId) {
+    const error = new Error(
+      "La entrevista no tiene una disponibilidad asociada."
+    );
+
+    error.code =
+      "SIN_DISPONIBILIDAD";
+
+    throw error;
+  }
+
+  const disponibilidad =
+    await obtenerDisponibilidadEntrevista(
+      disponibilidadId
+    );
+
+  if (
+    !disponibilidad ||
+    disponibilidad.activo === false
+  ) {
+    const error = new Error(
+      "La disponibilidad del reclutador ya no está activa."
+    );
+
+    error.code =
+      "DISPONIBILIDAD_INACTIVA";
+
+    throw error;
+  }
+
+  const horariosPermitidos =
+    generarEspaciosDisponibilidad({
+      disponibilidad,
+      fecha: nuevaFecha
+    });
+
+  const nuevoHorario =
+    horariosPermitidos.find(
+      (item) =>
+        item.hora === nuevaHora
+    );
+
+  if (!nuevoHorario) {
+    const error = new Error(
+      "El nuevo horario no pertenece a la disponibilidad configurada."
+    );
+
+    error.code =
+      "HORARIO_INVALIDO";
+
+    throw error;
+  }
+
+  const bloqueoAnteriorId =
+    entrevistaActual
+      .bloqueoHorarioId ||
+    crearIdBloqueoEntrevista({
+      disponibilidadId,
+
+      fecha:
+        entrevistaActual.fecha,
+
+      hora:
+        entrevistaActual.hora
+    });
+
+  const bloqueoNuevoId =
+    crearIdBloqueoEntrevista({
+      disponibilidadId,
+
+      fecha:
+        nuevaFecha,
+
+      hora:
+        nuevaHora
+    });
+
+  if (!bloqueoNuevoId) {
+    throw new Error(
+      "No fue posible generar el bloqueo del nuevo horario."
+    );
+  }
+
+  const fechaActual =
+    new Date().toISOString();
+
+  const entrevistaActualizada = {
+    ...entrevistaActual,
+    ...cambiosAdicionales,
+
+    fecha:
+      nuevaFecha,
+
+    hora:
+      nuevaHora,
+
+    horaFin:
+      nuevoHorario.horaFin,
+
+    duracionMinutos:
+      nuevoHorario
+        .duracionMinutos,
+
+    reclutador:
+      disponibilidad.reclutador ||
+      entrevistaActual.reclutador ||
+      "",
+
+    reclutadorId:
+      disponibilidad.reclutadorId ||
+      entrevistaActual.reclutadorId ||
+      "",
+
+    tipo:
+      disponibilidad.tipo ||
+      entrevistaActual.tipo ||
+      "presencial",
+
+    estado:
+      "reagendada",
+
+    bloqueoHorarioId:
+      bloqueoNuevoId,
+
+    bloqueoLiberado:
+      false,
+
+    fechaReagendado:
+      fechaActual,
+
+    fechaActualizacion:
+      fechaActual,
+
+    actualizadoPor
+  };
+
+  /*
+   * MODO LOCAL
+   */
+  if (!db) {
+    const entrevistas =
+      leerJson(
+        entrevistasFile,
+        []
+      );
+
+    const ocupado =
+      entrevistas.some(
+        (item) => {
+          if (
+            item.id ===
+            entrevistaActual.id
+          ) {
+            return false;
+          }
+
+          return horarioCoincideConEntrevista(
+            nuevoHorario,
+            item
+          );
+        }
+      );
+
+    if (ocupado) {
+      const error = new Error(
+        "El nuevo horario acaba de ser reservado."
+      );
+
+      error.code =
+        "HORARIO_OCUPADO";
+
+      throw error;
+    }
+
+    const index =
+      entrevistas.findIndex(
+        (item) =>
+          item.id ===
+          entrevistaActual.id
+      );
+
+    if (index === -1) {
+      const error = new Error(
+        "Entrevista no encontrada."
+      );
+
+      error.code =
+        "ENTREVISTA_NO_ENCONTRADA";
+
+      throw error;
+    }
+
+    entrevistas[index] =
+      entrevistaActualizada;
+
+    guardarJson(
+      entrevistasFile,
+      entrevistas
+    );
+
+    return entrevistaActualizada;
+  }
+
+  /*
+   * FIRESTORE:
+   * todo se ejecuta dentro de
+   * una sola transacción.
+   */
+  const entrevistaRef =
+    db.collection(
+      ENTREVISTAS_COLLECTION
+    ).doc(
+      entrevistaActual.id
+    );
+
+  const bloqueoNuevoRef =
+    db.collection(
+      BLOQUEOS_ENTREVISTA_COLLECTION
+    ).doc(
+      bloqueoNuevoId
+    );
+
+  const bloqueoAnteriorRef =
+    bloqueoAnteriorId
+      ? db.collection(
+          BLOQUEOS_ENTREVISTA_COLLECTION
+        ).doc(
+          bloqueoAnteriorId
+        )
+      : null;
+
+  await db.runTransaction(
+    async (transaction) => {
+      const [
+        entrevistaDoc,
+        bloqueoNuevoDoc
+      ] = await Promise.all([
+        transaction.get(
+          entrevistaRef
+        ),
+
+        transaction.get(
+          bloqueoNuevoRef
+        )
+      ]);
+
+      if (!entrevistaDoc.exists) {
+        const error = new Error(
+          "Entrevista no encontrada."
+        );
+
+        error.code =
+          "ENTREVISTA_NO_ENCONTRADA";
+
+        throw error;
+      }
+
+      /*
+       * Si no estamos seleccionando
+       * exactamente el mismo espacio,
+       * verificamos que el bloqueo nuevo
+       * esté disponible.
+       */
+      if (
+        bloqueoNuevoId !==
+        bloqueoAnteriorId &&
+        bloqueoNuevoDoc.exists
+      ) {
+        const bloqueoNuevo =
+          bloqueoNuevoDoc.data() ||
+          {};
+
+        if (
+          bloqueoNuevo.activo !== false
+        ) {
+          const error = new Error(
+            "El nuevo horario acaba de ser reservado."
+          );
+
+          error.code =
+            "HORARIO_OCUPADO";
+
+          throw error;
+        }
+      }
+
+      /*
+       * Crear o reactivar el nuevo bloqueo.
+       */
+      transaction.set(
+        bloqueoNuevoRef,
+        {
+          id:
+            bloqueoNuevoId,
+
+          activo:
+            true,
+
+          disponibilidadId,
+
+          entrevistaId:
+            entrevistaActual.id,
+
+          candidatoId:
+            entrevistaActual
+              .candidatoId ||
+            "",
+
+          candidatoNombre:
+            entrevistaActual
+              .candidatoNombre ||
+            "",
+
+          fecha:
+            nuevaFecha,
+
+          hora:
+            nuevaHora,
+
+          horaFin:
+            nuevoHorario.horaFin ||
+            "",
+
+          reclutador:
+            disponibilidad.reclutador ||
+            "",
+
+          reclutadorId:
+            disponibilidad.reclutadorId ||
+            "",
+
+          fechaCreacion:
+            fechaActual,
+
+          fechaActualizacion:
+            fechaActual,
+
+          motivo:
+            "entrevista_reagendada"
+        },
+        {
+          merge: false
+        }
+      );
+
+      /*
+       * Liberar el bloqueo anterior
+       * solamente cuando es distinto.
+       */
+      if (
+        bloqueoAnteriorRef &&
+        bloqueoAnteriorId !==
+          bloqueoNuevoId
+      ) {
+        transaction.set(
+          bloqueoAnteriorRef,
+          {
+            activo:
+              false,
+
+            motivoLiberacion:
+              "entrevista_reagendada",
+
+            reemplazadoPor:
+              bloqueoNuevoId,
+
+            fechaLiberacion:
+              fechaActual,
+
+            fechaActualizacion:
+              fechaActual
+          },
+          {
+            merge: true
+          }
+        );
+      }
+
+      transaction.set(
+        entrevistaRef,
+        entrevistaActualizada,
+        {
+          merge: true
+        }
+      );
+    }
+  );
+
+  return entrevistaActualizada;
+}
+
+/* =========================================================
+   BLOQUEO ATÓMICO DE HORARIOS
+========================================================= */
+
+function crearIdBloqueoEntrevista({
+  disponibilidadId = "",
+  fecha = "",
+  hora = ""
+} = {}) {
+  const partes = [
+    disponibilidadId,
+    fecha,
+    hora
+  ]
+    .map((valor) =>
+      slugify(String(valor || ""))
+    )
+    .filter(Boolean);
+
+  return partes.join("__");
+}
+
+async function guardarReservaEntrevistaAtomica({
+  entrevista,
+  horarioSeleccionado
+} = {}) {
+  if (
+    !entrevista?.id ||
+    !entrevista.disponibilidadId ||
+    !entrevista.fecha ||
+    !entrevista.hora
+  ) {
+    throw new Error(
+      "Datos incompletos para bloquear el horario."
+    );
+  }
+
+  const bloqueoId =
+    crearIdBloqueoEntrevista({
+      disponibilidadId:
+        entrevista.disponibilidadId,
+
+      fecha:
+        entrevista.fecha,
+
+      hora:
+        entrevista.hora
+    });
+
+  if (!bloqueoId) {
+    throw new Error(
+      "No fue posible generar el identificador del horario."
+    );
+  }
+
+  /*
+   * Modo local sin Firestore.
+   * Node procesa esta sección de forma síncrona
+   * entre lectura y escritura del archivo.
+   */
+  if (!db) {
+    const entrevistas =
+      leerJson(
+        entrevistasFile,
+        []
+      );
+
+    const ocupado =
+      entrevistas.some(
+        (item) =>
+          horarioCoincideConEntrevista(
+            horarioSeleccionado,
+            item
+          )
+      );
+
+    if (ocupado) {
+      const error =
+        new Error(
+          "Ese horario acaba de ser reservado. Selecciona otro horario."
+        );
+
+      error.code =
+        "HORARIO_OCUPADO";
+
+      throw error;
+    }
+
+    entrevistas.push(
+      entrevista
+    );
+
+    guardarJson(
+      entrevistasFile,
+      entrevistas
+    );
+
+    return {
+      bloqueoId,
+      entrevista
+    };
+  }
+
+  const bloqueoRef =
+    db.collection(
+      BLOQUEOS_ENTREVISTA_COLLECTION
+    ).doc(bloqueoId);
+
+  const entrevistaRef =
+    db.collection(
+      ENTREVISTAS_COLLECTION
+    ).doc(entrevista.id);
+
+  await db.runTransaction(
+    async (transaction) => {
+      const bloqueoDoc =
+        await transaction.get(
+          bloqueoRef
+        );
+
+      if (bloqueoDoc.exists) {
+        const bloqueo =
+          bloqueoDoc.data() || {};
+
+        /*
+         * Solo dejamos reutilizar el espacio
+         * si el bloqueo fue liberado.
+         */
+        if (bloqueo.activo !== false) {
+          const error =
+            new Error(
+              "Ese horario acaba de ser reservado. Selecciona otro horario."
+            );
+
+          error.code =
+            "HORARIO_OCUPADO";
+
+          throw error;
+        }
+      }
+
+      const fechaActual =
+        new Date().toISOString();
+
+      transaction.set(
+        bloqueoRef,
+        {
+          id:
+            bloqueoId,
+
+          activo:
+            true,
+
+          disponibilidadId:
+            entrevista
+              .disponibilidadId,
+
+          entrevistaId:
+            entrevista.id,
+
+          candidatoId:
+            entrevista.candidatoId,
+
+          candidatoNombre:
+            entrevista
+              .candidatoNombre,
+
+          fecha:
+            entrevista.fecha,
+
+          hora:
+            entrevista.hora,
+
+          horaFin:
+            entrevista.horaFin ||
+            horarioSeleccionado
+              ?.horaFin ||
+            "",
+
+          reclutador:
+            entrevista.reclutador ||
+            "",
+
+          reclutadorId:
+            entrevista.reclutadorId ||
+            "",
+
+          fechaCreacion:
+            fechaActual,
+
+          fechaActualizacion:
+            fechaActual
+        },
+        {
+          merge: false
+        }
+      );
+
+      transaction.set(
+        entrevistaRef,
+        {
+          ...entrevista,
+          bloqueoHorarioId:
+            bloqueoId
+        },
+        {
+          merge: false
+        }
+      );
+    }
+  );
+
+  return {
+    bloqueoId,
+    entrevista: {
+      ...entrevista,
+      bloqueoHorarioId:
+        bloqueoId
+    }
+  };
+}
+
+async function liberarBloqueoEntrevista({
+  entrevista,
+  motivo = "liberado"
+} = {}) {
+  if (!entrevista) {
+    return false;
+  }
+
+  const bloqueoId =
+    entrevista.bloqueoHorarioId ||
+    crearIdBloqueoEntrevista({
+      disponibilidadId:
+        entrevista.disponibilidadId ||
+        "",
+
+      fecha:
+        entrevista.fecha ||
+        "",
+
+      hora:
+        entrevista.hora ||
+        ""
+    });
+
+  if (!bloqueoId) {
+    /*
+     * Entrevistas antiguas o creadas
+     * manualmente pueden no tener
+     * disponibilidad asociada.
+     */
+    return false;
+  }
+
+  /*
+   * En modo local no existe una
+   * colección independiente de bloqueos.
+   * El horario se considera libre al
+   * cancelar o eliminar la entrevista.
+   */
+  if (!db) {
+    return true;
+  }
+
+  const bloqueoRef =
+    db
+      .collection(
+        BLOQUEOS_ENTREVISTA_COLLECTION
+      )
+      .doc(bloqueoId);
+
+  const bloqueoDoc =
+    await bloqueoRef.get();
+
+  if (!bloqueoDoc.exists) {
+    return false;
+  }
+
+  const fechaActual =
+    new Date().toISOString();
+
+  await bloqueoRef.set(
+    {
+      activo: false,
+
+      motivoLiberacion:
+        motivo,
+
+      fechaLiberacion:
+        fechaActual,
+
+      fechaActualizacion:
+        fechaActual
+    },
+    {
+      merge: true
+    }
+  );
+
+  return true;
+}
+
+
 
 function slugify(texto = "") {
   return normalizarTexto(texto)
@@ -1210,6 +2247,33 @@ function validarDisponibilidadEntrevista(
     String(
       data.reclutador || ""
     ).trim();
+    const region =
+  String(
+    data.region ||
+    data.zona ||
+    data.ciudad ||
+    ""
+  ).trim();
+
+const sucursal =
+  String(
+    data.sucursal || ""
+  ).trim();
+
+const sucursalId =
+  String(
+    data.sucursalId || ""
+  ).trim();
+
+const vacanteId =
+  String(
+    data.vacanteId || ""
+  ).trim();
+
+const vacanteTitulo =
+  String(
+    data.vacanteTitulo || ""
+  ).trim();
 
   const fechaInicio =
     String(
@@ -1255,6 +2319,14 @@ function validarDisponibilidadEntrevista(
         "El nombre del reclutador es obligatorio."
     };
   }
+
+  if (!region) {
+  return {
+    ok: false,
+    error:
+      "Selecciona la región de reclutamiento."
+  };
+}
 
   if (
     !fechaInicio ||
@@ -1381,32 +2453,29 @@ function validarDisponibilidadEntrevista(
     ok: true,
 
     data: {
-      reclutador,
+  reclutador,
 
-      reclutadorId:
-        String(
-          data.reclutadorId || ""
-        ).trim(),
+  reclutadorId:
+    String(
+      data.reclutadorId || ""
+    ).trim(),
 
-      sucursal:
-        String(
-          data.sucursal || ""
-        ).trim(),
+  /*
+   * Guardamos los tres nombres
+   * temporalmente para mantener
+   * compatibilidad con registros
+   * anteriores.
+   */
+  region,
+  zona: region,
+  ciudad: region,
 
-      sucursalId:
-        String(
-          data.sucursalId || ""
-        ).trim(),
+  sucursal,
+  sucursalId,
 
-      vacanteId:
-        String(
-          data.vacanteId || ""
-        ).trim(),
-
-      vacanteTitulo:
-        String(
-          data.vacanteTitulo || ""
-        ).trim(),
+  vacanteId,
+  vacanteTitulo,
+    
 
       fechaInicio,
       fechaFin,
@@ -4203,6 +5272,8 @@ app.get(
       const {
         fecha,
         vacanteId = "",
+        region = "",
+        ciudad = "",
         sucursal = "",
         sucursalId = "",
         tipo = ""
@@ -4225,82 +5296,145 @@ app.get(
         });
       }
 
-      const disponibilidades =
-        await leerDisponibilidadesEntrevista();
+      const contexto =
+        await resolverContextoAgenda({
+          vacanteId,
+          region,
+          ciudad,
+          sucursal,
+          sucursalId
+        });
 
-      const entrevistas =
-        await leerEntrevistas(500);
+      if (!contexto.region) {
+        return res.status(400).json({
+          error:
+            "No fue posible identificar la región de la vacante."
+        });
+      }
 
-      const aplicables =
-        disponibilidades.filter(
-          (item) => {
-            if (item.activo === false) {
-              return false;
-            }
+      const [
+        disponibilidades,
+        entrevistas
+      ] = await Promise.all([
+        leerDisponibilidadesEntrevista(),
+        leerEntrevistas(500)
+      ]);
 
-            if (
-              vacanteId &&
-              item.vacanteId &&
-              item.vacanteId !== vacanteId
-            ) {
-              return false;
-            }
+      const seleccion =
+        seleccionarDisponibilidadesIdeales({
+          disponibilidades,
 
-            if (
-              sucursalId &&
-              item.sucursalId &&
-              item.sucursalId !== sucursalId
-            ) {
-              return false;
-            }
+          region:
+            contexto.region,
 
-            if (
-              sucursal &&
-              item.sucursal &&
-              normalizarTexto(
-                item.sucursal
-              ) !==
-                normalizarTexto(
-                  sucursal
-                )
-            ) {
-              return false;
-            }
+          sucursalId:
+            contexto.sucursalId,
 
-            if (
-              tipo &&
-              item.tipo &&
-              item.tipo !== tipo
-            ) {
-              return false;
-            }
+          sucursal:
+            contexto.sucursal,
 
-            return true;
-          }
-        );
+          vacanteId:
+            contexto.vacanteId,
+
+          tipo
+        });
+
+      if (
+        !seleccion
+          .disponibilidades
+          .length
+      ) {
+        return res.json({
+          ok: true,
+          fecha,
+
+          contexto: {
+            region:
+              contexto.region,
+
+            sucursalId:
+              contexto.sucursalId,
+
+            sucursal:
+              contexto.sucursal,
+
+            vacanteId:
+              contexto.vacanteId
+          },
+
+          asignacion: {
+            nivel: 0,
+            criterio:
+              "sin_disponibilidad"
+          },
+
+          total: 0,
+          horarios: []
+        });
+      }
 
       const horariosGenerados =
-        aplicables.flatMap(
-          (disponibilidad) =>
-            generarEspaciosDisponibilidad({
-              disponibilidad,
-              fecha
-            })
-        );
+        seleccion
+          .disponibilidades
+          .flatMap(
+            (disponibilidad) =>
+              generarEspaciosDisponibilidad({
+                disponibilidad,
+                fecha
+              })
+          );
 
       const horariosLibres =
         filtrarHorariosOcupados(
           horariosGenerados,
           entrevistas
         ).sort((a, b) =>
-          a.hora.localeCompare(b.hora)
+          a.hora.localeCompare(
+            b.hora
+          )
         );
 
       res.json({
         ok: true,
         fecha,
+
+        contexto: {
+          region:
+            contexto.region,
+
+          sucursalId:
+            contexto.sucursalId,
+
+          sucursal:
+            contexto.sucursal,
+
+          vacanteId:
+            contexto.vacanteId
+        },
+
+        asignacion: {
+          nivel:
+            seleccion.nivel,
+
+          criterio:
+            seleccion.criterio,
+
+          configuracionesEncontradas:
+            seleccion
+              .disponibilidades
+              .length,
+
+          disponibilidadesIds:
+            seleccion
+              .disponibilidades
+              .map(
+                (item) => item.id
+              )
+        },
+
         total:
           horariosLibres.length,
+
         horarios:
           horariosLibres
       });
@@ -4475,9 +5609,14 @@ app.post(
           fechaActual
       };
 
-      await guardarEntrevista(
-        entrevista
-      );
+      const resultadoReserva =
+      await guardarReservaEntrevistaAtomica({
+        entrevista,
+        horarioSeleccionado
+      });
+
+    const entrevistaGuardada =
+      resultadoReserva.entrevista;
 
       await actualizarPostulacion(
         candidatoId,
@@ -4486,7 +5625,7 @@ app.post(
             "entrevista_agendada",
 
           entrevistaId:
-            entrevista.id,
+            entrevistaGuardada.id,
 
           fechaEntrevista:
             fecha,
@@ -4495,10 +5634,10 @@ app.post(
             hora,
 
           reclutadorEntrevista:
-            entrevista.reclutador,
+            entrevistaGuardada.reclutador,
 
           tipoEntrevista:
-            entrevista.tipo,
+            entrevistaGuardada.tipo,
 
           fechaActualizacion:
             fechaActual
@@ -4511,19 +5650,31 @@ app.post(
         message:
           "Entrevista reservada correctamente.",
 
-        entrevista
+        entrevista:
+          entrevistaGuardada
       });
-    } catch (error) {
-      console.error(
-        "Error reservando entrevista:",
-        error
-      );
+      } catch (error) {
+  console.error(
+    "Error reservando entrevista:",
+    error
+  );
 
-      res.status(500).json({
-        error:
-          "No fue posible reservar la entrevista."
-      });
-    }
+  if (
+    error.code ===
+    "HORARIO_OCUPADO"
+  ) {
+    return res.status(409).json({
+      error:
+        "Ese horario acaba de ser reservado. Selecciona otro horario."
+    });
+  }
+
+  res.status(500).json({
+    error:
+      "No fue posible reservar la entrevista."
+  });
+}
+   
   }
 );
 
@@ -4601,57 +5752,200 @@ app.post("/api/entrevistas", verifyAdmin, async (req, res) => {
   }
 });
 
-app.patch("/api/entrevistas/:id", verifyAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
+app.patch(
+  "/api/entrevistas/:id",
+  verifyAdmin,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
 
-    const entrevistas = await leerEntrevistas();
-    const entrevistaActual = entrevistas.find((item) => item.id === id);
+      const entrevistas =
+        await leerEntrevistas(500);
 
-    if (!entrevistaActual) {
-      return res.status(404).json({
-        error: "Entrevista no encontrada."
-      });
-    }
+      const entrevistaActual =
+        entrevistas.find(
+          (item) =>
+            item.id === id
+        );
 
-    const data = {
-      ...req.body,
-      fechaActualizacion: new Date().toISOString()
-    };
-
-    await actualizarEntrevista(id, data);
-
-    if (
-      entrevistaActual.candidatoId &&
-      (data.fecha || data.hora)
-    ) {
-      await actualizarPostulacion(entrevistaActual.candidatoId, {
-        fechaEntrevista:
-          data.fecha || entrevistaActual.fecha,
-        horaEntrevista:
-          data.hora || entrevistaActual.hora,
-        fechaActualizacion: new Date().toISOString()
-      });
-    }
-
-    res.json({
-      ok: true,
-      message: "Entrevista actualizada correctamente.",
-      entrevista: {
-        ...entrevistaActual,
-        ...data,
-        id
+      if (!entrevistaActual) {
+        return res.status(404).json({
+          error:
+            "Entrevista no encontrada."
+        });
       }
-    });
-  } catch (error) {
-    console.error("Error actualizando entrevista:", error);
 
-    res.status(500).json({
-      error: "No fue posible actualizar la entrevista."
-    });
+      const nuevaFecha =
+        String(
+          req.body.fecha ||
+          entrevistaActual.fecha ||
+          ""
+        ).trim();
+
+      const nuevaHora =
+        String(
+          req.body.hora ||
+          entrevistaActual.hora ||
+          ""
+        ).trim();
+
+      const cambioDeHorario =
+        nuevaFecha !==
+          entrevistaActual.fecha ||
+        nuevaHora !==
+          entrevistaActual.hora;
+
+      let entrevistaActualizada;
+
+      if (cambioDeHorario) {
+        entrevistaActualizada =
+          await reagendarEntrevistaAtomica({
+            entrevistaActual,
+
+            nuevaFecha,
+            nuevaHora,
+
+            cambiosAdicionales: {
+              ...req.body,
+
+              estado:
+                "reagendada"
+            },
+
+            actualizadoPor:
+              req.adminUser?.email ||
+              ""
+          });
+      } else {
+        const data = {
+          ...req.body,
+
+          fechaActualizacion:
+            new Date().toISOString(),
+
+          actualizadoPor:
+            req.adminUser?.email ||
+            ""
+        };
+
+        await actualizarEntrevista(
+          id,
+          data
+        );
+
+        entrevistaActualizada = {
+          ...entrevistaActual,
+          ...data,
+          id
+        };
+      }
+
+      if (
+        entrevistaActual.candidatoId
+      ) {
+        await actualizarPostulacion(
+          entrevistaActual.candidatoId,
+          {
+            estadoSolicitud:
+              "entrevista_agendada",
+
+            estadoEntrevista:
+              entrevistaActualizada
+                .estado,
+
+            entrevistaId:
+              entrevistaActualizada.id,
+
+            fechaEntrevista:
+              entrevistaActualizada
+                .fecha,
+
+            horaEntrevista:
+              entrevistaActualizada
+                .hora,
+
+            reclutadorEntrevista:
+              entrevistaActualizada
+                .reclutador ||
+              "",
+
+            tipoEntrevista:
+              entrevistaActualizada
+                .tipo ||
+              "",
+
+            fechaActualizacion:
+              new Date().toISOString()
+          }
+        );
+      }
+
+      res.json({
+        ok: true,
+
+        message:
+          cambioDeHorario
+            ? "Entrevista reprogramada correctamente."
+            : "Entrevista actualizada correctamente.",
+
+        entrevista:
+          entrevistaActualizada
+      });
+    } catch (error) {
+      console.error(
+        "Error actualizando entrevista:",
+        error
+      );
+
+      if (
+        error.code ===
+        "HORARIO_OCUPADO"
+      ) {
+        return res.status(409).json({
+          error:
+            "Ese horario ya fue reservado. Selecciona otro horario."
+        });
+      }
+
+      if (
+        error.code ===
+        "HORARIO_INVALIDO"
+      ) {
+        return res.status(400).json({
+          error:
+            "El horario seleccionado no pertenece a la disponibilidad del reclutador."
+        });
+      }
+
+      if (
+        error.code ===
+        "SIN_DISPONIBILIDAD" ||
+        error.code ===
+        "DISPONIBILIDAD_INACTIVA"
+      ) {
+        return res.status(400).json({
+          error:
+            error.message
+        });
+      }
+
+      if (
+        error.code ===
+        "ENTREVISTA_NO_ENCONTRADA"
+      ) {
+        return res.status(404).json({
+          error:
+            "Entrevista no encontrada."
+        });
+      }
+
+      res.status(500).json({
+        error:
+          "No fue posible actualizar la entrevista."
+      });
+    }
   }
-});
-
+);
 app.patch(
   "/api/entrevistas/:id/estado",
   verifyAdmin,
@@ -4695,12 +5989,37 @@ app.patch(
         });
       }
 
+     const fechaActual =
+  new Date().toISOString();
+
       const data = {
         estado,
-        fechaActualizacion: new Date().toISOString()
+
+        fechaActualizacion:
+          fechaActual
       };
 
-      await actualizarEntrevista(id, data);
+      if (
+          estado === "cancelada" &&
+          entrevista.estado !== "cancelada"
+        ) {
+          await liberarBloqueoEntrevista({
+            entrevista,
+
+            motivo:
+              "entrevista_cancelada"
+          });
+
+          data.bloqueoLiberado = true;
+
+          data.fechaLiberacionHorario =
+            fechaActual;
+        }
+
+      await actualizarEntrevista(
+        id,
+        data
+);
 
       if (entrevista.candidatoId) {
         let estadoSolicitud = "entrevista_agendada";
@@ -4772,12 +6091,49 @@ app.delete(
         });
       }
 
+      await liberarBloqueoEntrevista({
+        entrevista,
+
+        motivo:
+          "entrevista_eliminada"
+      });
       const eliminada = await eliminarEntrevista(id);
 
       if (!eliminada) {
         return res.status(404).json({
           error: "Entrevista no encontrada."
         });
+      }
+
+      if (entrevista.candidatoId) {
+        await actualizarPostulacion(
+          entrevista.candidatoId,
+          {
+            estadoSolicitud:
+              "aprobado",
+
+            estadoEntrevista:
+              "eliminada",
+
+            entrevistaId:
+              "",
+
+            fechaEntrevista:
+              "",
+
+            horaEntrevista:
+              "",
+
+            reclutadorEntrevista:
+              "",
+
+            tipoEntrevista:
+              "",
+
+            fechaActualizacion:
+              new Date().toISOString()
+          }
+        );
       }
 
       res.json({

@@ -1756,6 +1756,21 @@ async function fetchAvailableSlotsForDate(
     );
   }
 
+  const region =
+  vacante.region ||
+  vacante.zona ||
+  vacante.ciudad ||
+  postulacion.region ||
+  postulacion.zona ||
+  postulacion.ciudad ||
+  "";
+
+if (region) {
+  params.set(
+    "region",
+    region
+  );
+}
   const response = await fetch(
     `${API_URL}/api/entrevistas/horarios-disponibles?${params.toString()}`
   );
