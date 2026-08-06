@@ -43,7 +43,9 @@ let applicationFlow = {
   availableSlots: [],
   selectedInterviewDate: "",
   selectedInterviewSlot: null,
-  bookingInterview: false
+  bookingInterview: false,
+
+waitingForStatusFolio: false
 };
 
 let candidateProfile = {
@@ -1132,11 +1134,19 @@ function handleOption(value, label = "") {
   }
 
   if (value === "consultar_estatus") {
-    addAssistantText(
-      "🔑 Para consultar tu estatus, escribe tu folio en la sección 'Consultar estatus de mi solicitud'."
-    );
-    return;
-  }
+  applicationFlow.waitingForStatusFolio =
+    true;
+
+  addAssistantText(
+    "🔑 Escribe aquí en el chat el folio de tu postulación."
+  );
+
+  addAssistantText(
+    "Ejemplo: 1786031353628"
+  );
+
+  return;
+}
 
   /* =========================
      RESPUESTAS DINÁMICAS
@@ -2776,13 +2786,157 @@ async function consultarEstatus() {
   }
 }
 
+async function consultarEstatusDesdeChat(
+  folio = ""
+) {
+  const folioLimpio =
+    String(folio || "").trim();
+
+  if (!folioLimpio) {
+    addAssistantText(
+      "⚠️ Escribe el folio de tu postulación."
+    );
+    return;
+  }
+
+  addAssistantText(
+    "🔍 Consultando el estatus de tu solicitud..."
+  );
+
+  const indicator =
+    showTypingIndicator();
+
+  try {
+    const response = await fetch(
+      `${API_URL}/api/postulacion/${encodeURIComponent(
+        folioLimpio
+      )}`
+    );
+
+    const data = await response.json();
+
+    indicator.remove();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error ||
+        "No fue posible consultar la solicitud."
+      );
+    }
+
+    applicationFlow.waitingForStatusFolio =
+      false;
+
+    const estado =
+      data.estadoSolicitud ||
+      "pendiente";
+
+    const puesto =
+      data.vacanteTitulo ||
+      data.puestoInteres ||
+      "No especificado";
+
+    const sucursal =
+      data.sucursal ||
+      data.sucursalNombre ||
+      "No especificada";
+
+    let mensaje = `📋 Estado de tu solicitud
+
+🔑 Folio: ${folioLimpio}
+💼 Puesto: ${puesto}
+🏢 Sucursal: ${sucursal}
+📊 Estado actual: ${estado.replaceAll(
+      "_",
+      " "
+    )}`;
+
+    if (
+      data.fechaEntrevista &&
+      data.horaEntrevista
+    ) {
+      mensaje += `
+
+📅 Entrevista: ${formatChatDate(
+        data.fechaEntrevista
+      )}
+🕒 Hora: ${formatChatTime(
+        data.horaEntrevista
+      )}
+👤 Reclutador: ${
+        data.reclutadorEntrevista ||
+        "Por confirmar"
+      }
+💬 Modalidad: ${
+        data.tipoEntrevista ||
+        "Por confirmar"
+      }`;
+    }
+
+    addAssistantText(mensaje);
+
+    addOptions(
+      "¿Qué deseas hacer ahora?",
+      [
+        {
+          label:
+            "🔍 Consultar otro folio",
+          value:
+            "consultar_estatus"
+        },
+        {
+          label:
+            "📍 Buscar vacantes",
+          value:
+            "buscar_ubicacion"
+        }
+      ]
+    );
+  } catch (error) {
+    indicator.remove();
+
+    console.error(
+      "Error consultando estatus:",
+      error
+    );
+
+    addAssistantText(
+      `❌ ${
+        error.message ||
+        "No fue posible consultar la solicitud."
+      }`
+    );
+
+    addAssistantText(
+      "Verifica el folio e inténtalo nuevamente."
+    );
+
+    applicationFlow.waitingForStatusFolio =
+      true;
+  }
+}
 /* =========================
    INPUT LIBRE
 ========================= */
 
 async function handleFreeText(text) {
   const normalized = normalizeText(text);
+  if (
+  applicationFlow.waitingForStatusFolio
+) {
+  await consultarEstatusDesdeChat(
+    text
+  );
 
+  return;
+}
+if (/^\d{10,20}$/.test(text.trim())) {
+  await consultarEstatusDesdeChat(
+    text
+  );
+
+  return;
+}
   if (
   applicationFlow.mode ===
   "interview_booking"
