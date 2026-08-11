@@ -72,14 +72,56 @@ function crearComunicacionesRouter({
     return next();
   }
 
-  /*
-   * Todas las rutas registradas después
-   * de este middleware quedan protegidas.
-   */
-  router.use(
-    protegerRuta
-  );
+  /* =======================================================
+   PROTECCIÓN EXCLUSIVA DEL COMMUNICATION CENTER
 
+   IMPORTANTE:
+   Este router está montado sobre /api.
+
+   Por lo tanto NO debemos ejecutar verifyAdmin
+   sobre rutas públicas ajenas como:
+
+   /api/vacantes
+   /api/sucursales
+   /api/postulacion
+
+   Solamente protegemos las rutas pertenecientes
+   al Communication Center.
+======================================================= */
+
+router.use(
+  (req, res, next) => {
+    const rutasProtegidas = [
+      "/plantillas-comunicacion",
+      "/comunicaciones",
+      "/cola-comunicaciones"
+    ];
+
+    const rutaActual =
+      req.path || "";
+
+    const perteneceCommunicationCenter =
+      rutasProtegidas.some(
+        (prefijo) =>
+          rutaActual === prefijo ||
+          rutaActual.startsWith(
+            `${prefijo}/`
+          )
+      );
+
+    if (
+      !perteneceCommunicationCenter
+    ) {
+      return next();
+    }
+
+    return protegerRuta(
+      req,
+      res,
+      next
+    );
+  }
+);
   /* =======================================================
      PLANTILLAS DE COMUNICACIÓN
   ======================================================= */
