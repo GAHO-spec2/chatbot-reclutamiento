@@ -100,6 +100,68 @@ const refreshCommunicationsBtn =
     "refreshCommunicationsBtn"
   );
 
+  /* =========================================================
+   DETALLE DE COMUNICACIÓN
+========================================================= */
+
+const communicationDetailModal =
+  document.getElementById(
+    "communicationDetailModal"
+  );
+
+const closeCommunicationDetailBackdrop =
+  document.getElementById(
+    "closeCommunicationDetailBackdrop"
+  );
+
+const closeCommunicationDetailBtn =
+  document.getElementById(
+    "closeCommunicationDetailBtn"
+  );
+
+const closeCommunicationDetailFooterBtn =
+  document.getElementById(
+    "closeCommunicationDetailFooterBtn"
+  );
+
+const detailCandidate =
+  document.getElementById("detailCandidate");
+
+const detailRecipient =
+  document.getElementById("detailRecipient");
+
+const detailType =
+  document.getElementById("detailType");
+
+const detailChannel =
+  document.getElementById("detailChannel");
+
+const detailStatus =
+  document.getElementById("detailStatus");
+
+const detailDate =
+  document.getElementById("detailDate");
+
+const detailAttempts =
+  document.getElementById("detailAttempts");
+
+const detailId =
+  document.getElementById("detailId");
+
+const detailSubject =
+  document.getElementById("detailSubject");
+
+const detailContent =
+  document.getElementById("detailContent");
+
+const detailErrorSection =
+  document.getElementById(
+    "detailErrorSection"
+  );
+
+const detailError =
+  document.getElementById("detailError");
+
 /* =========================================================
    ESTADÍSTICAS
 ========================================================= */
@@ -1473,6 +1535,187 @@ async function cargarComunicaciones() {
   actualizarEstadisticas();
 }
 
+function getCommunicationDetailDate(item) {
+  return (
+    item.fechaEnvio ||
+    item.fechaProcesamiento ||
+    item.actualizadoEn ||
+    item.creadoEn ||
+    item.createdAt ||
+    item.fechaCreacion ||
+    ""
+  );
+}
+
+function formatCommunicationDetailDate(value) {
+  if (!value) {
+    return "—";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+
+  return date.toLocaleString(
+    "es-MX",
+    {
+      dateStyle: "medium",
+      timeStyle: "short"
+    }
+  );
+}
+
+function getCommunicationErrorText(error) {
+  if (!error) {
+    return "";
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  const parts = [];
+
+  if (error.codigo) {
+    parts.push(
+      `Código: ${error.codigo}`
+    );
+  }
+
+  if (error.nombre) {
+    parts.push(
+      `Tipo: ${error.nombre}`
+    );
+  }
+
+  if (error.mensaje) {
+    parts.push(
+      `Mensaje: ${error.mensaje}`
+    );
+  }
+
+  return parts.join("\n");
+}
+
+function openCommunicationDetail(item) {
+  if (!item || !communicationDetailModal) {
+    return;
+  }
+
+  if (detailCandidate) {
+    detailCandidate.textContent =
+      item.candidatoNombre ||
+      item.nombreCandidato ||
+      item.destinatarioNombre ||
+      "Candidato";
+  }
+
+  if (detailRecipient) {
+    detailRecipient.textContent =
+      item.destinatarioCorreo ||
+      item.destinatarioTelefono ||
+      item.destinatario ||
+      "—";
+  }
+
+  if (detailType) {
+    detailType.textContent =
+      item.tipo ||
+      "Comunicación";
+  }
+
+  if (detailChannel) {
+    detailChannel.textContent =
+      getChannelLabel(
+        normalizeText(
+          item.canal || "email"
+        )
+      );
+  }
+
+  if (detailStatus) {
+    detailStatus.textContent =
+      String(
+        item.estado || "creado"
+      ).replaceAll("_", " ");
+  }
+
+  if (detailDate) {
+    detailDate.textContent =
+      formatCommunicationDetailDate(
+        getCommunicationDetailDate(item)
+      );
+  }
+
+  if (detailAttempts) {
+    detailAttempts.textContent =
+      String(
+        Number(item.intentos || 0)
+      );
+  }
+
+  if (detailId) {
+    detailId.textContent =
+      item.id || "—";
+  }
+
+  if (detailSubject) {
+    detailSubject.textContent =
+      item.asunto ||
+      "Sin asunto";
+  }
+
+  if (detailContent) {
+    detailContent.textContent =
+      item.contenidoTexto ||
+      "Sin contenido disponible.";
+  }
+
+  const errorText =
+    getCommunicationErrorText(
+      item.ultimoError
+    );
+
+  if (
+    errorText &&
+    detailErrorSection &&
+    detailError
+  ) {
+    detailError.textContent =
+      errorText;
+
+    detailErrorSection.classList.remove(
+      "hidden"
+    );
+  } else {
+    detailErrorSection?.classList.add(
+      "hidden"
+    );
+
+    if (detailError) {
+      detailError.textContent = "—";
+    }
+  }
+
+  communicationDetailModal.classList.remove(
+    "hidden"
+  );
+
+  document.body.style.overflow =
+    "hidden";
+}
+
+function closeCommunicationDetail() {
+  communicationDetailModal?.classList.add(
+    "hidden"
+  );
+
+  document.body.style.overflow =
+    "";
+}
+
 function renderComunicaciones() {
   if (!communicationsList) {
     return;
@@ -1894,6 +2137,62 @@ function bindEvents() {
     }
   );
 }
+
+
+  communicationsList?.addEventListener(
+    "click",
+    (event) => {
+      const button =
+        event.target.closest(
+          "[data-communication-id]"
+        );
+
+      if (!button) {
+        return;
+      }
+
+      const communicationId =
+        button.dataset.communicationId;
+
+      const communication =
+        comunicaciones.find(
+          (item) =>
+            String(item.id) ===
+            String(communicationId)
+        );
+
+      if (!communication) {
+        console.warn(
+          "No se encontró la comunicación:",
+          communicationId
+        );
+
+        return;
+      }
+
+      openCommunicationDetail(
+        communication
+      );
+    }
+  );
+
+  closeCommunicationDetailBackdrop
+    ?.addEventListener(
+      "click",
+      closeCommunicationDetail
+    );
+
+  closeCommunicationDetailBtn
+    ?.addEventListener(
+      "click",
+      closeCommunicationDetail
+    );
+
+  closeCommunicationDetailFooterBtn
+    ?.addEventListener(
+      "click",
+      closeCommunicationDetail
+    );
 
 /* =========================================================
    INICIALIZACIÓN

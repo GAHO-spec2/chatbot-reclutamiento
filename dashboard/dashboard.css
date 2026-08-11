@@ -1986,3 +1986,473 @@ body {
     text-align: left;
   }
 }
+
+/* =========================================================
+   SELECCIÓN Y ELIMINACIÓN DE CANDIDATOS
+========================================================= */
+
+.candidate-selection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+
+  width: 100%;
+  margin: 18px 0 20px;
+  padding: 16px 18px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(20, 28, 39, 0.96),
+      rgba(15, 21, 30, 0.96)
+    );
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+
+  box-sizing: border-box;
+}
+
+.candidate-selection-all {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  cursor: pointer;
+  user-select: none;
+
+  font-size: 15px;
+  font-weight: 700;
+  color: #f3f6fb;
+}
+
+.candidate-selection-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 18px;
+}
+
+#selectedCandidatesCount {
+  min-width: 115px;
+
+  font-size: 14px;
+  font-weight: 700;
+  color: #8fc7ff;
+
+  text-align: right;
+}
+
+/* =========================================================
+   CHECKBOX GENERAL
+========================================================= */
+
+#selectAllCandidates,
+.candidate-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+
+  width: 20px;
+  height: 20px;
+
+  flex: 0 0 20px;
+
+  margin: 0;
+
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-radius: 5px;
+
+  background: rgba(255, 255, 255, 0.04);
+
+  cursor: pointer;
+
+  position: relative;
+
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+#selectAllCandidates:hover,
+.candidate-checkbox:hover {
+  border-color: #69b7ff;
+
+  box-shadow:
+    0 0 0 4px rgba(70, 155, 255, 0.08);
+}
+
+#selectAllCandidates:checked,
+.candidate-checkbox:checked {
+  background: #2388e8;
+  border-color: #2388e8;
+}
+
+#selectAllCandidates:checked::after,
+.candidate-checkbox:checked::after {
+  content: "✓";
+
+  position: absolute;
+  inset: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: white;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+#selectAllCandidates:indeterminate {
+  background: #2388e8;
+  border-color: #2388e8;
+}
+
+#selectAllCandidates:indeterminate::after {
+  content: "−";
+
+  position: absolute;
+  inset: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: white;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+/* =========================================================
+   BOTÓN ELIMINAR
+========================================================= */
+
+.btn--danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  min-height: 42px;
+  padding: 0 18px;
+
+  border: 1px solid rgba(255, 82, 82, 0.35);
+  border-radius: 12px;
+
+  background:
+    rgba(153, 31, 41, 0.22);
+
+  color: #ff7a82;
+
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease,
+    opacity 0.18s ease;
+}
+
+.btn--danger:hover:not(:disabled) {
+  background:
+    rgba(190, 40, 52, 0.36);
+
+  border-color:
+    rgba(255, 100, 110, 0.65);
+
+  transform: translateY(-1px);
+}
+
+.btn--danger:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* =========================================================
+   CABECERA DEL LISTADO
+========================================================= */
+
+.candidate-list-head--selectable {
+  display: grid;
+
+  grid-template-columns:
+    42px
+    minmax(260px, 1.25fr)
+    minmax(280px, 1.15fr)
+    minmax(210px, 0.8fr)
+    90px;
+
+  align-items: center;
+
+  gap: 24px;
+
+  padding:
+    0 18px 12px;
+
+  box-sizing: border-box;
+}
+
+.candidate-list-head--selectable span {
+  font-size: 12px;
+  font-weight: 800;
+
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.candidate-list-head--selectable
+.candidate-select-column {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  font-size: 14px;
+}
+
+/* =========================================================
+   TARJETAS DE CANDIDATOS
+========================================================= */
+
+.dashboard-card {
+  display: grid;
+
+  grid-template-columns:
+    42px
+    minmax(260px, 1.25fr)
+    minmax(280px, 1.15fr)
+    minmax(210px, 0.8fr)
+    90px;
+
+  align-items: center;
+
+  gap: 24px;
+
+  width: 100%;
+
+  padding: 20px 18px;
+
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   COLUMNA CHECKBOX
+========================================================= */
+
+.candidate-select {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 42px;
+  min-width: 42px;
+}
+
+/* =========================================================
+   CANDIDATO
+========================================================= */
+
+.candidate-primary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  min-width: 0;
+}
+
+.candidate-avatar {
+  flex: 0 0 auto;
+}
+
+.candidate-identity {
+  min-width: 0;
+}
+
+.candidate-identity h3 {
+  margin: 0 0 6px;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.candidate-identity p {
+  margin: 0;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   PUESTO
+========================================================= */
+
+.candidate-position {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  min-width: 0;
+}
+
+.candidate-position strong {
+  font-size: 15px;
+}
+
+.candidate-position span,
+.candidate-position small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   PROCESO
+========================================================= */
+
+.candidate-process {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+
+  min-width: 0;
+}
+
+.candidate-compatibility-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* =========================================================
+   ACCIONES
+========================================================= */
+
+.candidate-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.candidate-actions .btn {
+  min-width: 64px;
+}
+
+/* =========================================================
+   CANDIDATO SELECCIONADO
+========================================================= */
+
+.dashboard-card:has(
+  .candidate-checkbox:checked
+) {
+  border-color:
+    rgba(70, 155, 255, 0.52);
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(30, 71, 108, 0.18),
+      rgba(19, 27, 38, 0.96)
+    );
+
+  box-shadow:
+    inset 3px 0 0 #2388e8;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1100px) {
+
+  .candidate-list-head--selectable {
+    display: none;
+  }
+
+  .dashboard-card {
+    grid-template-columns:
+      36px
+      minmax(200px, 1fr)
+      minmax(180px, 1fr);
+
+    gap: 18px;
+  }
+
+  .candidate-process {
+    grid-column: 2;
+  }
+
+  .candidate-actions {
+    grid-column: 3;
+    grid-row: 2;
+
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+
+  .candidate-selection-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .candidate-selection-actions {
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  #selectedCandidatesCount {
+    text-align: left;
+  }
+
+  .dashboard-card {
+    grid-template-columns:
+      32px
+      1fr;
+
+    gap: 14px;
+
+    padding: 18px 14px;
+  }
+
+  .candidate-select {
+    grid-column: 1;
+    grid-row: 1;
+
+    width: 32px;
+    min-width: 32px;
+  }
+
+  .candidate-primary {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .candidate-position {
+    grid-column: 2;
+  }
+
+  .candidate-process {
+    grid-column: 2;
+  }
+
+  .candidate-actions {
+    grid-column: 2;
+
+    justify-content: flex-start;
+  }
+
+  .candidate-actions .btn {
+    width: 100%;
+  }
+}

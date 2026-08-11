@@ -880,6 +880,142 @@
   </div>
 
   <!-- =========================
+     MODAL DETALLE COMUNICACIÓN
+========================== -->
+<div
+  id="communicationDetailModal"
+  class="modal hidden"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="communicationDetailTitle"
+>
+  <div
+    id="closeCommunicationDetailBackdrop"
+    class="modal__backdrop"
+  ></div>
+
+  <div class="modal__content communication-modal">
+    <div class="modal__header">
+      <div>
+        <span class="communications-section-eyebrow">
+          Historial de comunicaciones
+        </span>
+
+        <h3 id="communicationDetailTitle">
+          Detalle de comunicación
+        </h3>
+
+        <p>
+          Información completa del mensaje enviado al candidato.
+        </p>
+      </div>
+
+      <button
+        id="closeCommunicationDetailBtn"
+        class="chatbot-close"
+        type="button"
+        aria-label="Cerrar detalle"
+      >
+        ✕
+      </button>
+    </div>
+
+    <div class="modal__body">
+
+      <div class="communication-detail-grid">
+
+        <div>
+          <span class="detail-label">Candidato</span>
+          <strong id="detailCandidate">—</strong>
+        </div>
+
+        <div>
+          <span class="detail-label">Destinatario</span>
+          <strong id="detailRecipient">—</strong>
+        </div>
+
+        <div>
+          <span class="detail-label">Tipo</span>
+          <strong id="detailType">—</strong>
+        </div>
+
+        <div>
+          <span class="detail-label">Canal</span>
+          <strong id="detailChannel">—</strong>
+        </div>
+
+        <div>
+          <span class="detail-label">Estado</span>
+          <strong id="detailStatus">—</strong>
+        </div>
+
+        <div>
+          <span class="detail-label">Fecha</span>
+          <strong id="detailDate">—</strong>
+        </div>
+
+        <div>
+          <span class="detail-label">Intentos</span>
+          <strong id="detailAttempts">—</strong>
+        </div>
+
+        <div>
+          <span class="detail-label">ID</span>
+          <strong id="detailId">—</strong>
+        </div>
+
+      </div>
+
+      <section class="communication-detail-section">
+        <span class="detail-label">Asunto</span>
+        <div
+          id="detailSubject"
+          class="communication-detail-box"
+        >
+          —
+        </div>
+      </section>
+
+      <section class="communication-detail-section">
+        <span class="detail-label">Contenido</span>
+        <div
+          id="detailContent"
+          class="communication-detail-box communication-detail-content"
+        >
+          —
+        </div>
+      </section>
+
+      <section
+        id="detailErrorSection"
+        class="communication-detail-section hidden"
+      >
+        <span class="detail-label">Error</span>
+
+        <div
+          id="detailError"
+          class="communication-detail-box communication-detail-error"
+        >
+          —
+        </div>
+      </section>
+
+    </div>
+
+    <div class="modal__footer">
+      <button
+        id="closeCommunicationDetailFooterBtn"
+        class="btn btn--secondary"
+        type="button"
+      >
+        Cerrar
+      </button>
+    </div>
+
+  </div>
+</div>
+
+  <!-- =========================
        FIREBASE Y JAVASCRIPT
   ========================== -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>

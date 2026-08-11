@@ -18,7 +18,7 @@
     href="icons8-documento-32.png"
   />
 
-  <link rel="stylesheet" href="dashboard.css?v=8" />
+  <link rel="stylesheet" href="dashboard.css?v=9" />
 </head>
 
 <body>
@@ -315,6 +315,39 @@
           Sin filtros adicionales
         </span>
       </div>
+      <!-- =========================
+     SELECCIÓN DE CANDIDATOS
+========================== -->
+<div
+  id="candidateSelectionBar"
+  class="candidate-selection-bar"
+>
+  <label class="candidate-selection-all">
+    <input
+      id="selectAllCandidates"
+      type="checkbox"
+    />
+
+    <span>
+      Seleccionar todos
+    </span>
+  </label>
+
+  <div class="candidate-selection-actions">
+    <span id="selectedCandidatesCount">
+      0 seleccionados
+    </span>
+
+    <button
+      id="deleteSelectedCandidatesBtn"
+      type="button"
+      class="btn btn--danger"
+      disabled
+    >
+      🗑 Eliminar seleccionados
+    </button>
+  </div>
+</div>
 
       <div
         id="dashboardStatus"
@@ -324,12 +357,19 @@
       ></div>
 
       <!-- CABECERA TIPO TABLA -->
-      <div class="candidate-list-head">
-        <span>Candidato</span>
-        <span>Puesto y ubicación</span>
-        <span>Proceso</span>
-        <span>Acción</span>
-      </div>
+      <div class="candidate-list-head candidate-list-head--selectable">
+  <span class="candidate-select-column">
+    ✓
+  </span>
+
+  <span>Candidato</span>
+
+  <span>Puesto y ubicación</span>
+
+  <span>Proceso</span>
+
+  <span>Acción</span>
+</div>
 
       <!-- LISTADO -->
       <div

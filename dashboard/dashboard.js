@@ -126,6 +126,28 @@ const saveInterviewBtn = document.getElementById("saveInterviewBtn");
 let postulaciones = [];
 let selectedCandidate = null;
 
+/* =========================
+   SELECCIÓN DE CANDIDATOS
+========================= */
+
+let selectedCandidateIds =
+  new Set();
+
+const selectAllCandidates =
+  document.getElementById(
+    "selectAllCandidates"
+  );
+
+const selectedCandidatesCount =
+  document.getElementById(
+    "selectedCandidatesCount"
+  );
+
+const deleteSelectedCandidatesBtn =
+  document.getElementById(
+    "deleteSelectedCandidatesBtn"
+  );
+
 const candidateSearch = document.getElementById("candidateSearch");
 const candidateStatusFilter = document.getElementById(
   "candidateStatusFilter"
@@ -1001,6 +1023,202 @@ function renderEvaluationList(
     .join("");
 }
 
+/* =========================
+   SELECCIÓN Y ELIMINACIÓN
+========================= */
+
+function updateCandidateSelectionUi() {
+  const total =
+    selectedCandidateIds.size;
+
+  if (selectedCandidatesCount) {
+    selectedCandidatesCount.textContent =
+      `${total} ${
+        total === 1
+          ? "seleccionado"
+          : "seleccionados"
+      }`;
+  }
+
+  if (deleteSelectedCandidatesBtn) {
+    deleteSelectedCandidatesBtn.disabled =
+      total === 0;
+
+    deleteSelectedCandidatesBtn.textContent =
+      total === 1
+        ? "🗑 Eliminar seleccionado"
+        : `🗑 Eliminar seleccionados${
+            total > 1
+              ? ` (${total})`
+              : ""
+          }`;
+  }
+
+  const candidatosVisibles =
+    getPostulacionesFiltradas();
+
+  const idsVisibles =
+    candidatosVisibles.map(
+      (item) =>
+        String(item.id)
+    );
+
+  const seleccionadosVisibles =
+    idsVisibles.filter(
+      (id) =>
+        selectedCandidateIds.has(id)
+    ).length;
+
+  if (selectAllCandidates) {
+    selectAllCandidates.checked =
+      idsVisibles.length > 0 &&
+      seleccionadosVisibles ===
+        idsVisibles.length;
+
+    selectAllCandidates.indeterminate =
+      seleccionadosVisibles > 0 &&
+      seleccionadosVisibles <
+        idsVisibles.length;
+  }
+}
+
+function toggleCandidateSelection(
+  candidateId,
+  checked
+) {
+  const id =
+    String(candidateId || "");
+
+  if (!id) {
+    return;
+  }
+
+  if (checked) {
+    selectedCandidateIds.add(id);
+  } else {
+    selectedCandidateIds.delete(id);
+  }
+
+  updateCandidateSelectionUi();
+}
+
+async function eliminarPostulacionesSeleccionadas() {
+  const ids =
+    Array.from(
+      selectedCandidateIds
+    );
+
+  if (!ids.length) {
+    return;
+  }
+
+  const cantidad =
+    ids.length;
+
+  const mensaje =
+    cantidad === 1
+      ? "¿Deseas eliminar permanentemente la postulación seleccionada?"
+      : `¿Deseas eliminar permanentemente las ${cantidad} postulaciones seleccionadas?`;
+
+  const confirmado =
+    window.confirm(
+      `${mensaje}\n\nEsta acción no se puede deshacer.`
+    );
+
+  if (!confirmado) {
+    return;
+  }
+
+  if (deleteSelectedCandidatesBtn) {
+    deleteSelectedCandidatesBtn.disabled =
+      true;
+
+    deleteSelectedCandidatesBtn.textContent =
+      "Eliminando...";
+  }
+
+  try {
+    let eliminadas =
+      0;
+
+    const errores =
+      [];
+
+    for (const id of ids) {
+      try {
+        const response =
+          await fetch(
+            `${API_URL}/api/postulaciones/${encodeURIComponent(
+              id
+            )}`,
+            {
+              method:
+                "DELETE",
+
+              headers:
+                authHeaders()
+            }
+          );
+
+        const data =
+          await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.error ||
+            "No fue posible eliminar la postulación."
+          );
+        }
+
+        eliminadas += 1;
+      } catch (error) {
+        errores.push({
+          id,
+          mensaje:
+            error.message
+        });
+      }
+    }
+
+    selectedCandidateIds.clear();
+
+    sessionStorage.removeItem(
+      DASHBOARD_CACHE_KEY
+    );
+
+    await cargarPostulaciones(
+      true
+    );
+
+    if (errores.length) {
+      setStatus(
+        `⚠️ Se eliminaron ${eliminadas} postulaciones, pero ${errores.length} no pudieron eliminarse.`
+      );
+    } else {
+      setStatus(
+        `✅ ${
+          eliminadas === 1
+            ? "Postulación eliminada"
+            : `${eliminadas} postulaciones eliminadas`
+        } correctamente.`
+      );
+    }
+  } catch (error) {
+    console.error(
+      "Error eliminando postulaciones:",
+      error
+    );
+
+    setStatus(
+      `⚠️ ${
+        error.message ||
+        "No fue posible eliminar las postulaciones."
+      }`
+    );
+  } finally {
+    updateCandidateSelectionUi();
+  }
+}
 
 /* =========================
    RENDER POSTULACIONES
@@ -1025,6 +1243,7 @@ function renderPostulaciones() {
     `;
 
     updateStats();
+    updateCandidateSelectionUi();
     return;
   }
 
@@ -1098,72 +1317,121 @@ const compatibilityLabel =
   "Compatibilidad no disponible";
 
     card.innerHTML = `
-      <div class="candidate-primary">
-        <div class="candidate-avatar">
-          ${getIniciales(postulacion.nombre)}
-        </div>
-
-        <div class="candidate-identity">
-          <h3>${postulacion.nombre || "Sin nombre"}</h3>
-
-          <p>
-            ${postulacion.correo || postulacion.telefono || "Sin contacto"}
-          </p>
-        </div>
-      </div>
-
-      <div class="candidate-position">
-        <strong>${puesto}</strong>
-
-        <span>
-          ${marca} · ${sucursal}
-        </span>
-
-        <small>
-          ${postulacion.ciudad || "Ciudad no registrada"}
-        </small>
-
-        <small class="candidate-distance-summary">
-          📍 ${distanciaResumen}
-        </small>
-      </div>
-
-      <div class="candidate-process">
-  <span class="${getEstadoClass(estado)}">
-    ${estado.replaceAll("_", " ")}
-  </span>
-
-  <div class="candidate-compatibility-mini">
-    <strong>
-      ${compatibilityText}
-    </strong>
-
-    <span>
-      ${compatibilityLabel}
-    </span>
+  <div class="candidate-select">
+    <input
+      class="candidate-checkbox"
+      type="checkbox"
+      data-candidate-id="${postulacion.id}"
+      ${
+        selectedCandidateIds.has(
+          String(postulacion.id)
+        )
+          ? "checked"
+          : ""
+      }
+      aria-label="Seleccionar ${postulacion.nombre || "candidato"}"
+    />
   </div>
 
-  <small>
-    ${entrevista}
-  </small>
-</div>
+  <div class="candidate-primary">
+    <div class="candidate-avatar">
+      ${getIniciales(postulacion.nombre)}
+    </div>
 
-      <div class="candidate-actions">
-        <button
-          class="btn btn--secondary view-btn"
-          type="button"
-          data-id="${postulacion.id}"
-        >
-          Ver
-        </button>
-      </div>
-    `;
+    <div class="candidate-identity">
+      <h3>${postulacion.nombre || "Sin nombre"}</h3>
 
-    card.addEventListener("click", (event) => {
-      if (event.target.closest("button")) return;
+      <p>
+        ${postulacion.correo || postulacion.telefono || "Sin contacto"}
+      </p>
+    </div>
+  </div>
 
-      openCandidateModal(postulacion);
-    });
+  <div class="candidate-position">
+    <strong>${puesto}</strong>
+
+    <span>
+      ${marca} · ${sucursal}
+    </span>
+
+    <small>
+      ${postulacion.ciudad || "Ciudad no registrada"}
+    </small>
+
+    <small class="candidate-distance-summary">
+      📍 ${distanciaResumen}
+    </small>
+  </div>
+
+  <div class="candidate-process">
+    <span class="${getEstadoClass(estado)}">
+      ${estado.replaceAll("_", " ")}
+    </span>
+
+    <div class="candidate-compatibility-mini">
+      <strong>
+        ${compatibilityText}
+      </strong>
+
+      <span>
+        ${compatibilityLabel}
+      </span>
+    </div>
+
+    <small>
+      ${entrevista}
+    </small>
+  </div>
+
+  <div class="candidate-actions">
+    <button
+      class="btn btn--secondary view-btn"
+      type="button"
+      data-id="${postulacion.id}"
+    >
+      Ver
+    </button>
+  </div>
+`;
+    
+    const checkbox =
+  card.querySelector(
+    ".candidate-checkbox"
+  );
+
+checkbox?.addEventListener(
+  "click",
+  (event) => {
+    event.stopPropagation();
+  }
+);
+
+checkbox?.addEventListener(
+  "change",
+  () => {
+    toggleCandidateSelection(
+      postulacion.id,
+      checkbox.checked
+    );
+  }
+);
+
+    card.addEventListener(
+  "click",
+  (event) => {
+    if (
+      event.target.closest(
+        "button, input, label"
+      )
+    ) {
+      return;
+    }
+
+    openCandidateModal(
+      postulacion
+    );
+  }
+);
 
     card.addEventListener("keydown", (event) => {
       if (
@@ -1468,6 +1736,47 @@ if (modalCompatibilidadAlert) {
 }
 
 
+if (selectAllCandidates) {
+  selectAllCandidates.addEventListener(
+    "change",
+    () => {
+      const visibles =
+        getPostulacionesFiltradas();
+
+      visibles.forEach(
+        (candidate) => {
+          const id =
+            String(
+              candidate.id
+            );
+
+          if (
+            selectAllCandidates
+              .checked
+          ) {
+            selectedCandidateIds
+              .add(id);
+          } else {
+            selectedCandidateIds
+              .delete(id);
+          }
+        }
+      );
+
+      renderPostulaciones();
+    }
+  );
+}
+
+if (deleteSelectedCandidatesBtn) {
+  deleteSelectedCandidatesBtn
+    .addEventListener(
+      "click",
+      eliminarPostulacionesSeleccionadas
+    );
+}
+
+
 function closeCandidateModal() {
   modal.classList.add("hidden");
   selectedCandidate = null;
@@ -1696,6 +2005,39 @@ async function cerrarSesion() {
   }
 }
 
+/* =========================
+   EVENTOS SELECCIÓN CANDIDATOS
+========================= */
+
+if (selectAllCandidates) {
+  selectAllCandidates.addEventListener(
+    "change",
+    () => {
+      const visibles =
+        getPostulacionesFiltradas();
+
+      visibles.forEach((candidate) => {
+        const id =
+          String(candidate.id);
+
+        if (selectAllCandidates.checked) {
+          selectedCandidateIds.add(id);
+        } else {
+          selectedCandidateIds.delete(id);
+        }
+      });
+
+      renderPostulaciones();
+    }
+  );
+}
+
+if (deleteSelectedCandidatesBtn) {
+  deleteSelectedCandidatesBtn.addEventListener(
+    "click",
+    eliminarPostulacionesSeleccionadas
+  );
+}
 /* =========================
    EVENTS
 ========================= */

@@ -770,13 +770,121 @@ function guardarJson(filePath, data) {
 
 async function guardarPostulacion(postulacion) {
   if (!db) {
-    const postulaciones = leerJson(postulacionesFile, []);
-    postulaciones.push(postulacion);
-    guardarJson(postulacionesFile, postulaciones);
+    const postulaciones =
+      leerJson(
+        postulacionesFile,
+        []
+      );
+
+    postulaciones.push(
+      postulacion
+    );
+
+    guardarJson(
+      postulacionesFile,
+      postulaciones
+    );
+
     return;
   }
 
-  await db.collection(POSTULACIONES_COLLECTION).doc(postulacion.id).set(postulacion);
+  await db
+    .collection(
+      POSTULACIONES_COLLECTION
+    )
+    .doc(postulacion.id)
+    .set(postulacion);
+}
+
+async function actualizarPostulacion(
+  id,
+  data
+) {
+  if (!db) {
+    const postulaciones =
+      leerJson(
+        postulacionesFile,
+        []
+      );
+
+    const index =
+      postulaciones.findIndex(
+        (p) => p.id === id
+      );
+
+    if (index !== -1) {
+      postulaciones[index] = {
+        ...postulaciones[index],
+        ...data
+      };
+
+      guardarJson(
+        postulacionesFile,
+        postulaciones
+      );
+    }
+
+    return;
+  }
+
+  await db
+    .collection(
+      POSTULACIONES_COLLECTION
+    )
+    .doc(id)
+    .update(data);
+}
+
+async function eliminarPostulacion(id) {
+  if (!id) {
+    return false;
+  }
+
+  if (!db) {
+    const postulaciones =
+      leerJson(
+        postulacionesFile,
+        []
+      );
+
+    const nuevasPostulaciones =
+      postulaciones.filter(
+        (postulacion) =>
+          postulacion.id !== id
+      );
+
+    if (
+      nuevasPostulaciones.length ===
+      postulaciones.length
+    ) {
+      return false;
+    }
+
+    guardarJson(
+      postulacionesFile,
+      nuevasPostulaciones
+    );
+
+    return true;
+  }
+
+  const referencia =
+    db
+      .collection(
+        POSTULACIONES_COLLECTION
+      )
+      .doc(id);
+
+  const documento =
+    await referencia.get();
+
+  if (!documento.exists) {
+    return false;
+  }
+
+  await referencia.delete();
+
+  return true;
 }
 
 async function leerPostulaciones(limit = 50) {
@@ -800,25 +908,8 @@ async function leerPostulaciones(limit = 50) {
     ...doc.data()
   }));
 }
-async function actualizarPostulacion(id, data) {
-  if (!db) {
-    const postulaciones = leerJson(postulacionesFile, []);
-    const index = postulaciones.findIndex((p) => p.id === id);
 
-    if (index !== -1) {
-      postulaciones[index] = {
-        ...postulaciones[index],
-        ...data
-      };
 
-      guardarJson(postulacionesFile, postulaciones);
-    }
-
-    return;
-  }
-
-  await db.collection(POSTULACIONES_COLLECTION).doc(id).update(data);
-}
 
 async function leerEntrevistas(limit = 100) {
   if (!db) {
@@ -6125,6 +6216,7 @@ app.patch("/api/postulaciones/:id/estado", verifyAdmin, async (req, res) => {
     const { estado } = req.body;
     const estadosValidos = ["pendiente", "aprobado", "rechazado", "entrevista_agendada"];
 
+
     if (!estadosValidos.includes(estado)) {
       return res.status(400).json({ error: "Estado no valido." });
     }
@@ -6157,6 +6249,57 @@ app.patch("/api/postulaciones/:id/estado", verifyAdmin, async (req, res) => {
   }
 });
 
+/* =========================================================
+   ELIMINAR POSTULACIÓN
+========================================================= */
+
+app.delete(
+  "/api/postulaciones/:id",
+  verifyAdmin,
+  async (req, res) => {
+    try {
+      const { id } =
+        req.params;
+
+      if (!id) {
+        return res.status(400).json({
+          error:
+            "El identificador de la postulación es obligatorio."
+        });
+      }
+
+      const eliminada =
+        await eliminarPostulacion(
+          id
+        );
+
+      if (!eliminada) {
+        return res.status(404).json({
+          error:
+            "Postulación no encontrada."
+        });
+      }
+
+      res.json({
+        ok: true,
+        message:
+          "Postulación eliminada correctamente.",
+        id
+      });
+    } catch (error) {
+      console.error(
+        "Error eliminando postulación:",
+        error
+      );
+
+      res.status(500).json({
+        error:
+          error.message ||
+          "No fue posible eliminar la postulación."
+      });
+    }
+  }
+);
 app.get(
   "/api/entrevistas/horarios-disponibles",
   async (req, res) => {
