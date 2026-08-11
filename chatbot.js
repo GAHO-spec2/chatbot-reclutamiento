@@ -1,4 +1,5 @@
-const API_URL = "https://chatbot-reclutamiento-dcqb.onrender.com";
+const API_URL =  "https://chatbot-reclutamiento-dcqb.onrender.com";
+
 
 const toggle = document.getElementById("chatbot-toggle");
 const closeBtn = document.getElementById("chatbot-close");
@@ -2659,8 +2660,7 @@ if (config.solicitarTiempoTraslado) {
 
     applicationFlow.submittedApplication =
   postulacion;
-    applicationFlow.submittedApplication =
-  postulacion;
+    
   applicationFlow.active = false;
 applicationFlow.mode = "";
 applicationFlow.step = 0;
@@ -2918,61 +2918,36 @@ async function consultarEstatusDesdeChat(
 /* =========================
    INPUT LIBRE
 ========================= */
-
 async function handleFreeText(text) {
-  const normalized = normalizeText(text);
-  if (
-  applicationFlow.waitingForStatusFolio
-) {
-  await consultarEstatusDesdeChat(
-    text
-  );
+  const normalized =
+    normalizeText(text);
 
-  return;
-}
-if (/^\d{10,20}$/.test(text.trim())) {
-  await consultarEstatusDesdeChat(
-    text
-  );
-
-  return;
-}
   if (
-  applicationFlow.mode ===
-  "interview_booking"
-) {
-  if (
-    normalized.includes(
-      "cancelar"
-    ) ||
-    normalized.includes(
-      "despues"
-    ) ||
-    normalized.includes(
-      "ahora no"
-    )
+    applicationFlow.active &&
+    Array.isArray(
+      applicationFlow.questions
+    ) &&
+    applicationFlow.currentQuestionIndex <
+      applicationFlow.questions.length
   ) {
-    applicationFlow.mode = "";
-
-    resetInterviewBookingFlow();
-
-    addAssistantText(
-      "✅ La agenda quedó pendiente. RH podrá contactarte para coordinar tu entrevista."
+    await handleApplicationFlow(
+      text
     );
 
     return;
   }
 
-  addAssistantText(
-    "📅 Para continuar con la agenda, selecciona una de las fechas u horarios disponibles en los botones."
-  );
+  if (
+    applicationFlow.waitingForStatusFolio
+  ) {
+    await consultarEstatusDesdeChat(
+      text
+    );
 
-  return;
-}
+    return;
+  }
 
-  /* =========================
-     FLUJO DE POSTULACIÓN DINÁMICA
-  ========================= */
+  
   if (
     applicationFlow.mode ===
     "dynamic_application"
@@ -2989,6 +2964,7 @@ if (/^\d{10,20}$/.test(text.trim())) {
       await submitApplicationFromChat();
       return;
     }
+  
 
     await handleApplicationFlow(text);
     return;
@@ -3307,7 +3283,7 @@ async function init() {
 const translations = {
   es: {
     // Footer
-    footer_description: "Desde franquicias de gran volumen hasta conceptos originales dirigidos a audiencias específicas, el grupo ha desempeñado un papel versátil e influyente con más de 80 ubicaciones en mercados de toda la República Mexicana y mercados dentro de la línea fronteriza en Texas.",
+    footer_description: "Desde franquicias de gran volumen hasta conceptos originales dirigidos a audiencias específicas, el grupo ha desempeñado un papel versátil e influyente con más de 100 ubicaciones en mercados de toda la República Mexicana y mercados dentro de la línea fronteriza en Texas.",
     site_map: "Mapa del sitio",
     home: "Inicio",
     about_us: "Nosotros",
@@ -3318,7 +3294,7 @@ const translations = {
     contact: "Contacto",
     address: "Cd. Juárez, Chihuahua, México",
     founded: "Fundado en 1994",
-    restaurants: "80+ restaurantes",
+    restaurants: "100+ restaurantes",
     stay_updated: "Manténgase actualizado",
     subscribe_text: "Suscríbete para recibir las últimas vacantes y novedades.",
     subscribe_btn: "Suscribirse",
@@ -3333,7 +3309,7 @@ const translations = {
   },
   en: {
     // Footer
-    footer_description: "From high-volume franchises to original concepts targeting specific audiences, the group has played a versatile and influential role with over 80 locations in markets throughout the Mexican Republic and border markets in Texas.",
+    footer_description: "From high-volume franchises to original concepts targeting specific audiences, the group has played a versatile and influential role with over 100 locations in markets throughout the Mexican Republic and border markets in Texas.",
     site_map: "Site Map",
     home: "Home",
     about_us: "About Us",
@@ -3344,7 +3320,7 @@ const translations = {
     contact: "Contact",
     address: "Cd. Juárez, Chihuahua, Mexico",
     founded: "Founded in 1994",
-    restaurants: "80+ restaurants",
+    restaurants: "100+ restaurants",
     stay_updated: "Stay Updated",
     subscribe_text: "Subscribe to receive the latest vacancies and news.",
     subscribe_btn: "Subscribe",

@@ -1,6 +1,6 @@
 import express from "express";
-import OpenAI from "openai";
 import dotenv from "dotenv";
+import OpenAI from "openai";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
@@ -8,39 +8,180 @@ import admin from "firebase-admin";
 import { fileURLToPath } from "url";
 import { createRequire } from "module";
 
-const require = createRequire(import.meta.url);
-const pdfParse = require("pdf-parse");
+dotenv.config({
+  path: new URL(
+    "../.env",
+    import.meta.url
+  )
+});
 
-dotenv.config();
+const require =
+  createRequire(import.meta.url);
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+const {
+  crearCommunicationQueueRepository
+} = require(
+  "./repositories/communicationQueueRepository.cjs"
+);
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const {
+  crearCommunicationQueue
+} = require(
+  "./communication/CommunicationQueue.cjs"
+);
+
+const {
+  crearCommunicationWorker
+} = require(
+  "./communication/CommunicationWorker.cjs"
+);
+
+const {
+  crearCommunicationQueueService
+} = require(
+  "./services/communicationQueue.cjs"
+);
+
+const {
+  crearCommunicationQueueController
+} = require(
+  "./controllers/communicationQueueController.cjs"
+);
+
+
+const {
+  crearCommunicationsRepository
+} = require(
+  "./repositories/communicationsRepository.cjs"
+);
+
+const {
+  crearEmailProvider
+} = require(
+  "./communication/EmailProvider.cjs"
+);
+
+const {
+  crearCommunicationEngine
+} = require(
+  "./communication/CommunicationEngine.cjs"
+);
+
+const {
+  crearCommunicationsService
+} = require(
+  "./services/communications.cjs"
+);
+
+const {
+  crearCommunicationsController
+} = require(
+  "./controllers/communicationsController.cjs"
+);
+const pdfParse =
+  require("pdf-parse");
+
+const app =
+  express();
+
+const PORT =
+  process.env.PORT || 3000;
+
+const __filename =
+  fileURLToPath(import.meta.url);
+
+const __dirname =
+  path.dirname(__filename);
+  
+const projectRoot =
+  path.resolve(
+    __dirname,
+    ".."
+  );
+
+const uploadsDir =
+  path.join(
+    __dirname,
+    "uploads"
+  );
+
+const dataDir =
+  path.join(
+    __dirname,
+    "data"
+  );
+
+const plantillasComunicacionFile =
+  path.join(
+    dataDir,
+    "plantillas-comunicacion.json"
+  );
+
+const comunicacionesFile =
+  path.join(
+    dataDir,
+    "comunicaciones.json"
+  );
+
+const communicationQueueFile =
+  path.join(
+    dataDir,
+    "communication-queue.json"
+  );
+
+
+
+/* =========================
+   OPENAI
+========================= */
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey:
+    process.env.OPENAI_API_KEY
 });
+
+/* =========================
+   FIREBASE ADMIN
+========================= */
 
 if (!admin.apps.length) {
   try {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    const serviceAccount =
+      JSON.parse(
+        process.env
+          .FIREBASE_SERVICE_ACCOUNT_JSON
+      );
 
     admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  projectId: serviceAccount.project_id
-});
-    console.log("Firebase Admin inicializado correctamente.");
+      credential:
+        admin.credential.cert(
+          serviceAccount
+        ),
+
+      projectId:
+        serviceAccount.project_id
+    });
+
+    console.log(
+      "Firebase Admin inicializado correctamente."
+    );
   } catch (error) {
-    console.error("Firebase Admin no inicializado:", error.message);
+    console.error(
+      "Firebase Admin no inicializado:",
+      error.message
+    );
   }
 }
 
-const db = admin.apps.length ? admin.firestore() : null;
+const db =
+  admin.apps.length
+    ? admin.firestore()
+    : null;
+
 if (db) {
   db.settings({
-    ignoreUndefinedProperties: true
+    ignoreUndefinedProperties:
+      true
   });
 }
 
@@ -87,8 +228,7 @@ async function verifyAdmin(req, res, next) {
   }
 }
 
-const uploadsDir = path.join(__dirname, "uploads");
-const dataDir = path.join(__dirname, "data");
+
 
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
@@ -109,6 +249,38 @@ const disponibilidadesEntrevistaFile =
   path.join(
     dataDir,
     "disponibilidades-entrevista.json"
+  );
+
+const COMUNICACIONES_COLLECTION =
+  "comunicaciones";
+
+const PLANTILLAS_COMUNICACION_COLLECTION =
+  "plantillas_comunicacion";
+const COMMUNICATION_QUEUE_COLLECTION =
+  "communication_queue";
+
+const RECORDATORIOS_COLLECTION =
+  "recordatorios_comunicacion";
+
+
+
+  if (
+  !fs.existsSync(
+    comunicacionesFile
+  )
+) {
+  fs.writeFileSync(
+    comunicacionesFile,
+    "[]",
+    "utf8"
+  );
+}
+
+
+const recordatoriosComunicacionFile =
+  path.join(
+    dataDir,
+    "recordatorios-comunicacion.json"
   );
 
 const sucursalesIniciales = [
@@ -285,6 +457,38 @@ const vacantesIniciales = [
   }
 ];
 
+const {
+  crearTemplatesRepository
+} = require(
+  "./repositories/templatesRepository.cjs"
+);
+
+const {
+  crearTemplatesService
+} = require(
+  "./services/templates.cjs"
+);
+
+const {
+  crearTemplatesController
+} = require(
+  "./controllers/templatesController.cjs"
+);
+
+const {
+  crearComunicacionesRouter
+} = require(
+  "./routes/comunicaciones.cjs"
+);
+const {
+  instalarPlantillasIniciales
+} = require(
+  "./services/defaultTemplatesInstaller.cjs"
+);
+
+dotenv.config();
+
+
 if (!fs.existsSync(postulacionesFile)) {
   fs.writeFileSync(postulacionesFile, "[]", "utf-8");
 }
@@ -310,6 +514,243 @@ if (
     "[]",
     "utf-8"
   );
+}
+if (
+  !fs.existsSync(
+    comunicacionesFile
+  )
+) {
+  fs.writeFileSync(
+    comunicacionesFile,
+    "[]",
+    "utf-8"
+  );
+}
+
+if (
+  !fs.existsSync(
+    plantillasComunicacionFile
+  )
+) {
+  fs.writeFileSync(
+    plantillasComunicacionFile,
+    "[]",
+    "utf-8"
+  );
+}
+
+if (
+  !fs.existsSync(
+    recordatoriosComunicacionFile
+  )
+) {
+  fs.writeFileSync(
+    recordatoriosComunicacionFile,
+    "[]",
+    "utf-8"
+  );
+}
+
+
+
+
+async function guardarComunicacion(
+  comunicacion
+) {
+  if (!db) {
+    const comunicaciones =
+      leerJson(
+        comunicacionesFile,
+        []
+      );
+
+    comunicaciones.push(
+      comunicacion
+    );
+
+    guardarJson(
+      comunicacionesFile,
+      comunicaciones
+    );
+
+    return comunicacion;
+  }
+
+  await db
+    .collection(
+      COMUNICACIONES_COLLECTION
+    )
+    .doc(comunicacion.id)
+    .set(comunicacion);
+
+  return comunicacion;
+}
+
+async function leerComunicaciones(
+  limit = 200
+) {
+  if (!db) {
+    return leerJson(
+      comunicacionesFile,
+      []
+    )
+      .sort(
+        (a, b) =>
+          new Date(
+            b.fechaCreacion || 0
+          ) -
+          new Date(
+            a.fechaCreacion || 0
+          )
+      )
+      .slice(0, limit);
+  }
+
+  const snapshot =
+    await db
+      .collection(
+        COMUNICACIONES_COLLECTION
+      )
+      .orderBy(
+        "fechaCreacion",
+        "desc"
+      )
+      .limit(limit)
+      .get();
+
+  return snapshot.docs.map(
+    (doc) => ({
+      id: doc.id,
+      ...doc.data()
+    })
+  );
+}
+
+async function actualizarComunicacion(
+  id,
+  cambios
+) {
+  if (!db) {
+    const comunicaciones =
+      leerJson(
+        comunicacionesFile,
+        []
+      );
+
+    const index =
+      comunicaciones.findIndex(
+        (item) =>
+          item.id === id
+      );
+
+    if (index === -1) {
+      return false;
+    }
+
+    comunicaciones[index] = {
+      ...comunicaciones[index],
+      ...cambios,
+      id
+    };
+
+    guardarJson(
+      comunicacionesFile,
+      comunicaciones
+    );
+
+    return true;
+  }
+
+  const ref =
+    db
+      .collection(
+        COMUNICACIONES_COLLECTION
+      )
+      .doc(id);
+
+  const doc =
+    await ref.get();
+
+  if (!doc.exists) {
+    return false;
+  }
+
+  await ref.set(
+    cambios,
+    {
+      merge: true
+    }
+  );
+
+  return true;
+}
+function crearRegistroComunicacion({
+  candidatoId = "",
+  postulacionId = "",
+  entrevistaId = "",
+
+  tipo = "",
+  canal = "email",
+
+  destinatario = "",
+  asunto = "",
+
+  contenidoTexto = "",
+  contenidoHtml = "",
+
+  fechaProgramada = "",
+  creadoPor = "sistema"
+} = {}) {
+
+  const fechaActual =
+    new Date().toISOString();
+
+  return {
+
+    id:
+      `com-${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2,8)}`,
+
+    candidatoId,
+    postulacionId,
+    entrevistaId,
+
+    tipo,
+    canal,
+
+    destinatario,
+
+    asunto,
+
+    contenidoTexto,
+    contenidoHtml,
+
+    estado:
+      fechaProgramada
+        ? "pendiente"
+        : "creado",
+
+    error: "",
+
+    fechaProgramada,
+
+    fechaEnvio: "",
+
+    fechaEntrega: "",
+
+    fechaApertura: "",
+
+    creadoPor,
+
+    fechaCreacion:
+      fechaActual,
+
+    fechaActualizacion:
+      fechaActual
+
+  };
+
 }
 
 function leerJson(filePath, fallback = []) {
@@ -2553,6 +2994,32 @@ async function geocodificarCodigoPostal({
   };
 }
 
+async function iniciarServidor() {
+  await inicializarCommunicationCenter();
+
+  const workerHabilitado =
+    String(
+      process.env
+        .COMMUNICATION_WORKER_ENABLED ??
+      "true"
+    ).toLowerCase() !==
+    "false";
+
+  if (workerHabilitado) {
+    await communicationWorker
+      .iniciar();
+  }
+
+  app.listen(
+    PORT,
+    () => {
+      console.log(
+        `Servidor escuchando en http://localhost:${PORT}`
+      );
+    }
+  );
+}
+
 function gradosARadianes(grados) {
   return grados * (Math.PI / 180);
 }
@@ -3644,7 +4111,260 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(__dirname));
+/* =========================================================
+   COMMUNICATION CENTER
+========================================================= */
+
+/* =========================
+   PLANTILLAS
+========================= */
+
+const templatesRepository =
+  crearTemplatesRepository({
+    db,
+
+    archivoJson:
+      plantillasComunicacionFile,
+
+    collectionName:
+      PLANTILLAS_COMUNICACION_COLLECTION
+  });
+
+const templatesService =
+  crearTemplatesService({
+    repository:
+      templatesRepository
+  });
+
+const templatesController =
+  crearTemplatesController({
+    service:
+      templatesService
+  });
+
+/* =========================
+   HISTORIAL
+========================= */
+
+const communicationsRepository =
+  crearCommunicationsRepository({
+    db,
+
+    archivoJson:
+      comunicacionesFile,
+
+    collectionName:
+      COMUNICACIONES_COLLECTION
+  });
+
+/* =========================
+   PROVEEDOR DE CORREO
+========================= */
+
+const emailProvider =
+  crearEmailProvider({
+    modo:
+      process.env.EMAIL_MODE ||
+      "simulacion",
+
+    remitenteNombre:
+      process.env.EMAIL_FROM_NAME ||
+      "GA Hospitality Reclutamiento",
+
+    remitenteCorreo:
+      process.env.EMAIL_FROM_ADDRESS ||
+      "reclutamiento@gahospitality.com",
+
+    replyTo:
+      process.env.EMAIL_REPLY_TO ||
+      "",
+
+    smtpHost:
+      process.env.SMTP_HOST ||
+      "",
+
+    smtpPort:
+      Number(
+        process.env.SMTP_PORT ||
+        587
+      ),
+
+    smtpSecure:
+      String(
+        process.env.SMTP_SECURE ||
+        "false"
+      ).toLowerCase() ===
+      "true",
+
+    smtpUser:
+      process.env.SMTP_USER ||
+      "",
+
+    smtpPass:
+      process.env.SMTP_PASS ||
+      "",
+
+    guardarContenidoEnLog:
+      process.env.NODE_ENV ===
+      "development"
+  });
+
+/* =========================
+   MOTOR CENTRAL
+========================= */
+
+const communicationEngine =
+  crearCommunicationEngine({
+    templatesService,
+
+    communicationsRepository,
+
+    emailProvider,
+
+    /*
+     * El EmailProvider ya controla si
+     * trabaja en simulación o en envío real.
+     */
+    modoSimulacion:
+      false,
+
+    logger:
+      console
+  });
+
+  /* =========================
+   COLA DE COMUNICACIONES
+========================= */
+
+const communicationQueueRepository =
+  crearCommunicationQueueRepository({
+    db,
+
+    archivoJson:
+      communicationQueueFile,
+
+    collectionName:
+      COMMUNICATION_QUEUE_COLLECTION
+  });
+
+const communicationQueue =
+  crearCommunicationQueue({
+    repository:
+      communicationQueueRepository,
+
+    communicationEngine,
+
+    demoraBaseMs:
+      Number(
+        process.env
+          .COMMUNICATION_QUEUE_RETRY_BASE_MS ||
+        60000
+      ),
+
+    demoraMaximaMs:
+      Number(
+        process.env
+          .COMMUNICATION_QUEUE_RETRY_MAX_MS ||
+        3600000
+      ),
+
+    logger:
+      console
+  });
+
+const communicationWorker =
+  crearCommunicationWorker({
+    queue:
+      communicationQueue,
+
+    intervaloMs:
+      Number(
+        process.env
+          .COMMUNICATION_WORKER_INTERVAL_MS ||
+        5000
+      ),
+
+    tamanoLote:
+      Number(
+        process.env
+          .COMMUNICATION_WORKER_BATCH_SIZE ||
+        10
+      ),
+
+    procesarAlIniciar:
+      String(
+        process.env
+          .COMMUNICATION_WORKER_PROCESS_ON_START ??
+        "true"
+      ).toLowerCase() !==
+      "false",
+
+    logger:
+      console
+  });
+
+const communicationQueueService =
+  crearCommunicationQueueService({
+    queue:
+      communicationQueue,
+
+    repository:
+      communicationQueueRepository,
+
+    worker:
+      communicationWorker
+  });
+
+const communicationQueueController =
+  crearCommunicationQueueController({
+    service:
+      communicationQueueService
+  });
+
+/* =========================
+   SERVICIO Y CONTROLLER
+========================= */
+
+const communicationsService =
+  crearCommunicationsService({
+    repository:
+      communicationsRepository,
+
+    engine:
+      communicationEngine
+  });
+
+const communicationsController =
+  crearCommunicationsController({
+    service:
+      communicationsService
+  });
+
+/* =========================
+   ROUTER ÚNICO
+========================= */
+
+const comunicacionesRouter =
+  crearComunicacionesRouter({
+    templatesController,
+
+    communicationsController,
+
+    communicationQueueController,
+
+    verifyAdmin:
+      db
+        ? verifyAdmin
+        : null
+  });
+
+app.use(
+  "/api",
+  comunicacionesRouter
+);
+app.use(
+  express.static(projectRoot)
+);
 app.use("/uploads", express.static(uploadsDir));
 
 async function extraerTextoPdf(filePath) {
@@ -3966,9 +4686,17 @@ ${textoLimpio.slice(0, 12000)}
     );
   }
 }
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
+app.get(
+  "/",
+  (req, res) => {
+    res.sendFile(
+      path.join(
+        projectRoot,
+        "index.html"
+      )
+    );
+  }
+);
 
 app.get("/index.html", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
@@ -4544,6 +5272,7 @@ app.post(
     { name: "domicilioFile", maxCount: 1 }
   ]),
   async (req, res) => {
+    
     try {
       const vacantes = (await leerVacantes()).map(
         enriquecerVacanteConSucursal
@@ -5126,16 +5855,140 @@ app.post(
           new Date().toISOString()
       };
 
-      await guardarPostulacion(
-        postulacion
-      );
+    await guardarPostulacion(
+  postulacion
+);
 
-      res.status(201).json({
-        ok: true,
-        message:
-          "Postulación recibida correctamente.",
-        postulacion
-      });
+/* =========================================================
+   ENCOLAR COMUNICACIÓN: POSTULACIÓN RECIBIDA
+========================================================= */
+
+try {
+  if (
+    postulacion.correo
+  ) {
+    await communicationQueue.agregar({
+      payload: {
+        tipo:
+          "postulacion_recibida",
+
+        canal:
+          "email",
+
+        destinatario: {
+          nombre:
+            postulacion.nombre,
+
+          correo:
+            postulacion.correo,
+
+          telefono:
+            postulacion.telefono
+        },
+
+        candidatoId:
+          postulacion.id,
+
+        postulacionId:
+          postulacion.id,
+
+        variables: {
+          nombre:
+            postulacion.nombre,
+
+          empresa:
+            "Great American Hospitality",
+
+          folio:
+            postulacion.id,
+
+          vacante:
+            postulacion.vacanteTitulo,
+
+          sucursal:
+            postulacion.sucursal,
+
+          fecha:
+            new Date(
+              postulacion.fechaRegistro
+            ).toLocaleDateString(
+              "es-MX",
+              {
+                day:
+                  "numeric",
+
+                month:
+                  "long",
+
+                year:
+                  "numeric"
+              }
+            ),
+
+          estatusUrl:
+            `${
+              process.env.PUBLIC_BASE_URL ||
+              "http://localhost:3000"
+            }/?folio=${
+              encodeURIComponent(
+                postulacion.id
+              )
+            }`
+        }
+      },
+
+      prioridad:
+        1,
+
+      maxIntentos:
+        3,
+
+      creadoPor:
+        "sistema_postulacion",
+
+      metadata: {
+        evento:
+          "postulacion_recibida",
+
+        vacanteId:
+          postulacion.vacanteId,
+
+        sucursalId:
+          postulacion.sucursalId
+      }
+    });
+
+    console.log(
+      `[CommunicationQueue] Postulación ${postulacion.id} agregada a la cola.`
+    );
+  } else {
+    console.warn(
+      `[CommunicationQueue] Postulación ${postulacion.id} sin correo; no se encoló email de confirmación.`
+    );
+  }
+} catch (
+  communicationError
+) {
+  console.error(
+    `[CommunicationQueue] No fue posible encolar la confirmación de la postulación ${postulacion.id}:`,
+    communicationError
+  );
+}
+
+/* =========================================================
+   RESPUESTA AL CANDIDATO
+========================================================= */
+
+res.status(201).json({
+  ok: true,
+
+  message:
+    "Postulación recibida correctamente.",
+
+  postulacion
+});
+
+      
     } catch (error) {
       console.error(
         "Error guardando postulación:",

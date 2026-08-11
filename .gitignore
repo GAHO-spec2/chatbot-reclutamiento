@@ -1,2 +1,10 @@
 node_modules
 .env
+
+# Datos dinámicos del ATS
+server/data/communication-queue.json
+server/data/comunicaciones.json
+server/data/postulaciones.json
+server/data/entrevistas.json
+server/data/recordatorios-comunicacion.json
+server/data/disponibilidades-entrevista.json

@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>
+    Communication Center | GA Hospitality
+  </title>
+
+  <meta
+    name="description"
+    content="Centro de comunicación y automatización del sistema de reclutamiento de GA Hospitality."
+  />
+
+  <link
+    rel="icon"
+    type="image/png"
+    sizes="32x32"
+    href="icons8-documento-32.png"
+  />
+
+  <link
+    rel="stylesheet"
+    href="dashboard.css?v=8"
+  />
+
+  <link
+    rel="stylesheet"
+    href="comunicaciones.css?v=2"
+  />
+</head>
+
+<body>
+
+  <!-- =========================
+       ENCABEZADO
+  ========================== -->
+  <header class="topbar">
+    <div class="topbar__left">
+      <img
+        src="gaho.png"
+        alt="GA Hospitality"
+        class="corporativo-logo"
+      />
+
+      <div>
+        <h2>GA Hospitality</h2>
+        <p>Communication Center</p>
+      </div>
+    </div>
+
+    <div class="topbar__right">
+      <a
+        href="dashboard.html"
+        class="btn btn--secondary"
+      >
+        Candidatos
+      </a>
+
+      <a
+        href="entrevistas.html"
+        class="btn btn--secondary"
+      >
+        Entrevistas
+      </a>
+
+      <a
+        href="vacantes-admin.html"
+        class="btn btn--secondary"
+      >
+        Vacantes
+      </a>
+
+      <button
+        id="logoutBtn"
+        class="btn btn--primary"
+        type="button"
+      >
+        Cerrar sesión
+      </button>
+    </div>
+  </header>
+
+  <!-- =========================
+       CONTENIDO PRINCIPAL
+  ========================== -->
+  <main class="container communications-container">
+
+    <!-- PRESENTACIÓN -->
+    <section class="communications-hero">
+      <div>
+        <span class="communications-eyebrow">
+          Candidate Experience
+        </span>
+
+        <h1>
+          Communication Center
+        </h1>
+
+        <p>
+          Administra plantillas, correos, recordatorios,
+          automatizaciones e historial de comunicaciones
+          con los candidatos.
+        </p>
+      </div>
+
+      <div class="communications-hero__actions">
+        <button
+          id="newTemplateBtn"
+          class="btn btn--primary"
+          type="button"
+        >
+          Nueva plantilla
+        </button>
+
+        <button
+          id="sendTestEmailBtn"
+          class="btn btn--secondary"
+          type="button"
+        >
+          Enviar prueba
+        </button>
+      </div>
+    </section>
+
+    <!-- =========================
+         INDICADORES
+    ========================== -->
+    <section class="communications-stats">
+
+      <article class="communication-stat">
+        <div class="communication-stat__icon">
+          📨
+        </div>
+
+        <div>
+          <span>Enviadas hoy</span>
+          <strong id="statSentToday">
+            0
+          </strong>
+        </div>
+      </article>
+
+      <article class="communication-stat">
+        <div class="communication-stat__icon">
+          ⏳
+        </div>
+
+        <div>
+          <span>Pendientes</span>
+          <strong id="statPending">
+            0
+          </strong>
+        </div>
+      </article>
+
+      <article class="communication-stat">
+        <div class="communication-stat__icon">
+          ⚠️
+        </div>
+
+        <div>
+          <span>Errores</span>
+          <strong id="statErrors">
+            0
+          </strong>
+        </div>
+      </article>
+
+      <article class="communication-stat">
+        <div class="communication-stat__icon">
+          📈
+        </div>
+
+        <div>
+          <span>Tasa de entrega</span>
+          <strong id="statDeliveryRate">
+            0%
+          </strong>
+        </div>
+      </article>
+
+    </section>
+
+    <!-- =========================
+         ACCIONES RÁPIDAS
+    ========================== -->
+    <section class="communications-card">
+      <div class="communications-section-head">
+        <div>
+          <span class="communications-section-eyebrow">
+            Acciones rápidas
+          </span>
+
+          <h2>
+            Administración de comunicaciones
+          </h2>
+
+          <p>
+            Accede rápidamente a las funciones principales
+            del centro de comunicación.
+          </p>
+        </div>
+      </div>
+
+      <div class="quick-actions-grid">
+
+        <button
+          id="quickNewTemplateBtn"
+          class="quick-action"
+          type="button"
+        >
+          <span class="quick-action__icon">
+            📝
+          </span>
+
+          <span>
+            <strong>Nueva plantilla</strong>
+            <small>
+              Crea una plantilla reutilizable.
+            </small>
+          </span>
+        </button>
+
+        <button
+          id="quickSendTestBtn"
+          class="quick-action"
+          type="button"
+        >
+          <span class="quick-action__icon">
+            🧪
+          </span>
+
+          <span>
+            <strong>Enviar correo de prueba</strong>
+            <small>
+              Valida diseño, variables y contenido.
+            </small>
+          </span>
+        </button>
+
+        <button
+          id="quickHistoryBtn"
+          class="quick-action"
+          type="button"
+        >
+          <span class="quick-action__icon">
+            📜
+          </span>
+
+          <span>
+            <strong>Ver historial</strong>
+            <small>
+              Consulta envíos y errores recientes.
+            </small>
+          </span>
+        </button>
+
+        <button
+          id="quickAutomationBtn"
+          class="quick-action"
+          type="button"
+        >
+          <span class="quick-action__icon">
+            ⚙️
+          </span>
+
+          <span>
+            <strong>Automatizaciones</strong>
+            <small>
+              Configura envíos y recordatorios.
+            </small>
+          </span>
+        </button>
+
+      </div>
+    </section>
+
+    <!-- =========================
+         PLANTILLAS
+    ========================== -->
+    <section class="communications-card">
+      <div class="communications-section-head">
+        <div>
+          <span class="communications-section-eyebrow">
+            Plantillas
+          </span>
+
+          <h2>
+            Plantillas principales
+          </h2>
+
+          <p>
+            Edita los mensajes que recibirán los candidatos
+            durante cada etapa del proceso.
+          </p>
+        </div>
+
+        <button
+          id="viewAllTemplatesBtn"
+          class="btn btn--secondary"
+          type="button"
+        >
+          Ver todas
+        </button>
+      </div>
+
+      <div
+        id="templatesGrid"
+        class="templates-grid"
+      >
+
+        <article
+          class="template-card"
+          data-template="postulacion_recibida"
+        >
+          <div class="template-card__top">
+            <span class="template-card__icon">
+              📥
+            </span>
+
+            <span class="template-status template-status--active">
+              Activa
+            </span>
+          </div>
+
+          <h3>
+            Postulación recibida
+          </h3>
+
+          <p>
+            Confirmación inmediata después de enviar
+            una solicitud.
+          </p>
+
+          <div class="template-card__meta">
+            <span>Email</span>
+            <span>Español</span>
+          </div>
+
+          <button
+            class="btn btn--secondary template-edit-btn"
+            type="button"
+            data-template-id="postulacion_recibida"
+          >
+            Editar plantilla
+          </button>
+        </article>
+
+        <article
+          class="template-card"
+          data-template="entrevista_programada"
+        >
+          <div class="template-card__top">
+            <span class="template-card__icon">
+              📅
+            </span>
+
+            <span class="template-status template-status--active">
+              Activa
+            </span>
+          </div>
+
+          <h3>
+            Entrevista programada
+          </h3>
+
+          <p>
+            Fecha, horario, ubicación, entrevistador
+            e instrucciones de llegada.
+          </p>
+
+          <div class="template-card__meta">
+            <span>Email</span>
+            <span>Español</span>
+          </div>
+
+          <button
+            class="btn btn--secondary template-edit-btn"
+            type="button"
+            data-template-id="entrevista_programada"
+          >
+            Editar plantilla
+          </button>
+        </article>
+
+        <article
+          class="template-card"
+          data-template="entrevista_reagendada"
+        >
+          <div class="template-card__top">
+            <span class="template-card__icon">
+              🔄
+            </span>
+
+            <span class="template-status template-status--active">
+              Activa
+            </span>
+          </div>
+
+          <h3>
+            Entrevista reagendada
+          </h3>
+
+          <p>
+            Notifica automáticamente la nueva fecha
+            y el nuevo horario.
+          </p>
+
+          <div class="template-card__meta">
+            <span>Email</span>
+            <span>Español</span>
+          </div>
+
+          <button
+            class="btn btn--secondary template-edit-btn"
+            type="button"
+            data-template-id="entrevista_reagendada"
+          >
+            Editar plantilla
+          </button>
+        </article>
+
+        <article
+          class="template-card"
+          data-template="recordatorio_entrevista"
+        >
+          <div class="template-card__top">
+            <span class="template-card__icon">
+              ⏰
+            </span>
+
+            <span class="template-status template-status--draft">
+              Pendiente
+            </span>
+          </div>
+
+          <h3>
+            Recordatorio de entrevista
+          </h3>
+
+          <p>
+            Recordatorio previo con mapa, hora
+            e indicaciones importantes.
+          </p>
+
+          <div class="template-card__meta">
+            <span>Email</span>
+            <span>Español</span>
+          </div>
+
+          <button
+            class="btn btn--secondary template-edit-btn"
+            type="button"
+            data-template-id="recordatorio_entrevista"
+          >
+            Editar plantilla
+          </button>
+        </article>
+
+        <article
+          class="template-card"
+          data-template="candidato_aprobado"
+        >
+          <div class="template-card__top">
+            <span class="template-card__icon">
+              ✅
+            </span>
+
+            <span class="template-status template-status--draft">
+              Pendiente
+            </span>
+          </div>
+
+          <h3>
+            Candidato aprobado
+          </h3>
+
+          <p>
+            Comunicación para avanzar a la siguiente
+            etapa o iniciar contratación.
+          </p>
+
+          <div class="template-card__meta">
+            <span>Email</span>
+            <span>Español</span>
+          </div>
+
+          <button
+            class="btn btn--secondary template-edit-btn"
+            type="button"
+            data-template-id="candidato_aprobado"
+          >
+            Editar plantilla
+          </button>
+        </article>
+
+        <article
+          class="template-card"
+          data-template="candidato_no_seleccionado"
+        >
+          <div class="template-card__top">
+            <span class="template-card__icon">
+              💬
+            </span>
+
+            <span class="template-status template-status--draft">
+              Pendiente
+            </span>
+          </div>
+
+          <h3>
+            No seleccionado
+          </h3>
+
+          <p>
+            Mensaje respetuoso y profesional para
+            cerrar el proceso.
+          </p>
+
+          <div class="template-card__meta">
+            <span>Email</span>
+            <span>Español</span>
+          </div>
+
+          <button
+            class="btn btn--secondary template-edit-btn"
+            type="button"
+            data-template-id="candidato_no_seleccionado"
+          >
+            Editar plantilla
+          </button>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- =========================
+         HISTORIAL
+    ========================== -->
+    <section class="communications-card">
+      <div class="communications-section-head">
+        <div>
+          <span class="communications-section-eyebrow">
+            Actividad reciente
+          </span>
+
+          <h2>
+            Historial de comunicaciones
+          </h2>
+
+          <p>
+            Consulta mensajes creados, pendientes,
+            enviados o con error.
+          </p>
+        </div>
+
+        <button
+          id="refreshCommunicationsBtn"
+          class="btn btn--secondary"
+          type="button"
+        >
+          Actualizar
+        </button>
+      </div>
+
+      <div class="communications-table-wrap">
+        <div class="communications-table-head">
+          <span>Candidato</span>
+          <span>Tipo</span>
+          <span>Canal</span>
+          <span>Estado</span>
+          <span>Fecha</span>
+          <span>Acción</span>
+        </div>
+
+        <div
+          id="communicationsList"
+          class="communications-list"
+        >
+          <div class="communications-empty">
+            Aún no hay comunicaciones registradas.
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- =========================
+       MODAL PLANTILLA
+  ========================== -->
+  <div
+    id="templateModal"
+    class="modal hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="templateModalTitle"
+  >
+    <div
+      id="closeTemplateBackdrop"
+      class="modal__backdrop"
+    ></div>
+
+    <div class="modal__content communication-modal">
+      <div class="modal__header">
+        <div>
+          <span class="communications-section-eyebrow">
+            Editor de plantilla
+          </span>
+
+          <h3 id="templateModalTitle">
+            Nueva plantilla
+          </h3>
+
+          <p>
+            Configura el asunto, contenido y variables.
+          </p>
+        </div>
+
+        <button
+          id="closeTemplateModalBtn"
+          class="chatbot-close"
+          type="button"
+          aria-label="Cerrar editor"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div class="modal__body">
+        <form id="templateForm">
+
+          <input
+            id="templateId"
+            type="hidden"
+          />
+
+          <div class="communication-editor-grid">
+
+            <section class="communication-editor-panel">
+              <div class="form-grid">
+
+                <div class="field">
+                  <label for="templateName">
+                    Nombre
+                  </label>
+
+                  <input
+                    id="templateName"
+                    type="text"
+                    placeholder="Ej. Entrevista programada"
+                    required
+                  />
+                </div>
+
+                <div class="field">
+                  <label for="templateType">
+                    Tipo
+                  </label>
+
+                  <select id="templateType">
+                    <option value="postulacion_recibida">
+                      Postulación recibida
+                    </option>
+
+                    <option value="entrevista_programada">
+                      Entrevista programada
+                    </option>
+
+                    <option value="entrevista_reagendada">
+                      Entrevista reagendada
+                    </option>
+
+                    <option value="recordatorio_entrevista">
+                      Recordatorio
+                    </option>
+
+                    <option value="candidato_aprobado">
+                      Candidato aprobado
+                    </option>
+
+                    <option value="candidato_no_seleccionado">
+                      No seleccionado
+                    </option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="templateChannel">
+                    Canal
+                  </label>
+
+                  <select id="templateChannel">
+                    <option value="email">
+                      Correo electrónico
+                    </option>
+
+                    <option value="whatsapp">
+                      WhatsApp
+                    </option>
+
+                    <option value="ambos">
+                      Ambos
+                    </option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="templateLanguage">
+                    Idioma
+                  </label>
+
+                  <select id="templateLanguage">
+                    <option value="es">
+                      Español
+                    </option>
+
+                    <option value="en">
+                      Inglés
+                    </option>
+                  </select>
+                </div>
+
+                <div class="field field--full">
+                  <label for="templateSubject">
+                    Asunto
+                  </label>
+
+                  <input
+                    id="templateSubject"
+                    type="text"
+                    placeholder="Ej. Tu entrevista ha sido programada"
+                    required
+                  />
+                </div>
+
+                <div class="field field--full">
+                  <label for="templateText">
+                    Contenido de texto
+                  </label>
+
+                  <textarea
+                    id="templateText"
+                    rows="12"
+                    placeholder="Escribe aquí el contenido de la comunicación..."
+                  ></textarea>
+                </div>
+
+                <div class="field field--full">
+                  <label for="templateHtml">
+                    Contenido HTML
+                  </label>
+
+                  <textarea
+                    id="templateHtml"
+                    rows="12"
+                    placeholder="<h1>Hola {{nombre}}</h1>"
+                  ></textarea>
+                </div>
+
+              </div>
+            </section>
+
+            <aside class="communication-preview-panel">
+              <div class="communication-preview-head">
+                <div>
+                  <span>
+                    Vista previa
+                  </span>
+
+                  <strong id="previewSubject">
+                    Asunto del correo
+                  </strong>
+                </div>
+
+                <button
+                  id="refreshPreviewBtn"
+                  class="btn btn--secondary"
+                  type="button"
+                >
+                  Actualizar
+                </button>
+              </div>
+
+              <div
+                id="templatePreview"
+                class="email-preview"
+              >
+                <div class="email-preview__logo">
+                  GA Hospitality
+                </div>
+
+                <h2>
+                  Hola Alejandro
+                </h2>
+
+                <p>
+                  Aquí podrás revisar el contenido
+                  de la plantilla antes de guardarla.
+                </p>
+              </div>
+
+              <div class="template-variables">
+                <h4>
+                  Variables disponibles
+                </h4>
+
+                <div class="template-variable-list">
+                  <button type="button" data-variable="{{nombre}}">
+                    {{nombre}}
+                  </button>
+
+                  <button type="button" data-variable="{{folio}}">
+                    {{folio}}
+                  </button>
+
+                  <button type="button" data-variable="{{vacante}}">
+                    {{vacante}}
+                  </button>
+
+                  <button type="button" data-variable="{{sucursal}}">
+                    {{sucursal}}
+                  </button>
+
+                  <button type="button" data-variable="{{fecha}}">
+                    {{fecha}}
+                  </button>
+
+                  <button type="button" data-variable="{{hora}}">
+                    {{hora}}
+                  </button>
+
+                  <button type="button" data-variable="{{reclutador}}">
+                    {{reclutador}}
+                  </button>
+
+                  <button type="button" data-variable="{{direccion}}">
+                    {{direccion}}
+                  </button>
+
+                  <button type="button" data-variable="{{googleMaps}}">
+                    {{googleMaps}}
+                  </button>
+
+                  <button type="button" data-variable="{{empresa}}">
+                    {{empresa}}
+                  </button>
+                </div>
+              </div>
+            </aside>
+
+          </div>
+        </form>
+      </div>
+
+      <div class="modal__footer">
+        <button
+          id="cancelTemplateBtn"
+          class="btn btn--secondary"
+          type="button"
+        >
+          Cancelar
+        </button>
+
+        <button
+          id="saveTemplateBtn"
+          class="btn btn--primary"
+          type="button"
+        >
+          Guardar plantilla
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================
+       FIREBASE Y JAVASCRIPT
+  ========================== -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+<script src="comunicaciones.js?v=2"></script>
+</body>
+</html>

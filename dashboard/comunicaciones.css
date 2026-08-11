@@ -1,0 +1,1260 @@
+/* =========================================================
+   COMMUNICATION CENTER
+   GA HOSPITALITY
+========================================================= */
+
+:root {
+  --communications-bg:
+    rgba(10, 17, 29, 0.96);
+
+  --communications-panel:
+    rgba(14, 23, 38, 0.92);
+
+  --communications-panel-soft:
+    rgba(22, 32, 49, 0.74);
+
+  --communications-border:
+    rgba(130, 157, 199, 0.18);
+
+  --communications-border-strong:
+    rgba(92, 142, 238, 0.35);
+
+  --communications-primary:
+    #4f8cff;
+
+  --communications-primary-soft:
+    rgba(79, 140, 255, 0.14);
+
+  --communications-purple:
+    #9b6cff;
+
+  --communications-purple-soft:
+    rgba(155, 108, 255, 0.13);
+
+  --communications-green:
+    #36d77e;
+
+  --communications-green-soft:
+    rgba(54, 215, 126, 0.13);
+
+  --communications-yellow:
+    #f6bd4a;
+
+  --communications-yellow-soft:
+    rgba(246, 189, 74, 0.13);
+
+  --communications-red:
+    #ff6670;
+
+  --communications-red-soft:
+    rgba(255, 102, 112, 0.13);
+
+  --communications-text:
+    #f7f9fd;
+
+  --communications-muted:
+    #8e9db2;
+
+  --communications-shadow:
+    0 22px 55px rgba(0, 0, 0, 0.34);
+}
+
+/* =========================================================
+   CONTENEDOR PRINCIPAL
+========================================================= */
+
+.communications-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-top: 28px;
+  padding-bottom: 46px;
+}
+
+/* =========================================================
+   PRESENTACIÓN
+========================================================= */
+
+.communications-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  min-height: 220px;
+  padding: 34px;
+  overflow: hidden;
+  border: 1px solid
+    var(--communications-border);
+  border-radius: 28px;
+  background:
+    radial-gradient(
+      circle at 88% 16%,
+      rgba(79, 140, 255, 0.22),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 72% 100%,
+      rgba(155, 108, 255, 0.14),
+      transparent 35%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(9, 15, 26, 0.98),
+      rgba(12, 21, 36, 0.98)
+    );
+  box-shadow:
+    var(--communications-shadow),
+    inset 0 1px 0
+      rgba(255, 255, 255, 0.035);
+}
+
+.communications-hero::before {
+  position: absolute;
+  top: -100px;
+  right: -65px;
+  width: 280px;
+  height: 280px;
+  content: "";
+  border: 1px solid
+    rgba(255, 255, 255, 0.04);
+  border-radius: 50%;
+}
+
+.communications-hero::after {
+  position: absolute;
+  right: 105px;
+  bottom: -125px;
+  width: 250px;
+  height: 250px;
+  content: "";
+  border: 1px solid
+    rgba(79, 140, 255, 0.08);
+  border-radius: 50%;
+}
+
+.communications-hero > * {
+  position: relative;
+  z-index: 2;
+}
+
+.communications-eyebrow,
+.communications-section-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 9px;
+  color: #75a7ff;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.communications-eyebrow::before {
+  width: 22px;
+  height: 2px;
+  content: "";
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--communications-primary),
+    var(--communications-purple)
+  );
+}
+
+.communications-hero h1 {
+  margin: 0 0 13px;
+  color: var(--communications-text);
+  font-size: clamp(
+    2rem,
+    4vw,
+    3.25rem
+  );
+  line-height: 1.06;
+  letter-spacing: -0.035em;
+}
+
+.communications-hero p {
+  max-width: 700px;
+  margin: 0;
+  color: var(--communications-muted);
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.communications-hero__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* =========================================================
+   INDICADORES
+========================================================= */
+
+.communications-stats {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.communication-stat {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 0;
+  padding: 21px;
+  overflow: hidden;
+  border: 1px solid
+    var(--communications-border);
+  border-radius: 20px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(15, 24, 39, 0.96),
+      rgba(9, 16, 28, 0.98)
+    );
+  box-shadow:
+    0 13px 32px
+      rgba(0, 0, 0, 0.22),
+    inset 0 1px 0
+      rgba(255, 255, 255, 0.025);
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.communication-stat:hover {
+  transform: translateY(-2px);
+  border-color:
+    var(--communications-border-strong);
+  box-shadow:
+    0 18px 36px
+      rgba(0, 0, 0, 0.29);
+}
+
+.communication-stat::after {
+  position: absolute;
+  right: -24px;
+  bottom: -35px;
+  width: 95px;
+  height: 95px;
+  content: "";
+  border-radius: 50%;
+  background:
+    rgba(79, 140, 255, 0.05);
+}
+
+.communication-stat__icon {
+  display: grid;
+  flex: 0 0 50px;
+  width: 50px;
+  height: 50px;
+  place-items: center;
+  border: 1px solid
+    rgba(79, 140, 255, 0.22);
+  border-radius: 16px;
+  background:
+    var(--communications-primary-soft);
+  font-size: 21px;
+}
+
+.communication-stat:nth-child(2)
+  .communication-stat__icon {
+  border-color:
+    rgba(246, 189, 74, 0.24);
+  background:
+    var(--communications-yellow-soft);
+}
+
+.communication-stat:nth-child(3)
+  .communication-stat__icon {
+  border-color:
+    rgba(255, 102, 112, 0.24);
+  background:
+    var(--communications-red-soft);
+}
+
+.communication-stat:nth-child(4)
+  .communication-stat__icon {
+  border-color:
+    rgba(54, 215, 126, 0.24);
+  background:
+    var(--communications-green-soft);
+}
+
+.communication-stat span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--communications-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.communication-stat strong {
+  display: block;
+  color: var(--communications-text);
+  font-size: 26px;
+  line-height: 1;
+}
+
+/* =========================================================
+   PANELES GENERALES
+========================================================= */
+
+.communications-card {
+  padding: 26px;
+  border: 1px solid
+    var(--communications-border);
+  border-radius: 25px;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(79, 140, 255, 0.055),
+      transparent 30%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(9, 15, 26, 0.98),
+      rgba(11, 19, 32, 0.98)
+    );
+  box-shadow:
+    var(--communications-shadow),
+    inset 0 1px 0
+      rgba(255, 255, 255, 0.025);
+}
+
+.communications-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 22px;
+  margin-bottom: 23px;
+}
+
+.communications-section-head h2 {
+  margin: 0 0 8px;
+  color: var(--communications-text);
+  font-size: clamp(
+    1.35rem,
+    2.3vw,
+    1.75rem
+  );
+}
+
+.communications-section-head p {
+  max-width: 700px;
+  margin: 0;
+  color: var(--communications-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+/* =========================================================
+   ACCIONES RÁPIDAS
+========================================================= */
+
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.quick-action {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+  min-height: 94px;
+  padding: 17px;
+  cursor: pointer;
+  border: 1px solid
+    rgba(130, 157, 199, 0.16);
+  border-radius: 17px;
+  background:
+    rgba(255, 255, 255, 0.025);
+  color: inherit;
+  text-align: left;
+  transition:
+    transform 0.17s ease,
+    border-color 0.17s ease,
+    background 0.17s ease;
+}
+
+.quick-action:hover {
+  transform: translateY(-2px);
+  border-color:
+    rgba(79, 140, 255, 0.37);
+  background:
+    rgba(79, 140, 255, 0.07);
+}
+
+.quick-action__icon {
+  display: grid;
+  flex: 0 0 45px;
+  width: 45px;
+  height: 45px;
+  place-items: center;
+  border: 1px solid
+    rgba(79, 140, 255, 0.2);
+  border-radius: 14px;
+  background:
+    var(--communications-primary-soft);
+  font-size: 19px;
+}
+
+.quick-action strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #f7f9fd;
+  font-size: 13px;
+}
+
+.quick-action small {
+  display: block;
+  color: #8493a8;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+/* =========================================================
+   TARJETAS DE PLANTILLAS
+========================================================= */
+
+.templates-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(0, 1fr)
+    );
+  gap: 17px;
+}
+
+.template-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 270px;
+  padding: 21px;
+  overflow: hidden;
+  border: 1px solid
+    rgba(130, 157, 199, 0.18);
+  border-radius: 20px;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(79, 140, 255, 0.08),
+      transparent 36%
+    ),
+    rgba(17, 26, 42, 0.72);
+  transition:
+    transform 0.19s ease,
+    border-color 0.19s ease,
+    box-shadow 0.19s ease;
+}
+
+.template-card::before {
+  position: absolute;
+  top: 0;
+  left: 22px;
+  right: 22px;
+  height: 2px;
+  content: "";
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(79, 140, 255, 0.76),
+      rgba(155, 108, 255, 0.6),
+      transparent
+    );
+}
+
+.template-card:hover {
+  transform: translateY(-3px);
+  border-color:
+    rgba(79, 140, 255, 0.4);
+  box-shadow:
+    0 20px 40px
+      rgba(0, 0, 0, 0.28);
+}
+
+.template-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 13px;
+  margin-bottom: 18px;
+}
+
+.template-card__icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid
+    rgba(155, 108, 255, 0.28);
+  border-radius: 15px;
+  background:
+    var(--communications-purple-soft);
+  font-size: 21px;
+}
+
+.template-card h3 {
+  margin: 0 0 9px;
+  color: var(--communications-text);
+  font-size: 16px;
+}
+
+.template-card p {
+  flex: 1;
+  margin: 0 0 19px;
+  color: var(--communications-muted);
+  font-size: 12px;
+  line-height: 1.62;
+}
+
+.template-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.template-status::before {
+  width: 6px;
+  height: 6px;
+  content: "";
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow:
+    0 0 8px currentColor;
+}
+
+.template-status--active {
+  border: 1px solid
+    rgba(54, 215, 126, 0.25);
+  background:
+    var(--communications-green-soft);
+  color: #60e99a;
+}
+
+.template-status--draft {
+  border: 1px solid
+    rgba(246, 189, 74, 0.25);
+  background:
+    var(--communications-yellow-soft);
+  color: #f5c866;
+}
+
+.template-status--inactive {
+  border: 1px solid
+    rgba(255, 255, 255, 0.12);
+  background:
+    rgba(255, 255, 255, 0.055);
+  color: #9ba7b9;
+}
+
+.template-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 17px;
+  flex-wrap: wrap;
+}
+
+.template-card__meta span {
+  padding: 5px 9px;
+  border: 1px solid
+    rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background:
+    rgba(255, 255, 255, 0.035);
+  color: #9ba9bb;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.template-card .btn {
+  width: 100%;
+  min-height: 41px;
+  border-radius: 12px;
+}
+
+/* =========================================================
+   HISTORIAL DE COMUNICACIONES
+========================================================= */
+
+.communications-table-wrap {
+  overflow: hidden;
+  border: 1px solid
+    rgba(130, 157, 199, 0.15);
+  border-radius: 18px;
+  background:
+    rgba(5, 10, 18, 0.4);
+}
+
+.communications-table-head,
+.communication-row {
+  display: grid;
+  grid-template-columns:
+    minmax(190px, 1.45fr)
+    minmax(170px, 1.25fr)
+    minmax(85px, 0.65fr)
+    minmax(100px, 0.75fr)
+    minmax(135px, 0.9fr)
+    minmax(90px, 0.55fr);
+  align-items: center;
+  gap: 14px;
+}
+
+.communications-table-head {
+  min-height: 48px;
+  padding: 0 18px;
+  border-bottom: 1px solid
+    rgba(255, 255, 255, 0.08);
+  background:
+    rgba(255, 255, 255, 0.035);
+}
+
+.communications-table-head span {
+  color: #7f8da2;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.communication-row {
+  min-height: 72px;
+  padding: 14px 18px;
+  border-bottom: 1px solid
+    rgba(255, 255, 255, 0.065);
+  transition:
+    background 0.17s ease;
+}
+
+.communication-row:last-child {
+  border-bottom: 0;
+}
+
+.communication-row:hover {
+  background:
+    rgba(79, 140, 255, 0.045);
+}
+
+.communication-row__candidate {
+  min-width: 0;
+}
+
+.communication-row__candidate strong {
+  display: block;
+  overflow: hidden;
+  margin-bottom: 4px;
+  color: #f6f8fc;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.communication-row__candidate small {
+  display: block;
+  overflow: hidden;
+  color: #7f8ea3;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.communication-row__text {
+  overflow: hidden;
+  color: #b3bfd0;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.communication-channel,
+.communication-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: max-content;
+  max-width: 100%;
+  min-height: 27px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.communication-channel {
+  border: 1px solid
+    rgba(79, 140, 255, 0.22);
+  background:
+    var(--communications-primary-soft);
+  color: #7cafff;
+}
+
+.communication-channel--whatsapp {
+  border-color:
+    rgba(54, 215, 126, 0.23);
+  background:
+    var(--communications-green-soft);
+  color: #63e899;
+}
+
+.communication-state--enviado,
+.communication-state--entregado,
+.communication-state--abierto {
+  border: 1px solid
+    rgba(54, 215, 126, 0.24);
+  background:
+    var(--communications-green-soft);
+  color: #61e899;
+}
+
+.communication-state--pendiente,
+.communication-state--procesando {
+  border: 1px solid
+    rgba(246, 189, 74, 0.24);
+  background:
+    var(--communications-yellow-soft);
+  color: #f4c967;
+}
+
+.communication-state--error {
+  border: 1px solid
+    rgba(255, 102, 112, 0.24);
+  background:
+    var(--communications-red-soft);
+  color: #ff7b84;
+}
+
+.communication-state--creado,
+.communication-state--cancelado {
+  border: 1px solid
+    rgba(255, 255, 255, 0.12);
+  background:
+    rgba(255, 255, 255, 0.055);
+  color: #a5afbe;
+}
+
+.communication-row__action {
+  min-height: 34px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  font-size: 10px;
+}
+
+.communications-empty {
+  display: grid;
+  min-height: 155px;
+  place-items: center;
+  padding: 28px;
+  color: var(--communications-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* =========================================================
+   MODAL Y EDITOR
+========================================================= */
+
+.communication-modal {
+  width: min(
+    1180px,
+    calc(100vw - 34px)
+  );
+  max-height: 92vh;
+  padding: 0;
+  overflow-x: hidden;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(79, 140, 255, 0.09),
+      transparent 28%
+    ),
+    linear-gradient(
+      150deg,
+      rgba(9, 15, 26, 0.995),
+      rgba(6, 11, 20, 0.995)
+    );
+}
+
+.communication-modal
+  .modal__header {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  padding: 22px 25px 18px;
+  background:
+    rgba(7, 13, 23, 0.95);
+  backdrop-filter: blur(17px);
+}
+
+.communication-modal
+  .modal__body {
+  padding: 22px 25px 8px;
+}
+
+.communication-modal
+  .modal__footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  padding: 18px 25px;
+  background:
+    rgba(7, 13, 23, 0.96);
+  backdrop-filter: blur(17px);
+}
+
+.communication-editor-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.05fr)
+    minmax(340px, 0.95fr);
+  gap: 20px;
+}
+
+.communication-editor-panel,
+.communication-preview-panel {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid
+    rgba(130, 157, 199, 0.16);
+  border-radius: 19px;
+  background:
+    rgba(255, 255, 255, 0.025);
+}
+
+.communication-editor-panel
+  textarea {
+  min-height: 180px;
+  resize: vertical;
+  font-family:
+    Consolas,
+    "Courier New",
+    monospace;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+#templateText {
+  font-family: inherit;
+}
+
+.communication-preview-panel {
+  position: sticky;
+  top: 0;
+  align-self: start;
+}
+
+.communication-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 13px;
+  margin-bottom: 15px;
+}
+
+.communication-preview-head span {
+  display: block;
+  margin-bottom: 5px;
+  color: #8392a8;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.communication-preview-head strong {
+  display: block;
+  max-width: 350px;
+  overflow: hidden;
+  color: #eef3fb;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   VISTA PREVIA DEL CORREO
+========================================================= */
+
+.email-preview {
+  min-height: 430px;
+  max-height: 540px;
+  padding: 30px;
+  overflow: auto;
+  border: 1px solid
+    rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow:
+    0 18px 40px
+      rgba(0, 0, 0, 0.26);
+  color: #243047;
+}
+
+.email-preview__logo {
+  display: inline-flex;
+  margin-bottom: 25px;
+  padding: 10px 14px;
+  border-radius: 9px;
+  background: #0f1929;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.email-preview h1,
+.email-preview h2,
+.email-preview h3 {
+  color: #18243a;
+}
+
+.email-preview h2 {
+  margin: 0 0 17px;
+  font-size: 24px;
+}
+
+.email-preview p {
+  color: #536077;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.email-preview a {
+  color: #2569d8;
+}
+
+.email-preview img {
+  max-width: 100%;
+}
+
+.email-preview table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.email-preview td,
+.email-preview th {
+  padding: 9px;
+  border: 1px solid #dde3ec;
+  text-align: left;
+}
+
+/* =========================================================
+   VARIABLES DE PLANTILLA
+========================================================= */
+
+.template-variables {
+  margin-top: 18px;
+  padding-top: 17px;
+  border-top: 1px solid
+    rgba(255, 255, 255, 0.08);
+}
+
+.template-variables h4 {
+  margin: 0 0 11px;
+  color: #e8edf6;
+  font-size: 12px;
+}
+
+.template-variable-list {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.template-variable-list button {
+  padding: 7px 9px;
+  cursor: pointer;
+  border: 1px solid
+    rgba(79, 140, 255, 0.23);
+  border-radius: 9px;
+  background:
+    var(--communications-primary-soft);
+  color: #8db8ff;
+  font-family:
+    Consolas,
+    "Courier New",
+    monospace;
+  font-size: 9px;
+  font-weight: 750;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    transform 0.16s ease;
+}
+
+.template-variable-list button:hover {
+  transform: translateY(-1px);
+  border-color:
+    rgba(79, 140, 255, 0.47);
+  background:
+    rgba(79, 140, 255, 0.22);
+}
+
+/* =========================================================
+   SCROLLBAR
+========================================================= */
+
+.email-preview::-webkit-scrollbar,
+.communication-modal::-webkit-scrollbar {
+  width: 9px;
+}
+
+.email-preview::-webkit-scrollbar-track,
+.communication-modal::-webkit-scrollbar-track {
+  background:
+    rgba(0, 0, 0, 0.08);
+}
+
+.email-preview::-webkit-scrollbar-thumb,
+.communication-modal::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background:
+    rgba(117, 135, 163, 0.42);
+}
+
+/* =========================================================
+   ESTADOS DE CARGA
+========================================================= */
+
+.communications-loading {
+  display: grid;
+  min-height: 150px;
+  place-items: center;
+  color: var(--communications-muted);
+  font-size: 12px;
+}
+
+.communications-error {
+  padding: 16px;
+  border: 1px solid
+    rgba(255, 102, 112, 0.24);
+  border-radius: 14px;
+  background:
+    var(--communications-red-soft);
+  color: #ff9299;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.communications-success {
+  padding: 16px;
+  border: 1px solid
+    rgba(54, 215, 126, 0.24);
+  border-radius: 14px;
+  background:
+    var(--communications-green-soft);
+  color: #70eba3;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* =========================================================
+   RESPONSIVE — TABLET
+========================================================= */
+
+@media (max-width: 1100px) {
+  .communications-stats {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .quick-actions-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .templates-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .communication-editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .communication-preview-panel {
+    position: static;
+  }
+
+  .communications-table-head {
+    display: none;
+  }
+
+  .communication-row {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+    gap: 13px;
+    padding: 17px;
+  }
+}
+
+/* =========================================================
+   RESPONSIVE — MÓVIL
+========================================================= */
+
+@media (max-width: 700px) {
+  .communications-container {
+    padding-top: 18px;
+  }
+
+  .communications-hero {
+    min-height: auto;
+    padding: 24px 20px;
+    border-radius: 21px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .communications-hero__actions {
+    width: 100%;
+  }
+
+  .communications-hero__actions
+    .btn {
+    width: 100%;
+  }
+
+  .communications-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .communications-card {
+    padding: 19px;
+    border-radius: 20px;
+  }
+
+  .communications-section-head {
+    flex-direction: column;
+  }
+
+  .communications-section-head
+    > .btn {
+    width: 100%;
+  }
+
+  .quick-actions-grid,
+  .templates-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .template-card {
+    min-height: 240px;
+  }
+
+  .communication-row {
+    grid-template-columns: 1fr;
+  }
+
+  .communication-row__action {
+    width: 100%;
+  }
+
+  .communication-modal {
+    width:
+      calc(100vw - 20px);
+    max-height: 96vh;
+  }
+
+  .communication-modal
+    .modal__header,
+  .communication-modal
+    .modal__body,
+  .communication-modal
+    .modal__footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .communication-editor-panel,
+  .communication-preview-panel {
+    padding: 15px;
+  }
+
+  .email-preview {
+    min-height: 350px;
+    padding: 21px 17px;
+  }
+
+  .communication-preview-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .communication-preview-head
+    .btn {
+    width: 100%;
+  }
+
+  .communication-modal
+    .modal__footer {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 9px;
+  }
+
+  .communication-modal
+    .modal__footer
+    .btn {
+    width: 100%;
+  }
+}
+
+/* =========================================================
+   RESPONSIVE — MÓVIL PEQUEÑO
+========================================================= */
+
+@media (max-width: 420px) {
+  .communications-hero h1 {
+    font-size: 1.85rem;
+  }
+
+  .communication-stat {
+    padding: 17px;
+  }
+
+  .communication-stat__icon {
+    flex-basis: 44px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .communication-stat strong {
+    font-size: 22px;
+  }
+
+  .quick-action {
+    min-height: 86px;
+    padding: 14px;
+  }
+
+  .template-card {
+    padding: 18px;
+  }
+
+  .template-variable-list
+    button {
+    width: 100%;
+    text-align: left;
+  }
+}

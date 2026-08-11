@@ -1,0 +1,110 @@
+[
+  {
+    "id": "vac-001",
+    "sucursalId": "wendys-las-misiones-ciudad-juarez",
+    "branchId": "wendys-las-misiones-ciudad-juarez",
+    "tipoVacante": "operativa",
+    "grupo": "Wendy's",
+    "titulo": "Cajero",
+    "area": "Operaciones",
+    "pais": "Mexico",
+    "estado": "Chihuahua",
+    "ciudad": "Ciudad Juarez",
+    "sucursal": "Las Misiones",
+    "requisitos": [
+      "Atencion al cliente",
+      "Manejo basico de caja",
+      "Disponibilidad de horario"
+    ]
+  },
+  {
+    "id": "vac-002",
+    "sucursalId": "wendys-ejercito-nacional-ciudad-juarez",
+    "branchId": "wendys-ejercito-nacional-ciudad-juarez",
+    "tipoVacante": "operativa",
+    "grupo": "Wendy's",
+    "titulo": "Despachador",
+    "area": "Servicio",
+    "pais": "Mexico",
+    "estado": "Chihuahua",
+    "ciudad": "Ciudad Juarez",
+    "sucursal": "Ejercito Nacional",
+    "requisitos": [
+      "Rapidez",
+      "Orden",
+      "Trabajo en equipo"
+    ]
+  },
+  {
+    "id": "vac-003",
+    "sucursalId": "applebees-tecnologico-ciudad-juarez",
+    "branchId": "applebees-tecnologico-ciudad-juarez",
+    "tipoVacante": "operativa",
+    "grupo": "Applebee's",
+    "titulo": "Hostess",
+    "area": "Recepcion",
+    "pais": "Mexico",
+    "estado": "Chihuahua",
+    "ciudad": "Ciudad Juarez",
+    "sucursal": "Tecnologico",
+    "requisitos": [
+      "Excelente trato al cliente",
+      "Presentacion",
+      "Comunicacion"
+    ]
+  },
+  {
+    "id": "vac-008",
+    "sucursalId": "little-caesars-chihuahua",
+    "branchId": "little-caesars-chihuahua",
+    "tipoVacante": "operativa",
+    "grupo": "Little Caesars",
+    "titulo": "Auxiliar de Cocina",
+    "area": "Cocina",
+    "pais": "Mexico",
+    "estado": "Chihuahua",
+    "ciudad": "Chihuahua",
+    "sucursal": "Sucursal Chihuahua",
+    "requisitos": [
+      "Preparacion de alimentos",
+      "Limpieza",
+      "Trabajo bajo presion"
+    ]
+  },
+  {
+    "id": "vac-101",
+    "sucursalId": "corporativo-chihuahua",
+    "branchId": "corporativo-chihuahua",
+    "tipoVacante": "administrativa",
+    "grupo": "RH",
+    "titulo": "Auxiliar de Reclutamiento",
+    "area": "RH",
+    "pais": "Mexico",
+    "estado": "Chihuahua",
+    "ciudad": "Chihuahua",
+    "sucursal": "Corporativo",
+    "requisitos": [
+      "Entrevistas",
+      "Seguimiento",
+      "Organizacion"
+    ]
+  },
+  {
+    "id": "vac-010",
+    "sucursalId": "little-caesars-guadalajara",
+    "branchId": "little-caesars-guadalajara",
+    "tipoVacante": "operativa",
+    "grupo": "Little Caesars",
+    "titulo": "Cajero",
+    "area": "Mostrador",
+    "pais": "Mexico",
+    "estado": "Jalisco",
+    "ciudad": "Guadalajara",
+    "sucursal": "Sucursal Guadalajara",
+    "requisitos": [
+      "Atencion al cliente",
+      "Caja",
+      "Disponibilidad"
+    ]
+  }
+]
