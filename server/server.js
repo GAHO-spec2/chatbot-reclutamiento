@@ -4363,6 +4363,44 @@ app.use(
   "/api",
   comunicacionesRouter
 );
+
+/* =========================================================
+   INICIALIZACIÓN DEL COMMUNICATION CENTER
+========================================================= */
+
+async function inicializarCommunicationCenter() {
+  try {
+    const resultado =
+      await instalarPlantillasIniciales({
+        service:
+          templatesService,
+
+        usuario:
+          "sistema"
+      });
+
+    if (
+      resultado.instalado
+    ) {
+      console.log(
+        `Communication Center: ${resultado.totalCreadas || 0} plantilla(s) inicial(es) creada(s).`
+      );
+    } else {
+      console.log(
+        `Communication Center: plantillas existentes (${resultado.totalExistentes || 0}).`
+      );
+    }
+
+    return resultado;
+  } catch (error) {
+    console.error(
+      "Error inicializando Communication Center:",
+      error
+    );
+
+    throw error;
+  }
+}
 app.use(
   express.static(projectRoot)
 );
@@ -7676,6 +7714,12 @@ app.use((req, res) => {
   res.status(404).json({ error: "Ruta no encontrada." });
 });
 
-app.listen(PORT, () => {
-  console.log(`Servidor escuchando en http://localhost:${PORT}`);
-});
+iniciarServidor()
+  .catch((error) => {
+    console.error(
+      "Error iniciando servidor:",
+      error
+    );
+
+    process.exit(1);
+  });
