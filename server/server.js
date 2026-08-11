@@ -3011,13 +3011,14 @@ async function iniciarServidor() {
   }
 
   app.listen(
-    PORT,
-    () => {
-      console.log(
-        `Servidor escuchando en http://localhost:${PORT}`
-      );
-    }
-  );
+  PORT,
+  "0.0.0.0",
+  () => {
+    console.log(
+      `Servidor escuchando en puerto ${PORT}`
+    );
+  }
+);
 }
 
 function gradosARadianes(grados) {
