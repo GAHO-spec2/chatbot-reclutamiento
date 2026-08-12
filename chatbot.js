@@ -3243,30 +3243,131 @@ if (form) {
 ========================= */
 
 async function revisarAplicacionDesdeUrl() {
-  const params = new URLSearchParams(window.location.search);
-  const vacanteId = params.get("aplicar") || params.get("interes");
+  const params =
+    new URLSearchParams(window.location.search);
 
-  if (!vacanteId) return;
+  const qrSlug =
+    String(params.get("v") || "").trim();
+
+  const vacanteId =
+    String(
+      params.get("aplicar") ||
+      params.get("interes") ||
+      ""
+    ).trim();
+
+  if (!qrSlug && !vacanteId) return;
 
   try {
-    const response = await fetch(`${API_URL}/api/vacantes`);
-    const vacantes = await response.json();
+    let vacante = null;
 
-    const vacante = vacantes.find((item) => item.id === vacanteId);
+    /* =========================
+       ACCESO DESDE QR
+    ========================= */
+
+    if (qrSlug) {
+      const response =
+        await fetch(
+          `${API_URL}/api/vacantes/qr/${encodeURIComponent(qrSlug)}`
+        );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ||
+          "No fue posible cargar la vacante del QR."
+        );
+      }
+
+      vacante =
+        data.vacante || null;
+    }
+
+    /* =========================
+       ACCESO NORMAL POR ID
+    ========================= */
+
+    else if (vacanteId) {
+      const response =
+        await fetch(
+          `${API_URL}/api/vacantes`
+        );
+
+      const vacantes =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          vacantes.error ||
+          "No fue posible cargar las vacantes."
+        );
+      }
+
+      vacante =
+        Array.isArray(vacantes)
+          ? vacantes.find(
+              (item) =>
+                item.id === vacanteId
+            )
+          : null;
+    }
+
+    /* =========================
+       VACANTE NO ENCONTRADA
+    ========================= */
 
     if (!vacante) {
+      resetChatHistory();
       openChat();
-      addAssistantText("❌ No pude encontrar la vacante seleccionada. Puedes buscar otra vacante desde ubicaciones.");
+      hideWelcomeOverlay();
+
+      addAssistantText(
+        "❌ No pude encontrar la vacante seleccionada. Puedes buscar otra vacante desde ubicaciones."
+      );
+
       return;
     }
 
+    /* =========================
+       ABRIR CHAT DIRECTAMENTE
+    ========================= */
+
+    resetChatHistory();
+
+    openChat();
+    hideWelcomeOverlay();
+
+    startApplicationFromVacancy(
+      vacante
+    );
+
+    /* =========================
+       LIMPIAR URL
+    ========================= */
+
+    window.history.replaceState(
+      {},
+      document.title,
+      "index.html#chatbot-toggle"
+    );
+  } catch (error) {
+    console.error(
+      "Error cargando vacante desde URL:",
+      error
+    );
+
     resetChatHistory();
     openChat();
-    startApplicationFromVacancy(vacante);
+    hideWelcomeOverlay();
 
-    window.history.replaceState({}, document.title, "index.html#chatbot-toggle");
-  } catch (error) {
-    console.error("Error cargando vacante desde URL:", error);
+    addAssistantText(
+      `❌ ${
+        error.message ||
+        "No fue posible cargar la vacante."
+      }`
+    );
   }
 }
 
