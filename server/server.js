@@ -5269,6 +5269,78 @@ app.get("/api/vacantes", async (req, res) => {
   }
 });
 
+app.get("/api/vacantes/qr/:slug", async (req, res) => {
+  try {
+    const slug =
+      String(req.params.slug || "")
+        .trim()
+        .toLowerCase();
+
+    if (!slug) {
+      return res.status(400).json({
+        error: "Slug QR no enviado."
+      });
+    }
+
+    const vacantes = (
+      await leerVacantes()
+    ).map(
+      enriquecerVacanteConSucursal
+    );
+
+    const vacante =
+      vacantes.find((item) => {
+        const itemSlug =
+          String(
+            item?.qr?.slug || ""
+          )
+            .trim()
+            .toLowerCase();
+
+        return itemSlug === slug;
+      });
+
+    if (!vacante) {
+      return res.status(404).json({
+        error:
+          "La vacante asociada a este QR no existe."
+      });
+    }
+
+    if (
+      vacante.activa === false ||
+      vacante?.qr?.activo === false
+    ) {
+      return res.status(410).json({
+        error:
+          "Esta vacante ya no está disponible.",
+        vacante: {
+          id: vacante.id,
+          titulo: vacante.titulo,
+          grupo: vacante.grupo,
+          sucursal: vacante.sucursal,
+          ciudad: vacante.ciudad
+        }
+      });
+    }
+
+    res.json({
+      ok: true,
+      vacante
+    });
+  } catch (error) {
+    console.error(
+      "Error cargando vacante por QR:",
+      error
+    );
+
+    res.status(500).json({
+      error:
+        "No fue posible consultar la vacante del QR."
+    });
+  }
+});
+
 app.get("/api/postulacion/:id", async (req, res) => {
   try {
     const postulaciones = await leerPostulaciones();
