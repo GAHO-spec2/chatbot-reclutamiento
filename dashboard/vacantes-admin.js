@@ -344,30 +344,99 @@ function renderVacantesAdmin() {
     card.className = "dashboard-card";
 
     card.innerHTML = `
-      <div class="dashboard-card__top">
-        <div>
-          <h3>${escapeHtml(vacante.titulo || "Sin título")}</h3>
-          <p>${escapeHtml(vacante.grupo || "-")} • ${escapeHtml(vacante.area || "-")}</p>
-        </div>
-        <span class="estado estado--pendiente">${escapeHtml(vacante.tipoVacante || "-")}</span>
-      </div>
+  <div class="vacancy-card__header">
+    <div class="vacancy-card__heading">
+      <span class="vacancy-card__eyebrow">
+        ${escapeHtml(vacante.grupo || "GA Hospitality")}
+      </span>
 
-      <div class="dashboard-card__info">
-        <p><strong>Ubicación:</strong> ${escapeHtml(vacante.pais || "-")} / ${escapeHtml(vacante.estado || "-")} / ${escapeHtml(vacante.ciudad || "-")}</p>
-        <p><strong>Sucursal:</strong> ${escapeHtml(vacante.sucursal || "-")}</p>
-        <p><strong>Número tienda:</strong> ${escapeHtml(vacante.numeroTienda || "-")}</p>
-        <p><strong>Dirección:</strong> ${escapeHtml(vacante.direccion || "-")}</p>
-        <p><strong>Coordenadas:</strong> ${coordenadasTexto}</p>
-        <p><strong>Requisitos:</strong> ${requisitosTexto}</p>
-      </div>
+      <h3 class="vacancy-card__title">
+        ${escapeHtml(vacante.titulo || "Sin título")}
+      </h3>
 
-      <div class="dashboard-card__actions">
-        ${googleBtnHtml}
-        ${appleBtnHtml}
-        <button class="btn btn--secondary edit-vacante-btn" data-id="${escapeHtml(vacante.id)}">Editar</button>
-        <button class="btn btn--secondary delete-vacante-btn" data-id="${escapeHtml(vacante.id)}">Eliminar</button>
-      </div>
-    `;
+      <p class="vacancy-card__area">
+        ${escapeHtml(vacante.area || "Área no especificada")}
+      </p>
+    </div>
+
+    <span class="vacancy-card__type">
+      ${escapeHtml(vacante.tipoVacante || "Sin tipo")}
+    </span>
+  </div>
+
+  <div class="vacancy-card__grid">
+    <div class="vacancy-card__item">
+      <span class="vacancy-card__label">
+        📍 Ubicación
+      </span>
+
+      <strong>
+        ${escapeHtml(vacante.ciudad || "-")}
+      </strong>
+
+      <small>
+        ${escapeHtml(vacante.estado || "-")},
+        ${escapeHtml(vacante.pais || "-")}
+      </small>
+    </div>
+
+    <div class="vacancy-card__item">
+      <span class="vacancy-card__label">
+        🏢 Sucursal
+      </span>
+
+      <strong>
+        ${escapeHtml(vacante.sucursal || "-")}
+      </strong>
+
+      <small>
+        Tienda:
+        ${escapeHtml(vacante.numeroTienda || "-")}
+      </small>
+    </div>
+
+    <div class="vacancy-card__item">
+      <span class="vacancy-card__label">
+        📌 Coordenadas
+      </span>
+
+      <strong>
+        ${coordenadasTexto}
+      </strong>
+
+      <small>
+        Ubicación geográfica
+      </small>
+    </div>
+  </div>
+
+  
+
+  <div class="vacancy-card__footer">
+    <div class="vacancy-card__maps">
+      ${googleBtnHtml}
+      ${appleBtnHtml}
+    </div>
+
+    <div class="vacancy-card__admin-actions">
+      <button
+        class="btn btn--secondary edit-vacante-btn"
+        type="button"
+        data-id="${escapeHtml(vacante.id)}"
+      >
+        ✏ Editar
+      </button>
+
+      <button
+        class="btn btn--danger delete-vacante-btn"
+        type="button"
+        data-id="${escapeHtml(vacante.id)}"
+      >
+        🗑 Eliminar
+      </button>
+    </div>
+  </div>
+`;
 
     vacantesAdminList.appendChild(card);
   });

@@ -1316,7 +1316,7 @@ const compatibilityLabel =
     .etiquetaNivelCompatibilidad ||
   "Compatibilidad no disponible";
 
-    card.innerHTML = `
+card.innerHTML = `
   <div class="candidate-select">
     <input
       class="candidate-checkbox"
@@ -1339,23 +1339,34 @@ const compatibilityLabel =
     </div>
 
     <div class="candidate-identity">
-      <h3>${postulacion.nombre || "Sin nombre"}</h3>
+      <h3>
+        ${postulacion.nombre || "Sin nombre"}
+      </h3>
 
       <p>
-        ${postulacion.correo || postulacion.telefono || "Sin contacto"}
+        ${
+          postulacion.correo ||
+          postulacion.telefono ||
+          "Sin contacto"
+        }
       </p>
     </div>
   </div>
 
   <div class="candidate-position">
-    <strong>${puesto}</strong>
+    <strong>
+      ${puesto}
+    </strong>
 
     <span>
       ${marca} · ${sucursal}
     </span>
 
     <small>
-      ${postulacion.ciudad || "Ciudad no registrada"}
+      ${
+        postulacion.ciudad ||
+        "Ciudad no registrada"
+      }
     </small>
 
     <small class="candidate-distance-summary">
@@ -1466,6 +1477,8 @@ checkbox?.addEventListener(
     });
 
   updateStats();
+  updateCandidateSelectionUi();
+
 }
 /* =========================
    MODAL CANDIDATO
@@ -1736,37 +1749,6 @@ if (modalCompatibilidadAlert) {
 }
 
 
-if (selectAllCandidates) {
-  selectAllCandidates.addEventListener(
-    "change",
-    () => {
-      const visibles =
-        getPostulacionesFiltradas();
-
-      visibles.forEach(
-        (candidate) => {
-          const id =
-            String(
-              candidate.id
-            );
-
-          if (
-            selectAllCandidates
-              .checked
-          ) {
-            selectedCandidateIds
-              .add(id);
-          } else {
-            selectedCandidateIds
-              .delete(id);
-          }
-        }
-      );
-
-      renderPostulaciones();
-    }
-  );
-}
 
 if (deleteSelectedCandidatesBtn) {
   deleteSelectedCandidatesBtn
@@ -1775,7 +1757,6 @@ if (deleteSelectedCandidatesBtn) {
       eliminarPostulacionesSeleccionadas
     );
 }
-
 
 function closeCandidateModal() {
   modal.classList.add("hidden");

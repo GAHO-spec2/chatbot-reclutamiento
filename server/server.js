@@ -7510,8 +7510,21 @@ app.post(
           lng: lngEntrada
         });
 
+      const fechaActual = new Date().toISOString();
+
+      const vacanteId = `vac-${Date.now()}`;
+
+      const qrSlugBase = slugify(
+        `${titulo}-${sucursal}-${ciudad}`
+      );
+
+      const qrSlug =
+        `${qrSlugBase}-${Math.random()
+          .toString(36)
+          .slice(2, 8)}`;
+
       const nuevaVacante = {
-        id: `vac-${Date.now()}`,
+        id: vacanteId,
 
         sucursalId: finalSucursalId,
         branchId: finalSucursalId,
@@ -7566,13 +7579,27 @@ app.post(
         preguntasPersonalizadas:
           preguntasNormalizadas,
 
+        
+        qr: {
+          slug: qrSlug,
+
+          activo: true,
+
+          creadoEn:
+            fechaActual,
+
+          visitas: 0,
+
+          postulaciones: 0
+        },
+
         activa: true,
 
         fechaCreacion:
-          new Date().toISOString(),
+          fechaActual,
 
         fechaActualizacion:
-          new Date().toISOString(),
+          fechaActual,
 
         creadaPor:
           req.adminUser?.email || ""
