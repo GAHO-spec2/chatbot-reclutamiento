@@ -3518,3 +3518,286 @@ body {
     flex: 1 1 auto;
   }
 }
+
+/* =========================================================
+   VALIDACIÓN VISUAL DE VACANTES
+========================================================= */
+
+.field > label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 10px;
+}
+
+
+/* OBLIGATORIO */
+
+.field-required-badge {
+  display: inline-flex;
+  align-items: center;
+
+  flex-shrink: 0;
+
+  padding: 4px 8px;
+
+  border-radius: 999px;
+
+  background:
+    rgba(239, 68, 68, 0.1);
+
+  border:
+    1px solid rgba(
+      239,
+      68,
+      68,
+      0.22
+    );
+
+  color: #ff8c8c;
+
+  font-size: 9px;
+  font-weight: 850;
+
+  letter-spacing: 0.05em;
+
+  text-transform: uppercase;
+}
+
+
+/* OPCIONAL */
+
+.field-optional-badge {
+  display: inline-flex;
+  align-items: center;
+
+  flex-shrink: 0;
+
+  padding: 4px 8px;
+
+  border-radius: 999px;
+
+  background:
+    rgba(255, 255, 255, 0.04);
+
+  border:
+    1px solid rgba(
+      255,
+      255,
+      255,
+      0.08
+    );
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.42
+    );
+
+  font-size: 9px;
+  font-weight: 800;
+
+  letter-spacing: 0.05em;
+
+  text-transform: uppercase;
+}
+
+
+/* =========================================================
+   CAMPO CON ERROR
+========================================================= */
+
+.field--error input,
+.field--error select,
+.field--error textarea,
+.vacante-input-error {
+  border-color:
+    rgba(
+      255,
+      77,
+      88,
+      0.82
+    ) !important;
+
+  background:
+    rgba(
+      239,
+      68,
+      68,
+      0.07
+    ) !important;
+
+  box-shadow:
+    0 0 0 4px
+    rgba(
+      239,
+      68,
+      68,
+      0.08
+    ) !important;
+}
+
+
+/* pequeña animación */
+
+.field--error {
+  animation:
+    vacanteFieldError
+    0.32s ease;
+}
+
+@keyframes vacanteFieldError {
+
+  0% {
+    transform:
+      translateX(0);
+  }
+
+  25% {
+    transform:
+      translateX(-3px);
+  }
+
+  50% {
+    transform:
+      translateX(3px);
+  }
+
+  75% {
+    transform:
+      translateX(-2px);
+  }
+
+  100% {
+    transform:
+      translateX(0);
+  }
+}
+
+
+/* =========================================================
+   MENSAJE INDIVIDUAL
+========================================================= */
+
+.vacante-field-error {
+  display: block;
+
+  margin-top: 3px;
+
+  color: #ff8585;
+
+  font-size: 11px;
+  font-weight: 650;
+
+  line-height: 1.4;
+}
+
+
+/* =========================================================
+   RESUMEN DE ERRORES
+========================================================= */
+
+.vacante-validation-summary {
+  display: flex;
+
+  align-items: flex-start;
+
+  gap: 13px;
+
+  margin-bottom: 18px;
+
+  padding: 15px 17px;
+
+  border:
+    1px solid rgba(
+      239,
+      68,
+      68,
+      0.3
+    );
+
+  border-radius: 15px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(
+        239,
+        68,
+        68,
+        0.11
+      ),
+      rgba(
+        239,
+        68,
+        68,
+        0.035
+      )
+    );
+}
+
+.vacante-validation-summary__icon {
+  width: 34px;
+  height: 34px;
+
+  flex: 0 0 34px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 10px;
+
+  background:
+    rgba(
+      239,
+      68,
+      68,
+      0.13
+    );
+
+  color: #ff8585;
+
+  font-size: 16px;
+}
+
+.vacante-validation-summary strong {
+  display: block;
+
+  margin-bottom: 4px;
+
+  color: #ff9b9b;
+
+  font-size: 13px;
+}
+
+.vacante-validation-summary p {
+  margin: 0;
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.64
+    );
+
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+
+/* =========================================================
+   CAMPO CORREGIDO
+========================================================= */
+
+.field input:not(.vacante-input-error):focus,
+.field select:not(.vacante-input-error):focus,
+.field textarea:not(.vacante-input-error):focus {
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}

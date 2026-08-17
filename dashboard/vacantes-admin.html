@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vacantes | GA Hospitality</title>
   <link rel="icon" type="image/png" sizes="32x32" href="icons8-documento-32.png">
-  <link rel="stylesheet" href="dashboard.css?v=11">
+  <link rel="stylesheet" href="dashboard.css?v=13">
 </head>
 <body>
 
@@ -87,316 +87,628 @@
         </div>
         <button id="closeVacanteModalBtn" class="chatbot-close">✕</button>
       </div>
-
-      <div class="modal__body">
-        <form id="vacanteForm" class="form-grid">
-          <input type="hidden" id="vacanteIdEdit" />
-
-          <div class="field">
-            <label for="vacanteTipo">Tipo de vacante</label>
-            <select id="vacanteTipo" required>
-              <option value="">Selecciona</option>
-              <option value="operativa">Operativa / Restaurante</option>
-              <option value="administrativa">Administrativa / Corporativo</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="vacanteGrupo">Marca / Departamento</label>
-            <input id="vacanteGrupo" type="text" placeholder="Ej. Applebee's, Wendy's, RH" required />
-          </div>
-
-          <div class="field">
-            <label for="vacanteTituloInput">Título</label>
-            <input id="vacanteTituloInput" type="text" placeholder="Ej. Hostess" required />
-          </div>
-
-          <div class="field">
-            <label for="vacanteArea">Área</label>
-            <input id="vacanteArea" type="text" placeholder="Ej. Recepción" required />
-          </div>
-
-          <div class="field">
-            <label for="vacantePais">País</label>
-            <select id="vacantePais" required>
-              <option value="">Selecciona</option>
-              <option value="Mexico">México</option>
-              <option value="Estados Unidos">Estados Unidos</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="vacanteEstado">Estado</label>
-            <select id="vacanteEstado" required>
-              <option value="">Selecciona</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="vacanteCiudad">Ciudad</label>
-            <select id="vacanteCiudad" required>
-              <option value="">Selecciona</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="vacanteSucursal">Sucursal</label>
-            <input id="vacanteSucursal" type="text" placeholder="Ej. Tecnológico / Corporativo" required />
-          </div>
-
-          <div class="field">
-            <label for="vacanteNumeroTienda">Número de tienda</label>
-            <input id="vacanteNumeroTienda" type="text" placeholder="Ej. 042, 4142, APB-TEC" />
-          </div>
-
-          <div class="field field--full">
-            <label for="vacanteDireccion">Dirección completa</label>
-            <input id="vacanteDireccion" type="text" placeholder="Ej. Av. Tecnológico 1234, Ciudad Juárez, Chihuahua" />
-          </div>
-
-          <div class="field field--full">
-            <label for="vacanteGoogleMapsUrl">URL de Google Maps</label>
-            <input id="vacanteGoogleMapsUrl" type="url" placeholder="Pega aquí el enlace de Google Maps de la sucursal" />
-          </div>
-
-          <div class="field field--full">
-            <label for="vacanteAppleMapsUrl">URL de Apple Maps</label>
-            <input id="vacanteAppleMapsUrl" type="url" placeholder="Opcional: pega aquí el enlace de Apple Maps" />
-          </div>
-
-          <div class="field">
-            <label for="vacanteLat">Latitud</label>
-            <input id="vacanteLat" type="number" step="any" placeholder="Ej. 31.6904" />
-          </div>
-
-          <div class="field">
-            <label for="vacanteLng">Longitud</label>
-            <input id="vacanteLng" type="number" step="any" placeholder="Ej. -106.4245" />
-          </div>
-
-          <div class="field field--full">
-            <label for="vacanteRequisitos">Requisitos</label>
-            <textarea id="vacanteRequisitos" rows="4" placeholder="Separa cada requisito con coma" required></textarea>
-          </div>
-          
-          <!-- ==========================================
-     CONFIGURACIÓN DEL PROCESO DE POSTULACIÓN
-=========================================== -->
-<section class="application-config field--full">
-  <div class="application-config__head">
-    <div>
-      <span class="config-eyebrow">Flujo del chatbot</span>
-      <h4>Configuración de postulación</h4>
-      <p>
-        Define qué información deberá solicitar el chatbot para esta vacante.
-      </p>
-    </div>
-  </div>
-
-  <div class="config-grid">
-    <div class="field">
-      <label for="vacanteCvPolicy">Solicitud de currículum</label>
-
-      <select id="vacanteCvPolicy">
-        <option value="obligatorio">CV obligatorio</option>
-        <option value="opcional">CV opcional</option>
-        <option value="no_solicitar">No solicitar CV</option>
-      </select>
-
-      <small class="field-help">
-        El chatbot adaptará el proceso según esta selección.
-      </small>
-    </div>
-
-    <div class="config-fields-panel">
-      <h5>Información que solicitará el chatbot</h5>
       
-      <div class="config-checks">
+      
+      <div class="modal__body">
 
-  <label class="config-check">
-    <input
-      id="vacanteSolicitarTelefono"
-      type="checkbox"
-      checked
-    />
+  <!-- ==========================================
+       RESUMEN DE VALIDACIÓN
+  =========================================== -->
 
-    <span>
-      <strong>📞 Teléfono</strong>
-      <small>
-        Solicitar el número telefónico del candidato.
-      </small>
-    </span>
-  </label>
-
-  <label class="config-check">
-    <input
-      id="vacanteSolicitarCorreo"
-      type="checkbox"
-      checked
-    />
-
-    <span>
-      <strong>📧 Correo electrónico</strong>
-      <small>
-        Utilizar para seguimiento y notificaciones.
-      </small>
-    </span>
-  </label>
-
-  <label class="config-check">
-    <input
-      id="vacanteSolicitarCodigoPostal"
-      type="checkbox"
-      checked
-    />
-
-    <span>
-      <strong>📍 Código postal</strong>
-      <small>
-        Calcular la distancia aproximada entre el candidato y la sucursal.
-      </small>
-    </span>
-  </label>
-
-  <label class="config-check">
-    <input
-      id="vacanteSolicitarTransporte"
-      type="checkbox"
-      checked
-    />
-
-    <span>
-      <strong>🚌 Medio de transporte</strong>
-      <small>
-        Conocer cómo se trasladará el candidato al lugar de trabajo.
-      </small>
-    </span>
-  </label>
-
-  <label class="config-check">
-    <input
-      id="vacanteSolicitarVehiculoPropio"
-      type="checkbox"
-    />
-
-    <span>
-      <strong>🚗 Vehículo propio</strong>
-      <small>
-        Consultar si el candidato cuenta con automóvil o vehículo propio.
-      </small>
-    </span>
-  </label>
-
-  <label class="config-check">
-    <input
-      id="vacanteSolicitarTiempoTraslado"
-      type="checkbox"
-      checked
-    />
-
-    <span>
-      <strong>⏱ Tiempo máximo de traslado</strong>
-      <small>
-        Solicitar cuánto tiempo está dispuesto a trasladarse para trabajar.
-      </small>
-    </span>
-  </label>
-
-  <label class="config-check">
-    <input
-      id="vacanteSolicitarExperiencia"
-      type="checkbox"
-      checked
-    />
-
-    <span>
-      <strong>💼 Experiencia laboral</strong>
-      <small>
-        Conocer la experiencia relacionada con el puesto.
-      </small>
-    </span>
-  </label>
-
-  <label class="config-check">
-    <input
-      id="vacanteSolicitarEscolaridad"
-      type="checkbox"
-    />
-
-    <span>
-      <strong>🎓 Escolaridad</strong>
-      <small>
-        Solicitar el nivel académico del candidato.
-      </small>
-    </span>
-  </label>
-
-  <label class="config-check">
-    <input
-      id="vacanteSolicitarDisponibilidad"
-      type="checkbox"
-      checked
-    />
-
-    <span>
-      <strong>🗓 Disponibilidad</strong>
-      <small>
-        Conocer horarios y días disponibles para trabajar.
-      </small>
-    </span>
-  </label>
-
-</div>
-     
-     
+  <div
+    id="vacanteValidationSummary"
+    class="vacante-validation-summary hidden"
+    role="alert"
+  >
+    <div class="vacante-validation-summary__icon">
+      ⚠
     </div>
-  </div>
-</section>
 
-<!-- ==========================================
-     PREGUNTAS PERSONALIZADAS
-=========================================== -->
-<section class="custom-questions field--full">
-  <div class="custom-questions__head">
     <div>
-      <span class="config-eyebrow">Preguntas adicionales</span>
+      <strong>
+        Revisa los campos obligatorios
+      </strong>
 
-      <h4>Preguntas personalizadas</h4>
-
-      <p>
-        Agrega preguntas específicas para este puesto. El chatbot las realizará
-        en el orden mostrado.
+      <p id="vacanteValidationSummaryText">
+        Hay información pendiente antes de guardar la vacante.
       </p>
     </div>
-
-    <button
-      id="addCustomQuestionBtn"
-      class="btn btn--secondary"
-      type="button"
-    >
-      + Agregar pregunta
-    </button>
   </div>
 
-  <div
-    id="customQuestionsEmpty"
-    class="custom-questions-empty"
+
+  <!-- ==========================================
+       FORMULARIO DE VACANTE
+  =========================================== -->
+
+  <form
+    id="vacanteForm"
+    class="form-grid"
+    novalidate
   >
-    <strong>No hay preguntas adicionales</strong>
 
-    <p>
-      Esta vacante utilizará solamente las preguntas generales seleccionadas.
-    </p>
-  </div>
+    <input
+      type="hidden"
+      id="vacanteIdEdit"
+    />
 
-  <div
-    id="customQuestionsList"
-    class="custom-questions-list"
-  ></div>
-</section>
-        </form>
+
+    <!-- ==========================================
+         INFORMACIÓN PRINCIPAL
+    =========================================== -->
+
+    <div class="field">
+      <label for="vacanteTipo">
+        Tipo de vacante
+      </label>
+
+      <select
+        id="vacanteTipo"
+        required
+      >
+        <option value="">
+          Selecciona
+        </option>
+
+        <option value="operativa">
+          Operativa / Restaurante
+        </option>
+
+        <option value="administrativa">
+          Administrativa / Corporativo
+        </option>
+      </select>
+    </div>
+
+
+    <div class="field">
+      <label for="vacanteGrupo">
+        Marca / Departamento
+      </label>
+
+      <input
+        id="vacanteGrupo"
+        type="text"
+        placeholder="Ej. Applebee's, Wendy's, RH"
+        required
+      />
+    </div>
+
+
+    <div class="field">
+      <label for="vacanteTituloInput">
+        Título
+      </label>
+
+      <input
+        id="vacanteTituloInput"
+        type="text"
+        placeholder="Ej. Hostess"
+        required
+      />
+    </div>
+
+
+    <div class="field">
+      <label for="vacanteArea">
+        Área
+      </label>
+
+      <input
+        id="vacanteArea"
+        type="text"
+        placeholder="Ej. Recepción"
+        required
+      />
+    </div>
+
+
+    <div class="field">
+      <label for="vacantePais">
+        País
+      </label>
+
+      <select
+        id="vacantePais"
+        required
+      >
+        <option value="">
+          Selecciona
+        </option>
+
+        <option value="Mexico">
+          México
+        </option>
+
+        <option value="Estados Unidos">
+          Estados Unidos
+        </option>
+      </select>
+    </div>
+
+
+    <div class="field">
+      <label for="vacanteEstado">
+        Estado
+      </label>
+
+      <select
+        id="vacanteEstado"
+        required
+      >
+        <option value="">
+          Selecciona
+        </option>
+      </select>
+    </div>
+
+
+    <div class="field">
+      <label for="vacanteCiudad">
+        Ciudad
+      </label>
+
+      <select
+        id="vacanteCiudad"
+        required
+      >
+        <option value="">
+          Selecciona
+        </option>
+      </select>
+    </div>
+
+
+    <div class="field">
+      <label for="vacanteSucursal">
+        Sucursal
+      </label>
+
+      <input
+        id="vacanteSucursal"
+        type="text"
+        placeholder="Ej. Tecnológico / Corporativo"
+        required
+      />
+    </div>
+
+
+    <!-- ==========================================
+         DATOS OPCIONALES
+    =========================================== -->
+
+    <div class="field">
+      <label for="vacanteNumeroTienda">
+        Número de tienda
+      </label>
+
+      <input
+        id="vacanteNumeroTienda"
+        type="text"
+        placeholder="Ej. 042, 4142, APB-TEC"
+      />
+    </div>
+
+
+    <div class="field field--full">
+      <label for="vacanteDireccion">
+        Dirección completa
+      </label>
+
+      <input
+        id="vacanteDireccion"
+        type="text"
+        placeholder="Ej. Av. Tecnológico 1234, Ciudad Juárez, Chihuahua"
+      />
+    </div>
+
+
+    <div class="field field--full">
+      <label for="vacanteGoogleMapsUrl">
+        URL de Google Maps
+      </label>
+
+      <input
+        id="vacanteGoogleMapsUrl"
+        type="url"
+        placeholder="Pega aquí el enlace de Google Maps de la sucursal"
+      />
+    </div>
+
+
+    <div class="field field--full">
+      <label for="vacanteAppleMapsUrl">
+        URL de Apple Maps
+      </label>
+
+      <input
+        id="vacanteAppleMapsUrl"
+        type="url"
+        placeholder="Opcional: pega aquí el enlace de Apple Maps"
+      />
+    </div>
+
+
+    <div class="field">
+      <label for="vacanteLat">
+        Latitud
+      </label>
+
+      <input
+        id="vacanteLat"
+        type="number"
+        step="any"
+        placeholder="Ej. 31.6904"
+      />
+    </div>
+
+
+    <div class="field">
+      <label for="vacanteLng">
+        Longitud
+      </label>
+
+      <input
+        id="vacanteLng"
+        type="number"
+        step="any"
+        placeholder="Ej. -106.4245"
+      />
+    </div>
+
+
+    <!-- ==========================================
+         REQUISITOS
+    =========================================== -->
+
+    <div class="field field--full">
+      <label for="vacanteRequisitos">
+        Requisitos
+      </label>
+
+      <textarea
+        id="vacanteRequisitos"
+        rows="4"
+        placeholder="Separa cada requisito con coma"
+        required
+      ></textarea>
+    </div>
+
+
+    <!-- ==========================================
+         CONFIGURACIÓN DEL PROCESO DE POSTULACIÓN
+    =========================================== -->
+
+    <section
+      class="application-config field--full"
+    >
+
+      <div class="application-config__head">
+
+        <div>
+          <span class="config-eyebrow">
+            Flujo del chatbot
+          </span>
+
+          <h4>
+            Configuración de postulación
+          </h4>
+
+          <p>
+            Define qué información deberá solicitar el chatbot para esta vacante.
+          </p>
+        </div>
+
       </div>
 
+
+      <div class="config-grid">
+
+        <!-- POLÍTICA DE CV -->
+
+        <div class="field">
+
+          <label for="vacanteCvPolicy">
+            Solicitud de currículum
+          </label>
+
+          <select id="vacanteCvPolicy">
+
+            <option value="obligatorio">
+              CV obligatorio
+            </option>
+
+            <option value="opcional">
+              CV opcional
+            </option>
+
+            <option value="no_solicitar">
+              No solicitar CV
+            </option>
+
+          </select>
+
+          <small class="field-help">
+            El chatbot adaptará el proceso según esta selección.
+          </small>
+
+        </div>
+
+
+        <!-- CAMPOS DEL CHATBOT -->
+
+        <div class="config-fields-panel">
+
+          <h5>
+            Información que solicitará el chatbot
+          </h5>
+
+          <div class="config-checks">
+
+
+            <label class="config-check">
+
+              <input
+                id="vacanteSolicitarTelefono"
+                type="checkbox"
+                checked
+              />
+
+              <span>
+                <strong>
+                  📞 Teléfono
+                </strong>
+
+                <small>
+                  Solicitar el número telefónico del candidato.
+                </small>
+              </span>
+
+            </label>
+
+
+            <label class="config-check">
+
+              <input
+                id="vacanteSolicitarCorreo"
+                type="checkbox"
+                checked
+              />
+
+              <span>
+                <strong>
+                  📧 Correo electrónico
+                </strong>
+
+                <small>
+                  Utilizar para seguimiento y notificaciones.
+                </small>
+              </span>
+
+            </label>
+
+
+            <label class="config-check">
+
+              <input
+                id="vacanteSolicitarCodigoPostal"
+                type="checkbox"
+                checked
+              />
+
+              <span>
+                <strong>
+                  📍 Código postal
+                </strong>
+
+                <small>
+                  Calcular la distancia aproximada entre el candidato y la sucursal.
+                </small>
+              </span>
+
+            </label>
+
+
+            <label class="config-check">
+
+              <input
+                id="vacanteSolicitarTransporte"
+                type="checkbox"
+                checked
+              />
+
+              <span>
+                <strong>
+                  🚌 Medio de transporte
+                </strong>
+
+                <small>
+                  Conocer cómo se trasladará el candidato al lugar de trabajo.
+                </small>
+              </span>
+
+            </label>
+
+
+            <label class="config-check">
+
+              <input
+                id="vacanteSolicitarVehiculoPropio"
+                type="checkbox"
+              />
+
+              <span>
+                <strong>
+                  🚗 Vehículo propio
+                </strong>
+
+                <small>
+                  Consultar si el candidato cuenta con automóvil o vehículo propio.
+                </small>
+              </span>
+
+            </label>
+
+
+            <label class="config-check">
+
+              <input
+                id="vacanteSolicitarTiempoTraslado"
+                type="checkbox"
+                checked
+              />
+
+              <span>
+                <strong>
+                  ⏱ Tiempo máximo de traslado
+                </strong>
+
+                <small>
+                  Solicitar cuánto tiempo está dispuesto a trasladarse para trabajar.
+                </small>
+              </span>
+
+            </label>
+
+
+            <label class="config-check">
+
+              <input
+                id="vacanteSolicitarExperiencia"
+                type="checkbox"
+                checked
+              />
+
+              <span>
+                <strong>
+                  💼 Experiencia laboral
+                </strong>
+
+                <small>
+                  Conocer la experiencia relacionada con el puesto.
+                </small>
+              </span>
+
+            </label>
+
+
+            <label class="config-check">
+
+              <input
+                id="vacanteSolicitarEscolaridad"
+                type="checkbox"
+              />
+
+              <span>
+                <strong>
+                  🎓 Escolaridad
+                </strong>
+
+                <small>
+                  Solicitar el nivel académico del candidato.
+                </small>
+              </span>
+
+            </label>
+
+
+            <label class="config-check">
+
+              <input
+                id="vacanteSolicitarDisponibilidad"
+                type="checkbox"
+                checked
+              />
+
+              <span>
+                <strong>
+                  🗓 Disponibilidad
+                </strong>
+
+                <small>
+                  Conocer horarios y días disponibles para trabajar.
+                </small>
+              </span>
+
+            </label>
+
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ==========================================
+         PREGUNTAS PERSONALIZADAS
+    =========================================== -->
+
+    <section
+      class="custom-questions field--full"
+    >
+
+      <div class="custom-questions__head">
+
+        <div>
+
+          <span class="config-eyebrow">
+            Preguntas adicionales
+          </span>
+
+          <h4>
+            Preguntas personalizadas
+          </h4>
+
+          <p>
+            Agrega preguntas específicas para este puesto.
+            El chatbot las realizará en el orden mostrado.
+          </p>
+
+        </div>
+
+
+        <button
+          id="addCustomQuestionBtn"
+          class="btn btn--secondary"
+          type="button"
+        >
+          + Agregar pregunta
+        </button>
+
+      </div>
+
+
+      <div
+        id="customQuestionsEmpty"
+        class="custom-questions-empty"
+      >
+
+        <strong>
+          No hay preguntas adicionales
+        </strong>
+
+        <p>
+          Esta vacante utilizará solamente las preguntas generales seleccionadas.
+        </p>
+
+      </div>
+
+
+      <div
+        id="customQuestionsList"
+        class="custom-questions-list"
+      ></div>
+
+    </section>
+
+
+  </form>
+
+</div>
+
+   
       <div class="modal__footer">
         <button id="saveVacanteBtn" class="btn btn--primary">Guardar vacante</button>
       </div>
@@ -604,7 +916,7 @@
   </script>
 
   <!-- VACANTES ADMIN -->
-  <script src="vacantes-admin.js?v=10"></script>
+  <script src="vacantes-admin.js?v=12"></script>
 
 </body>
 </html>

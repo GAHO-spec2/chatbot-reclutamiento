@@ -43,6 +43,21 @@ const closeVacanteBackdrop = document.getElementById("closeVacanteBackdrop");
 const vacanteModalTitle = document.getElementById("vacanteModalTitle");
 const saveVacanteBtn = document.getElementById("saveVacanteBtn");
 
+const vacanteForm =
+  document.getElementById(
+    "vacanteForm"
+  );
+
+const vacanteValidationSummary =
+  document.getElementById(
+    "vacanteValidationSummary"
+  );
+
+const vacanteValidationSummaryText =
+  document.getElementById(
+    "vacanteValidationSummaryText"
+  );
+
 const vacanteIdEdit = document.getElementById("vacanteIdEdit");
 const vacanteTipo = document.getElementById("vacanteTipo");
 const vacanteGrupo = document.getElementById("vacanteGrupo");
@@ -1642,7 +1657,7 @@ function resetVacanteForm() {
 
 function openVacanteModal(vacante = null) {
   resetVacanteForm();
-
+  limpiarErroresVacante();
   if (!vacante) {
     vacanteModalTitle.textContent =
       "Nueva vacante";
@@ -1891,13 +1906,439 @@ if (downloadQrPngBtn) {
 
 function closeVacanteModal() {
   vacanteModal.classList.add("hidden");
+
   resetVacanteForm();
+  limpiarErroresVacante();
 }
+
+/* =========================================================
+   VALIDACIÓN VISUAL DE VACANTES
+========================================================= */
+
+const CAMPOS_OBLIGATORIOS_VACANTE = [
+  {
+    elemento: vacanteTipo,
+    nombre: "Tipo de vacante",
+    mensaje: "Selecciona el tipo de vacante."
+  },
+  {
+    elemento: vacanteGrupo,
+    nombre: "Marca / Departamento",
+    mensaje: "Ingresa la marca o departamento."
+  },
+  {
+    elemento: vacanteTituloInput,
+    nombre: "Título",
+    mensaje: "Ingresa el título de la vacante."
+  },
+  {
+    elemento: vacanteArea,
+    nombre: "Área",
+    mensaje: "Ingresa el área de la vacante."
+  },
+  {
+    elemento: vacantePais,
+    nombre: "País",
+    mensaje: "Selecciona un país."
+  },
+  {
+    elemento: vacanteEstado,
+    nombre: "Estado",
+    mensaje: "Selecciona un estado."
+  },
+  {
+    elemento: vacanteCiudad,
+    nombre: "Ciudad",
+    mensaje: "Selecciona una ciudad."
+  },
+  {
+    elemento: vacanteSucursal,
+    nombre: "Sucursal",
+    mensaje: "Ingresa la sucursal."
+  },
+  {
+    elemento: vacanteRequisitos,
+    nombre: "Requisitos",
+    mensaje:
+      "Ingresa al menos un requisito para la vacante."
+  }
+];
+
+
+function obtenerFieldContainer(elemento) {
+  if (!elemento) return null;
+
+  return elemento.closest(".field");
+}
+
+
+function obtenerMensajeErrorContainer(
+  elemento
+) {
+  const field =
+    obtenerFieldContainer(elemento);
+
+  if (!field) return null;
+
+  let error =
+    field.querySelector(
+      ".vacante-field-error"
+    );
+
+  if (!error) {
+    error =
+      document.createElement("small");
+
+    error.className =
+      "vacante-field-error";
+
+    field.appendChild(error);
+  }
+
+  return error;
+}
+
+
+function campoVacanteTieneValor(
+  elemento
+) {
+  if (!elemento) return true;
+
+  if (
+    elemento ===
+    vacanteRequisitos
+  ) {
+    return String(
+      elemento.value || ""
+    )
+      .split(",")
+      .map(
+        (item) =>
+          item.trim()
+      )
+      .filter(Boolean)
+      .length > 0;
+  }
+
+  return String(
+    elemento.value || ""
+  ).trim() !== "";
+}
+
+
+
+function configurarIndicadoresCamposVacante() {
+  if (!vacanteForm) return;
+
+  const fields =
+    vacanteForm.querySelectorAll(
+      ".field"
+    );
+
+  fields.forEach((field) => {
+    const label =
+      field.querySelector(
+        ":scope > label"
+      );
+
+    const control =
+      field.querySelector(
+        ":scope > input, :scope > select, :scope > textarea"
+      );
+
+    if (
+      !label ||
+      !control ||
+      control.type === "hidden"
+    ) {
+      return;
+    }
+
+    if (
+      label.querySelector(
+        ".field-required-badge, .field-optional-badge"
+      )
+    ) {
+      return;
+    }
+
+    const badge =
+      document.createElement("span");
+
+    if (control.required) {
+      badge.className =
+        "field-required-badge";
+
+      badge.textContent =
+        "Obligatorio";
+    } else {
+      badge.className =
+        "field-optional-badge";
+
+      badge.textContent =
+        "Opcional";
+    }
+
+    label.appendChild(badge);
+  });
+}
+
+
+function marcarCampoVacanteError(
+  elemento,
+  mensaje
+) {
+  if (!elemento) return;
+
+  const field =
+    obtenerFieldContainer(elemento);
+
+  const error =
+    obtenerMensajeErrorContainer(
+      elemento
+    );
+
+  elemento.classList.add(
+    "vacante-input-error"
+  );
+
+  field?.classList.add(
+    "field--error"
+  );
+
+  if (error) {
+    error.textContent =
+      `⚠ ${mensaje}`;
+
+    error.classList.remove(
+      "hidden"
+    );
+  }
+
+  elemento.setAttribute(
+    "aria-invalid",
+    "true"
+  );
+}
+
+
+function limpiarCampoVacanteError(
+  elemento
+) {
+  if (!elemento) return;
+
+  const field =
+    obtenerFieldContainer(elemento);
+
+  const error =
+    field?.querySelector(
+      ".vacante-field-error"
+    );
+
+  elemento.classList.remove(
+    "vacante-input-error"
+  );
+
+  field?.classList.remove(
+    "field--error"
+  );
+
+  if (error) {
+    error.textContent = "";
+
+    error.classList.add(
+      "hidden"
+    );
+  }
+
+  elemento.removeAttribute(
+    "aria-invalid"
+  );
+}
+
+
+function limpiarErroresVacante() {
+  CAMPOS_OBLIGATORIOS_VACANTE
+    .forEach(({ elemento }) => {
+      limpiarCampoVacanteError(
+        elemento
+      );
+    });
+
+  if (vacanteValidationSummary) {
+    vacanteValidationSummary
+      .classList
+      .add("hidden");
+  }
+}
+
+
+function validarCamposObligatoriosVacante() {
+  const faltantes = [];
+
+  CAMPOS_OBLIGATORIOS_VACANTE
+    .forEach(
+      ({
+        elemento,
+        nombre,
+        mensaje
+      }) => {
+        if (
+          !campoVacanteTieneValor(
+            elemento
+          )
+        ) {
+          faltantes.push({
+            elemento,
+            nombre
+          });
+
+          marcarCampoVacanteError(
+            elemento,
+            mensaje
+          );
+        } else {
+          limpiarCampoVacanteError(
+            elemento
+          );
+        }
+      }
+    );
+
+  if (!faltantes.length) {
+    if (
+      vacanteValidationSummary
+    ) {
+      vacanteValidationSummary
+        .classList
+        .add("hidden");
+    }
+
+    return {
+      ok: true,
+      faltantes: []
+    };
+  }
+
+  if (
+    vacanteValidationSummary
+  ) {
+    vacanteValidationSummary
+      .classList
+      .remove("hidden");
+  }
+
+  if (
+    vacanteValidationSummaryText
+  ) {
+    vacanteValidationSummaryText
+      .textContent =
+      faltantes.length === 1
+        ? `Falta completar: ${faltantes[0].nombre}.`
+        : `Faltan ${faltantes.length} campos obligatorios: ${faltantes
+            .map(
+              (item) =>
+                item.nombre
+            )
+            .join(", ")}.`;
+  }
+
+  const primero =
+    faltantes[0]?.elemento;
+
+  if (primero) {
+    primero.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+
+    setTimeout(() => {
+      primero.focus({
+        preventScroll: true
+      });
+    }, 350);
+  }
+
+  return {
+    ok: false,
+    faltantes
+  };
+}
+
+
+/* =========================
+   QUITAR ERROR AL CORREGIR
+========================= */
+
+CAMPOS_OBLIGATORIOS_VACANTE
+  .forEach(({ elemento }) => {
+    if (!elemento) return;
+
+    const evento =
+      elemento.tagName === "SELECT"
+        ? "change"
+        : "input";
+
+    elemento.addEventListener(
+      evento,
+      () => {
+        if (
+          campoVacanteTieneValor(
+            elemento
+          )
+        ) {
+          limpiarCampoVacanteError(
+            elemento
+          );
+        }
+
+        const quedanErrores =
+          CAMPOS_OBLIGATORIOS_VACANTE
+            .some(
+              ({ elemento }) =>
+                elemento?.classList
+                  .contains(
+                    "vacante-input-error"
+                  )
+            );
+
+        if (
+          !quedanErrores &&
+          vacanteValidationSummary
+        ) {
+          vacanteValidationSummary
+            .classList
+            .add("hidden");
+        }
+      }
+    );
+  });
 
 /* =========================
    GUARDAR VACANTE
 ========================= */
 async function guardarVacante() {
+
+  /* =========================================================
+     1. VALIDAR CAMPOS OBLIGATORIOS
+  ========================================================= */
+
+  const validacionCampos =
+    validarCamposObligatoriosVacante();
+
+  if (!validacionCampos.ok) {
+    setVacantesStatus(
+      `⚠️ Revisa los ${validacionCampos.faltantes.length} campo(s) obligatorio(s) marcados en rojo.`
+    );
+
+    return;
+  }
+
+
+  /* =========================================================
+     2. VALIDAR PREGUNTAS PERSONALIZADAS
+  ========================================================= */
+
   const validacionPreguntas =
     validarPreguntasPersonalizadas();
 
@@ -1905,155 +2346,260 @@ async function guardarVacante() {
     setVacantesStatus(
       `⚠️ ${validacionPreguntas.error}`
     );
+
     return;
   }
 
+
+  /* =========================================================
+     3. PREPARAR PAYLOAD
+  ========================================================= */
+
   const payload = {
-    tipoVacante: vacanteTipo.value,
-    grupo: vacanteGrupo.value.trim(),
-    titulo: vacanteTituloInput.value.trim(),
-    area: vacanteArea.value.trim(),
-    pais: vacantePais.value,
-    estado: vacanteEstado.value,
-    ciudad: vacanteCiudad.value,
-    sucursal: vacanteSucursal.value.trim(),
+
+    tipoVacante:
+      vacanteTipo.value,
+
+    grupo:
+      vacanteGrupo.value.trim(),
+
+    titulo:
+      vacanteTituloInput.value.trim(),
+
+    area:
+      vacanteArea.value.trim(),
+
+    pais:
+      vacantePais.value,
+
+    estado:
+      vacanteEstado.value,
+
+    ciudad:
+      vacanteCiudad.value,
+
+    sucursal:
+      vacanteSucursal.value.trim(),
+
 
     numeroTienda:
       vacanteNumeroTienda?.value.trim() || "",
 
+
     direccion:
       vacanteDireccion?.value.trim() || "",
+
 
     googleMapsUrl:
       normalizarUrl(
         vacanteGoogleMapsUrl?.value || ""
       ),
 
+
     appleMapsUrl:
       normalizarUrl(
         vacanteAppleMapsUrl?.value || ""
       ),
 
+
     lat:
-      obtenerNumero(vacanteLat?.value),
+      obtenerNumero(
+        vacanteLat?.value
+      ),
+
 
     lng:
-      obtenerNumero(vacanteLng?.value),
+      obtenerNumero(
+        vacanteLng?.value
+      ),
+
 
     requisitos:
       vacanteRequisitos.value
         .split(",")
-        .map((requisito) => requisito.trim())
+        .map(
+          (requisito) =>
+            requisito.trim()
+        )
         .filter(Boolean),
 
+
+    /* =========================================================
+       CONFIGURACIÓN DEL CHATBOT
+    ========================================================= */
+
     configuracionPostulacion: {
+
       cv:
         vacanteCvPolicy?.value ||
         "opcional",
+
+
       solicitarCodigoPostal:
-      Boolean(
-        vacanteSolicitarCodigoPostal?.checked
-      ),
+        Boolean(
+          vacanteSolicitarCodigoPostal
+            ?.checked
+        ),
+
 
       solicitarTelefono:
         Boolean(
-          vacanteSolicitarTelefono?.checked
+          vacanteSolicitarTelefono
+            ?.checked
         ),
+
 
       solicitarCorreo:
         Boolean(
-          vacanteSolicitarCorreo?.checked
+          vacanteSolicitarCorreo
+            ?.checked
         ),
+
 
       solicitarExperiencia:
         Boolean(
-          vacanteSolicitarExperiencia?.checked
+          vacanteSolicitarExperiencia
+            ?.checked
         ),
+
 
       solicitarEscolaridad:
         Boolean(
-          vacanteSolicitarEscolaridad?.checked
+          vacanteSolicitarEscolaridad
+            ?.checked
         ),
+
 
       solicitarDisponibilidad:
         Boolean(
-          vacanteSolicitarDisponibilidad?.checked
+          vacanteSolicitarDisponibilidad
+            ?.checked
         ),
+
+
       solicitarTransporte:
         Boolean(
-          vacanteSolicitarTransporte?.checked
+          vacanteSolicitarTransporte
+            ?.checked
         ),
+
 
       solicitarVehiculoPropio:
         Boolean(
-          vacanteSolicitarVehiculoPropio?.checked
+          vacanteSolicitarVehiculoPropio
+            ?.checked
         ),
+
 
       solicitarTiempoTraslado:
         Boolean(
-          vacanteSolicitarTiempoTraslado?.checked
+          vacanteSolicitarTiempoTraslado
+            ?.checked
         )
     },
+
+
+    /* =========================================================
+       PREGUNTAS PERSONALIZADAS
+    ========================================================= */
 
     preguntasPersonalizadas:
       preguntasPersonalizadas.map(
         (pregunta, index) => {
+
           let opciones = [];
 
-          if (pregunta.tipo === "si_no") {
-            opciones = ["Sí", "No"];
-          }
 
           if (
-            pregunta.tipo === "seleccion"
+            pregunta.tipo ===
+            "si_no"
           ) {
-            opciones = Array.isArray(
-              pregunta.opciones
-            )
-              ? pregunta.opciones
-                  .map((opcion) =>
-                    String(opcion).trim()
-                  )
-                  .filter(Boolean)
-              : [];
+            opciones = [
+              "Sí",
+              "No"
+            ];
           }
 
+
+          if (
+            pregunta.tipo ===
+            "seleccion"
+          ) {
+            opciones =
+              Array.isArray(
+                pregunta.opciones
+              )
+                ? pregunta.opciones
+                    .map(
+                      (opcion) =>
+                        String(
+                          opcion
+                        ).trim()
+                    )
+                    .filter(Boolean)
+                : [];
+          }
+
+
           return {
+
             id:
               pregunta.id ||
               generarPreguntaId(),
+
 
             texto:
               String(
                 pregunta.texto || ""
               ).trim(),
 
+
             tipo:
               pregunta.tipo ||
               "texto_corto",
+
 
             obligatoria:
               Boolean(
                 pregunta.obligatoria
               ),
 
+
             opciones,
 
-            orden: index + 1
+
+            orden:
+              index + 1
           };
         }
       )
   };
 
+
+  /* =========================================================
+     4. GENERAR MAPAS AUTOMÁTICAMENTE
+  ========================================================= */
+
   if (!payload.googleMapsUrl) {
     payload.googleMapsUrl =
-      crearGoogleMapsUrlDesdeDatos(payload);
+      crearGoogleMapsUrlDesdeDatos(
+        payload
+      );
   }
+
 
   if (!payload.appleMapsUrl) {
     payload.appleMapsUrl =
-      crearAppleMapsUrlDesdeDatos(payload);
+      crearAppleMapsUrlDesdeDatos(
+        payload
+      );
   }
+
+
+  /* =========================================================
+     5. VALIDACIÓN DE RESPALDO
+     Esta se mantiene aunque ya tengamos la validación visual.
+  ========================================================= */
 
   if (
     !payload.tipoVacante ||
@@ -2066,11 +2612,20 @@ async function guardarVacante() {
     !payload.sucursal ||
     !payload.requisitos.length
   ) {
+
     setVacantesStatus(
-      "⚠️ Completa todos los campos obligatorios de la vacante."
+      "⚠️ Faltan campos obligatorios. Revisa los campos marcados en rojo."
     );
+
+    validarCamposObligatoriosVacante();
+
     return;
   }
+
+
+  /* =========================================================
+     6. VALIDAR CONFIGURACIÓN DE CV
+  ========================================================= */
 
   const politicasCvValidas = [
     "obligatorio",
@@ -2078,44 +2633,74 @@ async function guardarVacante() {
     "no_solicitar"
   ];
 
+
   if (
     !politicasCvValidas.includes(
-      payload.configuracionPostulacion.cv
+      payload
+        .configuracionPostulacion
+        .cv
     )
   ) {
+
     setVacantesStatus(
       "⚠️ Selecciona una configuración válida para el currículum."
     );
+
     return;
   }
 
+
+  /* =========================================================
+     7. VALIDAR SESIÓN ADMINISTRATIVA
+  ========================================================= */
+
   if (!adminToken) {
+
     setVacantesStatus(
       "⚠️ Tu sesión administrativa no está lista. Cierra sesión e inicia sesión de nuevo."
     );
+
     return;
   }
 
+
+  /* =========================================================
+     8. GUARDAR / ACTUALIZAR VACANTE
+  ========================================================= */
+
   try {
-    const isEdit = Boolean(
-      vacanteIdEdit.value
-    );
+
+    const isEdit =
+      Boolean(
+        vacanteIdEdit.value
+      );
+
 
     const vacanteId =
       encodeURIComponent(
         vacanteIdEdit.value
       );
 
-    const url = isEdit
-      ? `${API_URL}/api/vacantes/${vacanteId}`
-      : `${API_URL}/api/vacantes`;
 
-    const method = isEdit
-      ? "PUT"
-      : "POST";
+    const url =
+      isEdit
+        ? `${API_URL}/api/vacantes/${vacanteId}`
+        : `${API_URL}/api/vacantes`;
+
+
+    const method =
+      isEdit
+        ? "PUT"
+        : "POST";
+
+
+    /* Desactivar botón mientras procesa */
 
     if (saveVacanteBtn) {
-      saveVacanteBtn.disabled = true;
+
+      saveVacanteBtn.disabled =
+        true;
+
 
       saveVacanteBtn.textContent =
         isEdit
@@ -2123,33 +2708,61 @@ async function guardarVacante() {
           : "Guardando...";
     }
 
+
     setVacantesStatus(
       isEdit
         ? "Actualizando vacante..."
         : "Guardando vacante..."
     );
 
-    const res = await fetch(url, {
-      method,
-      headers: authHeaders({
-        "Content-Type":
-          "application/json"
-      }),
-      body: JSON.stringify(payload)
-    });
+
+    /* =========================================================
+       PETICIÓN AL SERVIDOR
+    ========================================================= */
+
+    const res =
+      await fetch(
+        url,
+        {
+          method,
+
+          headers:
+            authHeaders({
+              "Content-Type":
+                "application/json"
+            }),
+
+          body:
+            JSON.stringify(
+              payload
+            )
+        }
+      );
+
 
     let data = {};
 
+
     try {
-      data = await res.json();
+
+      data =
+        await res.json();
+
     } catch (jsonError) {
+
       console.warn(
         "La respuesta del servidor no contiene JSON válido:",
         jsonError
       );
     }
 
+
+    /* =========================================================
+       ERROR DEL BACKEND
+    ========================================================= */
+
     if (!res.ok) {
+
       throw new Error(
         data.error ||
         data.message ||
@@ -2157,19 +2770,31 @@ async function guardarVacante() {
       );
     }
 
+
+    /* =========================================================
+       ÉXITO
+    ========================================================= */
+
     closeVacanteModal();
+
+
     await cargarVacantesAdmin();
+
 
     setVacantesStatus(
       isEdit
         ? "✅ Vacante actualizada correctamente."
         : "✅ Vacante creada correctamente."
     );
+
+
   } catch (error) {
+
     console.error(
       "Error guardando vacante:",
       error
     );
+
 
     setVacantesStatus(
       `⚠️ ${
@@ -2177,14 +2802,28 @@ async function guardarVacante() {
         "No fue posible guardar la vacante."
       }`
     );
+
+
   } finally {
+
+    /* =========================================================
+       REACTIVAR BOTÓN
+    ========================================================= */
+
     if (saveVacanteBtn) {
-      saveVacanteBtn.disabled = false;
+
+      saveVacanteBtn.disabled =
+        false;
+
+
       saveVacanteBtn.textContent =
         "Guardar vacante";
     }
   }
 }
+
+
+
 /* =========================
    ELIMINAR VACANTE
 ========================= */
@@ -2309,16 +2948,30 @@ if (closeVacanteQrBackdrop) {
 /* =========================
    INIT
 ========================= */
+
 async function init() {
+
+  /* Etiquetas Obligatorio / Opcional */
+  configurarIndicadoresCamposVacante();
+
+  /* Cargar ubicaciones */
   await cargarUbicaciones();
 
-  if (adminFiltroPais && adminFiltroEstado && adminFiltroCiudad) {
-    llenarEstados(adminFiltroPais, adminFiltroEstado, adminFiltroCiudad);
+  if (
+    adminFiltroPais &&
+    adminFiltroEstado &&
+    adminFiltroCiudad
+  ) {
+    llenarEstados(
+      adminFiltroPais,
+      adminFiltroEstado,
+      adminFiltroCiudad
+    );
   }
 
+  /* Cargar vacantes */
   await cargarVacantesAdmin();
 }
-
 /* =========================
    PROTECCIÓN ADMIN
 ========================= */
