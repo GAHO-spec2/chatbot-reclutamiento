@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vacantes | GA Hospitality</title>
   <link rel="icon" type="image/png" sizes="32x32" href="icons8-documento-32.png">
-  <link rel="stylesheet" href="dashboard.css?v=10">
+  <link rel="stylesheet" href="dashboard.css?v=11">
 </head>
 <body>
 
@@ -401,9 +401,210 @@
         <button id="saveVacanteBtn" class="btn btn--primary">Guardar vacante</button>
       </div>
     </div>
+   </div>
+
+  <!-- ==========================================
+       MODAL QR DE VACANTE
+  =========================================== -->
+
+  <div id="vacanteQrModal" class="modal hidden">
+
+    <div
+      id="closeVacanteQrBackdrop"
+      class="modal__backdrop"
+    ></div>
+
+    <div class="modal__content qr-modal__content">
+
+      <div class="modal__header">
+        <div>
+          <span class="config-eyebrow">
+            Reclutamiento directo
+          </span>
+
+          <h3>QR de vacante</h3>
+
+          <p>
+            Comparte esta vacante mediante código QR
+            o enlace directo.
+          </p>
+        </div>
+
+        <button
+          id="closeVacanteQrModalBtn"
+          class="chatbot-close"
+          type="button"
+          aria-label="Cerrar"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div class="modal__body">
+
+        <!-- RESUMEN DE VACANTE -->
+        <section class="qr-vacancy-summary">
+
+          <div>
+            <span class="qr-vacancy-summary__label">
+              Vacante
+            </span>
+
+            <h4 id="qrVacanteTitulo">
+              Vacante
+            </h4>
+
+            <p id="qrVacanteUbicacion">
+              Marca · Sucursal · Ciudad
+            </p>
+          </div>
+
+          <span
+            id="qrVacanteStatus"
+            class="qr-status qr-status--active"
+          >
+            ● QR activo
+          </span>
+
+        </section>
+
+        <!-- QR -->
+        <section class="qr-preview-card">
+
+          <div
+            id="qrCodeContainer"
+            class="qr-code-container"
+          >
+            <div class="qr-placeholder">
+              QR
+            </div>
+          </div>
+
+          <div class="qr-preview-info">
+
+            <span class="qr-preview-info__label">
+              Enlace directo
+            </span>
+
+            <div class="qr-link-box">
+
+              <input
+                id="qrVacanteUrl"
+                type="text"
+                readonly
+                value=""
+              />
+
+              <button
+                id="copyQrVacanteUrlBtn"
+                class="btn btn--secondary"
+                type="button"
+              >
+                Copiar enlace
+              </button>
+
+            </div>
+
+            <p class="qr-help">
+              Al escanear este código, el candidato
+              accederá directamente al chatbot de esta
+              vacante.
+            </p>
+
+          </div>
+
+        </section>
+
+        <!-- MÉTRICAS -->
+        <section class="qr-metrics">
+
+          <div class="qr-metric">
+            <span>Escaneos</span>
+
+            <strong id="qrVacanteVisitas">
+              0
+            </strong>
+          </div>
+
+          <div class="qr-metric">
+            <span>Postulaciones</span>
+
+            <strong id="qrVacantePostulaciones">
+              0
+            </strong>
+          </div>
+
+          <div class="qr-metric">
+            <span>Conversión</span>
+
+            <strong id="qrVacanteConversion">
+              0%
+            </strong>
+          </div>
+
+        </section>
+
+      </div>
+
+      <div class="modal__footer qr-modal__footer">
+
+        <div class="qr-modal__footer-left">
+
+          <button
+            id="toggleVacanteQrBtn"
+            class="btn btn--secondary"
+            type="button"
+          >
+            Desactivar QR
+          </button>
+
+        </div>
+
+        <div class="qr-modal__footer-right">
+
+          <button
+            id="openQrVacanteUrlBtn"
+            class="btn btn--secondary"
+            type="button"
+          >
+            Abrir enlace
+          </button>
+
+          <button
+            id="downloadQrPngBtn"
+            class="btn btn--secondary"
+            type="button"
+          >
+            Descargar PNG
+          </button>
+
+          <button
+            id="downloadQrSvgBtn"
+            class="btn btn--secondary"
+            type="button"
+          >
+            Descargar SVG
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
   </div>
+
+
+  <!-- FIREBASE -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="vacantes-admin.js?v=8"></script>
+
+  <!-- GENERADOR QR -->
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">
+  </script>
+
+  <!-- VACANTES ADMIN -->
+  <script src="vacantes-admin.js?v=10"></script>
+
 </body>
 </html>

@@ -106,10 +106,94 @@ const vacanteSolicitarTiempoTraslado =
     "vacanteSolicitarTiempoTraslado"
   );
 
+/* =========================
+   ELEMENTOS QR VACANTE
+========================= */
+
+const vacanteQrModal =
+  document.getElementById("vacanteQrModal");
+
+const closeVacanteQrModalBtn =
+  document.getElementById(
+    "closeVacanteQrModalBtn"
+  );
+
+const closeVacanteQrBackdrop =
+  document.getElementById(
+    "closeVacanteQrBackdrop"
+  );
+
+const qrVacanteTitulo =
+  document.getElementById(
+    "qrVacanteTitulo"
+  );
+
+const qrVacanteUbicacion =
+  document.getElementById(
+    "qrVacanteUbicacion"
+  );
+
+const qrVacanteStatus =
+  document.getElementById(
+    "qrVacanteStatus"
+  );
+
+const qrCodeContainer =
+  document.getElementById(
+    "qrCodeContainer"
+  );
+
+const qrVacanteUrl =
+  document.getElementById(
+    "qrVacanteUrl"
+  );
+
+const qrVacanteVisitas =
+  document.getElementById(
+    "qrVacanteVisitas"
+  );
+
+const qrVacantePostulaciones =
+  document.getElementById(
+    "qrVacantePostulaciones"
+  );
+
+const qrVacanteConversion =
+  document.getElementById(
+    "qrVacanteConversion"
+  );
+
+const copyQrVacanteUrlBtn =
+  document.getElementById(
+    "copyQrVacanteUrlBtn"
+  );
+
+const openQrVacanteUrlBtn =
+  document.getElementById(
+    "openQrVacanteUrlBtn"
+  );
+
+const downloadQrPngBtn =
+  document.getElementById(
+    "downloadQrPngBtn"
+  );
+
+const downloadQrSvgBtn =
+  document.getElementById(
+    "downloadQrSvgBtn"
+  );
+
+const toggleVacanteQrBtn =
+  document.getElementById(
+    "toggleVacanteQrBtn"
+  );
+
 let preguntasPersonalizadas = [];
 
 let vacantes = [];
 let ubicaciones = {};
+
+let vacanteQrActual = null;
 
 /* =========================
    HELPERS
@@ -418,29 +502,71 @@ function renderVacantesAdmin() {
       ${appleBtnHtml}
     </div>
 
-    <div class="vacancy-card__admin-actions">
-      <button
-        class="btn btn--secondary edit-vacante-btn"
-        type="button"
-        data-id="${escapeHtml(vacante.id)}"
-      >
-        ✏ Editar
-      </button>
+   <div class="vacancy-card__admin-actions">
 
-      <button
-        class="btn btn--danger delete-vacante-btn"
-        type="button"
-        data-id="${escapeHtml(vacante.id)}"
-      >
-        🗑 Eliminar
-      </button>
-    </div>
-  </div>
+  <button
+    class="btn btn--secondary qr-vacante-btn"
+    type="button"
+    data-id="${escapeHtml(vacante.id)}"
+    ${vacante.qr?.slug ? "" : "disabled"}
+  >
+    ▣ QR vacante
+  </button>
+
+  <button
+    class="btn btn--secondary edit-vacante-btn"
+    type="button"
+    data-id="${escapeHtml(vacante.id)}"
+  >
+    ✏ Editar
+  </button>
+
+  <button
+    class="btn btn--danger delete-vacante-btn"
+    type="button"
+    data-id="${escapeHtml(vacante.id)}"
+  >
+    🗑 Eliminar
+  </button>
+
+</div>
 `;
 
     vacantesAdminList.appendChild(card);
   });
+document
+  .querySelectorAll(".qr-vacante-btn")
+  .forEach((btn) => {
+    btn.addEventListener(
+      "click",
+      () => {
+        const item =
+          vacantes.find(
+            (v) =>
+              v.id === btn.dataset.id
+          );
 
+        if (item) {
+          openVacanteQrModal(item);
+        }
+      }
+    );
+  });
+  document
+  .querySelectorAll(".qr-vacante-btn")
+  .forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const item =
+        vacantes.find(
+          (v) =>
+            v.id === btn.dataset.id
+        );
+
+      if (item) {
+        openVacanteQrModal(item);
+      }
+    });
+  });
   document.querySelectorAll(".edit-vacante-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const item = vacantes.find((v) => v.id === btn.dataset.id);
@@ -452,7 +578,616 @@ function renderVacantesAdmin() {
     btn.addEventListener("click", () => eliminarVacante(btn.dataset.id));
   });
 }
+/* =========================================================
+   QR DE VACANTE
+========================================================= */
 
+function construirUrlQrVacante(vacante) {
+  const slug =
+    String(
+      vacante?.qr?.slug || ""
+    ).trim();
+
+  if (!slug) return "";
+
+  return `${API_URL}/?v=${encodeURIComponent(slug)}`;
+}
+
+
+function calcularConversionQr(vacante) {
+  const visitas =
+    Number(
+      vacante?.qr?.visitas || 0
+    );
+
+  const postulaciones =
+    Number(
+      vacante?.qr?.postulaciones || 0
+    );
+
+  if (
+    !Number.isFinite(visitas) ||
+    visitas <= 0
+  ) {
+    return 0;
+  }
+
+  const porcentaje =
+    (
+      postulaciones /
+      visitas
+    ) * 100;
+
+  return Math.round(
+    porcentaje * 10
+  ) / 10;
+}
+
+
+function renderQrVacante(url) {
+  if (!qrCodeContainer) return;
+
+  qrCodeContainer.innerHTML = "";
+
+  if (!url) {
+    qrCodeContainer.innerHTML = `
+      <div class="qr-placeholder">
+        QR no disponible
+      </div>
+    `;
+
+    return;
+  }
+
+  if (
+    typeof window.QRCode !==
+    "function"
+  ) {
+    qrCodeContainer.innerHTML = `
+      <div class="qr-placeholder">
+        No fue posible cargar
+        el generador QR.
+      </div>
+    `;
+
+    console.error(
+      "QRCode no está disponible."
+    );
+
+    return;
+  }
+
+  new QRCode(
+    qrCodeContainer,
+    {
+      text: url,
+      width: 220,
+      height: 220,
+      correctLevel:
+        QRCode.CorrectLevel.H
+    }
+  );
+}
+
+
+function openVacanteQrModal(
+  vacante
+) {
+  if (
+    !vacanteQrModal ||
+    !vacante
+  ) {
+    return;
+  }
+
+  vacanteQrActual =
+    vacante;
+
+  const qr =
+    vacante.qr || {};
+
+  const url =
+    construirUrlQrVacante(
+      vacante
+    );
+
+  if (qrVacanteTitulo) {
+    qrVacanteTitulo.textContent =
+      vacante.titulo ||
+      "Vacante";
+  }
+
+  if (qrVacanteUbicacion) {
+    qrVacanteUbicacion.textContent =
+      [
+        vacante.grupo,
+        vacante.sucursal,
+        vacante.ciudad
+      ]
+        .filter(Boolean)
+        .join(" · ");
+  }
+
+  if (qrVacanteUrl) {
+    qrVacanteUrl.value =
+      url;
+  }
+
+  if (qrVacanteVisitas) {
+    qrVacanteVisitas.textContent =
+      Number(
+        qr.visitas || 0
+      ).toLocaleString("es-MX");
+  }
+
+  if (
+    qrVacantePostulaciones
+  ) {
+    qrVacantePostulaciones
+      .textContent =
+      Number(
+        qr.postulaciones || 0
+      ).toLocaleString("es-MX");
+  }
+
+  if (qrVacanteConversion) {
+    qrVacanteConversion
+      .textContent =
+      `${calcularConversionQr(
+        vacante
+      )}%`;
+  }
+
+  const qrActivo =
+    qr.activo !== false;
+
+  if (qrVacanteStatus) {
+    qrVacanteStatus
+      .textContent =
+      qrActivo
+        ? "● QR activo"
+        : "● QR desactivado";
+
+    qrVacanteStatus
+      .classList.toggle(
+        "qr-status--active",
+        qrActivo
+      );
+
+    qrVacanteStatus
+      .classList.toggle(
+        "qr-status--inactive",
+        !qrActivo
+      );
+  }
+
+  if (toggleVacanteQrBtn) {
+    toggleVacanteQrBtn
+      .textContent =
+      qrActivo
+        ? "Desactivar QR"
+        : "Activar QR";
+  }
+
+  renderQrVacante(url);
+
+  vacanteQrModal
+    .classList
+    .remove("hidden");
+}
+
+
+function closeVacanteQrModal() {
+  if (!vacanteQrModal) return;
+
+  vacanteQrModal
+    .classList
+    .add("hidden");
+
+  vacanteQrActual = null;
+
+  if (qrCodeContainer) {
+    qrCodeContainer.innerHTML = "";
+  }
+}
+
+async function copiarEnlaceQr() {
+  const url =
+    qrVacanteUrl?.value?.trim() || "";
+
+  if (!url) return;
+
+  try {
+    await navigator.clipboard.writeText(url);
+
+    if (copyQrVacanteUrlBtn) {
+      const original =
+        copyQrVacanteUrlBtn.textContent;
+
+      copyQrVacanteUrlBtn.textContent =
+        "✓ Copiado";
+
+      setTimeout(() => {
+        copyQrVacanteUrlBtn.textContent =
+          original || "Copiar enlace";
+      }, 1500);
+    }
+  } catch (error) {
+    console.error(
+      "Error copiando enlace:",
+      error
+    );
+
+    qrVacanteUrl?.select();
+    document.execCommand("copy");
+  }
+}
+
+
+function abrirEnlaceQr() {
+  const url =
+    qrVacanteUrl?.value?.trim() || "";
+
+  if (!url) return;
+
+  window.open(
+    url,
+    "_blank",
+    "noopener,noreferrer"
+  );
+}
+
+
+function descargarQrPng() {
+  if (!qrCodeContainer) return;
+
+  const canvas =
+    qrCodeContainer.querySelector(
+      "canvas"
+    );
+
+  const img =
+    qrCodeContainer.querySelector(
+      "img"
+    );
+
+  let dataUrl = "";
+
+  if (canvas) {
+    dataUrl =
+      canvas.toDataURL("image/png");
+  } else if (img) {
+    dataUrl =
+      img.src;
+  }
+
+  if (!dataUrl) {
+    alert(
+      "No fue posible obtener la imagen del QR."
+    );
+    return;
+  }
+
+  const nombre =
+    String(
+      vacanteQrActual?.titulo ||
+      "vacante"
+    )
+      .toLowerCase()
+      .replace(
+        /[^a-z0-9]+/gi,
+        "-"
+      )
+      .replace(
+        /^-+|-+$/g,
+        ""
+      );
+
+  const link =
+    document.createElement("a");
+
+  link.href = dataUrl;
+
+  link.download =
+    `qr-${nombre || "vacante"}.png`;
+
+  document.body.appendChild(link);
+
+  link.click();
+
+  link.remove();
+}
+
+async function copiarEnlaceQr() {
+  const url =
+    qrVacanteUrl?.value || "";
+
+  if (!url) return;
+
+  try {
+    await navigator.clipboard
+      .writeText(url);
+
+    const textoAnterior =
+      copyQrVacanteUrlBtn
+        ?.textContent;
+
+    if (copyQrVacanteUrlBtn) {
+      copyQrVacanteUrlBtn
+        .textContent =
+        "✓ Copiado";
+
+      setTimeout(() => {
+        copyQrVacanteUrlBtn
+          .textContent =
+          textoAnterior ||
+          "Copiar enlace";
+      }, 1600);
+    }
+  } catch (error) {
+    console.error(
+      "Error copiando enlace QR:",
+      error
+    );
+
+    if (qrVacanteUrl) {
+      qrVacanteUrl.select();
+
+      document.execCommand(
+        "copy"
+      );
+    }
+  }
+}
+
+
+function abrirEnlaceQr() {
+  const url =
+    qrVacanteUrl?.value || "";
+
+  if (!url) return;
+
+  window.open(
+    url,
+    "_blank",
+    "noopener,noreferrer"
+  );
+}
+
+
+function descargarQrPng() {
+  if (
+    !qrCodeContainer ||
+    !vacanteQrActual
+  ) {
+    return;
+  }
+
+  const canvas =
+    qrCodeContainer
+      .querySelector("canvas");
+
+  const image =
+    qrCodeContainer
+      .querySelector("img");
+
+  let dataUrl = "";
+
+  if (canvas) {
+    dataUrl =
+      canvas.toDataURL(
+        "image/png"
+      );
+  } else if (image) {
+    dataUrl =
+      image.src;
+  }
+
+  if (!dataUrl) {
+    alert(
+      "No fue posible generar la imagen del QR."
+    );
+
+    return;
+  }
+
+  const nombre =
+    String(
+      vacanteQrActual.titulo ||
+      "vacante"
+    )
+      .toLowerCase()
+      .replace(
+        /[^a-z0-9]+/gi,
+        "-"
+      )
+      .replace(
+        /^-+|-+$/g,
+        ""
+      );
+
+  const link =
+    document.createElement("a");
+
+  link.href =
+    dataUrl;
+
+  link.download =
+    `qr-${nombre || "vacante"}.png`;
+
+  document.body
+    .appendChild(link);
+
+  link.click();
+  link.remove();
+}
+
+/* =========================================================
+   QR DE VACANTE
+========================================================= */
+
+function construirUrlQrVacante(vacante) {
+  const slug =
+    String(
+      vacante?.qr?.slug || ""
+    ).trim();
+
+  if (!slug) return "";
+
+  return `${API_URL}/?v=${encodeURIComponent(slug)}`;
+}
+
+
+function calcularConversionQr(vacante) {
+  const visitas =
+    Number(vacante?.qr?.visitas || 0);
+
+  const postulaciones =
+    Number(
+      vacante?.qr?.postulaciones || 0
+    );
+
+  if (!visitas) return 0;
+
+  return Math.round(
+    (
+      postulaciones /
+      visitas *
+      100
+    ) * 10
+  ) / 10;
+}
+
+
+function renderQrVacante(url) {
+  if (!qrCodeContainer) return;
+
+  qrCodeContainer.innerHTML = "";
+
+  if (!url) {
+    qrCodeContainer.innerHTML =
+      `<div class="qr-placeholder">
+        QR no disponible
+      </div>`;
+
+    return;
+  }
+
+  if (
+    typeof window.QRCode !==
+    "function"
+  ) {
+    qrCodeContainer.innerHTML =
+      `<div class="qr-placeholder">
+        No fue posible cargar el QR
+      </div>`;
+
+    return;
+  }
+
+  new QRCode(
+    qrCodeContainer,
+    {
+      text: url,
+      width: 220,
+      height: 220,
+      correctLevel:
+        QRCode.CorrectLevel.H
+    }
+  );
+}
+
+
+function openVacanteQrModal(vacante) {
+  if (!vacanteQrModal) return;
+
+  vacanteQrActual = vacante;
+
+  const qr =
+    vacante.qr || {};
+
+  const url =
+    construirUrlQrVacante(vacante);
+
+  if (qrVacanteTitulo) {
+    qrVacanteTitulo.textContent =
+      vacante.titulo || "Vacante";
+  }
+
+  if (qrVacanteUbicacion) {
+    qrVacanteUbicacion.textContent =
+      [
+        vacante.grupo,
+        vacante.sucursal,
+        vacante.ciudad
+      ]
+        .filter(Boolean)
+        .join(" · ");
+  }
+
+  if (qrVacanteUrl) {
+    qrVacanteUrl.value = url;
+  }
+
+  if (qrVacanteVisitas) {
+    qrVacanteVisitas.textContent =
+      Number(
+        qr.visitas || 0
+      );
+  }
+
+  if (qrVacantePostulaciones) {
+    qrVacantePostulaciones.textContent =
+      Number(
+        qr.postulaciones || 0
+      );
+  }
+
+  if (qrVacanteConversion) {
+    qrVacanteConversion.textContent =
+      `${calcularConversionQr(
+        vacante
+      )}%`;
+  }
+
+  const activo =
+    qr.activo !== false;
+
+  if (qrVacanteStatus) {
+    qrVacanteStatus.textContent =
+      activo
+        ? "● QR activo"
+        : "● QR desactivado";
+  }
+
+  if (toggleVacanteQrBtn) {
+    toggleVacanteQrBtn.textContent =
+      activo
+        ? "Desactivar QR"
+        : "Activar QR";
+  }
+
+  renderQrVacante(url);
+
+  vacanteQrModal
+    .classList
+    .remove("hidden");
+}
+
+
+function closeVacanteQrModal() {
+  if (!vacanteQrModal) return;
+
+  vacanteQrModal
+    .classList
+    .add("hidden");
+
+  vacanteQrActual = null;
+
+  if (qrCodeContainer) {
+    qrCodeContainer.innerHTML = "";
+  }
+}
 /* =========================
    PREGUNTAS PERSONALIZADAS
 ========================= */
@@ -979,6 +1714,49 @@ function openVacanteModal(vacante = null) {
     vacanteLng.value =
       vacante.lng ?? "";
   }
+  /* =========================
+   EVENTOS QR
+========================= */
+
+if (closeVacanteQrModalBtn) {
+  closeVacanteQrModalBtn
+    .addEventListener(
+      "click",
+      closeVacanteQrModal
+    );
+}
+
+if (closeVacanteQrBackdrop) {
+  closeVacanteQrBackdrop
+    .addEventListener(
+      "click",
+      closeVacanteQrModal
+    );
+}
+
+if (copyQrVacanteUrlBtn) {
+  copyQrVacanteUrlBtn
+    .addEventListener(
+      "click",
+      copiarEnlaceQr
+    );
+}
+
+if (openQrVacanteUrlBtn) {
+  openQrVacanteUrlBtn
+    .addEventListener(
+      "click",
+      abrirEnlaceQr
+    );
+}
+
+if (downloadQrPngBtn) {
+  downloadQrPngBtn
+    .addEventListener(
+      "click",
+      descargarQrPng
+    );
+}
 
   vacanteRequisitos.value =
     Array.isArray(vacante.requisitos)
@@ -1084,6 +1862,30 @@ function openVacanteModal(vacante = null) {
   renderPreguntasPersonalizadas();
 
   vacanteModal.classList.remove("hidden");
+}
+
+if (copyQrVacanteUrlBtn) {
+  copyQrVacanteUrlBtn
+    .addEventListener(
+      "click",
+      copiarEnlaceQr
+    );
+}
+
+if (openQrVacanteUrlBtn) {
+  openQrVacanteUrlBtn
+    .addEventListener(
+      "click",
+      abrirEnlaceQr
+    );
+}
+
+if (downloadQrPngBtn) {
+  downloadQrPngBtn
+    .addEventListener(
+      "click",
+      descargarQrPng
+    );
 }
 
 
@@ -1487,6 +2289,22 @@ if (addCustomQuestionBtn) {
       });
     }
   );
+}
+
+if (closeVacanteQrModalBtn) {
+  closeVacanteQrModalBtn
+    .addEventListener(
+      "click",
+      closeVacanteQrModal
+    );
+}
+
+if (closeVacanteQrBackdrop) {
+  closeVacanteQrBackdrop
+    .addEventListener(
+      "click",
+      closeVacanteQrModal
+    );
 }
 /* =========================
    INIT
