@@ -7915,6 +7915,106 @@ app.put(
   }
 );
 
+app.post(
+  "/api/vacantes/migrar-qr",
+  verifyAdmin,
+  async (req, res) => {
+    try {
+      const vacantes =
+        await leerVacantes();
+
+      const actualizadas = [];
+      const omitidas = [];
+
+      for (const vacante of vacantes) {
+        const slugExistente =
+          String(
+            vacante?.qr?.slug || ""
+          ).trim();
+
+        if (slugExistente) {
+          omitidas.push({
+            id: vacante.id,
+            titulo: vacante.titulo,
+            motivo: "ya_tiene_qr"
+          });
+
+          continue;
+        }
+
+        const fechaActual =
+          new Date().toISOString();
+
+        const qrSlugBase =
+          slugify(
+            `${vacante.titulo || "vacante"}-${vacante.sucursal || "sucursal"}-${vacante.ciudad || "ciudad"}`
+          ) || "vacante";
+
+        const qrSlug =
+          `${qrSlugBase}-${Math.random()
+            .toString(36)
+            .slice(2, 8)}`;
+
+        const qr = {
+          slug: qrSlug,
+          activo: true,
+          creadoEn: fechaActual,
+          visitas: 0,
+          postulaciones: 0
+        };
+
+        await actualizarVacante(
+          vacante.id,
+          {
+            qr,
+            fechaActualizacion:
+              fechaActual
+          }
+        );
+
+        actualizadas.push({
+          id: vacante.id,
+          titulo: vacante.titulo,
+          qr
+        });
+      }
+
+      res.json({
+        ok: true,
+
+        message:
+          "Migración QR completada correctamente.",
+
+        totalVacantes:
+          vacantes.length,
+
+        actualizadas:
+          actualizadas.length,
+
+        omitidas:
+          omitidas.length,
+
+        vacantesActualizadas:
+          actualizadas,
+
+        vacantesOmitidas:
+          omitidas
+      });
+    } catch (error) {
+      console.error(
+        "Error migrando QR de vacantes:",
+        error
+      );
+
+      res.status(500).json({
+        error:
+          error.message ||
+          "No fue posible migrar los QR de las vacantes."
+      });
+    }
+  }
+);
+
 app.delete("/api/vacantes/:id", verifyAdmin, async (req, res) => {
   try {
     const vacantes = await leerVacantes();
