@@ -68,14 +68,14 @@ const DEFAULT_APPLICATION_CONFIG = {
   solicitarTelefono: true,
   solicitarCorreo: true,
 
-  solicitarCodigoPostal: true,
-  solicitarTransporte: true,
+  solicitarCodigoPostal: false,
+  solicitarTransporte: false,
   solicitarVehiculoPropio: false,
-  solicitarTiempoTraslado: true,
+  solicitarTiempoTraslado: false,
 
-  solicitarExperiencia: true,
+  solicitarExperiencia: false,
   solicitarEscolaridad: false,
-  solicitarDisponibilidad: true
+  solicitarDisponibilidad: false
 };
 
 const VALID_QUESTION_TYPES = [
@@ -1865,8 +1865,11 @@ function normalizeCustomQuestions(vacante = {}) {
 }
 
 function buildApplicationQuestions(vacante = {}) {
-  const config =
-    getVacancyApplicationConfig(vacante);
+
+  /* =========================================================
+     PREGUNTAS BASE
+     Estas siempre se solicitarán.
+  ========================================================= */
 
   const questions = [
     {
@@ -1875,128 +1878,40 @@ function buildApplicationQuestions(vacante = {}) {
       type: "texto_corto",
       required: true,
       custom: false
-    }
-  ];
+    },
 
-  if (config.solicitarCorreo) {
-    questions.push({
+    {
       key: "correo",
-      label:
-        "¿Cuál es tu correo electrónico?",
+      label: "¿Cuál es tu correo electrónico?",
       type: "correo",
       required: true,
       custom: false
-    });
-  }
+    },
 
-  if (config.solicitarTelefono) {
-    questions.push({
+    {
       key: "telefono",
-      label:
-        "¿Cuál es tu número de teléfono?",
+      label: "¿Cuál es tu número de teléfono?",
       type: "telefono",
       required: true,
       custom: false
-    });
-  }
+    }
+  ];
 
-  if (config.solicitarEscolaridad) {
-    questions.push({
-      key: "escolaridad",
-      label:
-        "¿Cuál es tu último nivel de escolaridad?",
-      type: "texto_corto",
-      required: true,
-      custom: false
-    });
-  }
 
-  if (config.solicitarDisponibilidad) {
-    questions.push({
-      key: "disponibilidad",
-      label:
-        "¿Cuál es tu disponibilidad para trabajar?",
-      type: "texto_largo",
-      required: true,
-      custom: false
-    });
-  }
+  /* =========================================================
+     PREGUNTAS PERSONALIZADAS DE LA VACANTE
+  ========================================================= */
 
-  if (config.solicitarExperiencia) {
-    questions.push({
-      key: "experiencia",
-      label:
-        "Cuéntame brevemente sobre tu experiencia laboral o habilidades principales.",
-      type: "texto_largo",
-      required: true,
-      custom: false
-    });
-  }
+  const customQuestions =
+    normalizeCustomQuestions(
+      vacante
+    );
 
-  if (config.solicitarCodigoPostal) {
-  questions.push({
-    key: "codigoPostal",
-    label:
-      "¿Cuál es el código postal de la zona donde vives?",
-    type: "codigo_postal",
-    required: true,
-    custom: false
-  });
-}
-
-if (config.solicitarTransporte) {
-  questions.push({
-    key: "medioTransporte",
-    label:
-      "¿Cómo te trasladarías normalmente al lugar de trabajo?",
-    type: "seleccion",
-    required: true,
-    options: [
-      "Automóvil propio",
-      "Transporte público",
-      "Servicio de transporte",
-      "Motocicleta",
-      "Bicicleta",
-      "Caminando",
-      "Otro"
-    ],
-    custom: false
-  });
-}
-
-if (config.solicitarVehiculoPropio) {
-  questions.push({
-    key: "vehiculoPropio",
-    label:
-      "¿Cuentas con vehículo propio?",
-    type: "si_no",
-    required: true,
-    options: ["Sí", "No"],
-    custom: false
-  });
-}
-
-if (config.solicitarTiempoTraslado) {
-  questions.push({
-    key: "tiempoMaximoTraslado",
-    label:
-      "¿Cuál es el tiempo máximo que estarías dispuesto a trasladarte para llegar al trabajo?",
-    type: "seleccion",
-    required: true,
-    options: [
-      "Hasta 15 minutos",
-      "Hasta 30 minutos",
-      "Hasta 45 minutos",
-      "Hasta 60 minutos",
-      "Más de 60 minutos"
-    ],
-    custom: false
-  });
-}
 
   questions.push(
-    ...normalizeCustomQuestions(vacante)
+    ...customQuestions
   );
+
 
   return questions;
 }
@@ -2507,66 +2422,33 @@ async function submitApplicationFromChat() {
     return;
   }
 
-  const requiredFields = ["nombre"];
+ const requiredFields = [
+  "nombre",
+  "correo",
+  "telefono"
+];
 
-  if (config.solicitarCorreo) {
-    requiredFields.push("correo");
-  }
-
-  if (config.solicitarTelefono) {
-    requiredFields.push("telefono");
-  }
-
-  if (config.solicitarExperiencia) {
-    requiredFields.push("experiencia");
-  }
-
-  if (config.solicitarEscolaridad) {
-    requiredFields.push("escolaridad");
-  }
-
-  if (config.solicitarDisponibilidad) {
-    requiredFields.push("disponibilidad");
-  }
-  if (config.solicitarCodigoPostal) {
-  requiredFields.push(
-    "codigoPostal"
+const missingField =
+  requiredFields.find(
+    (field) =>
+      !String(
+        applicationFlow.data[field] || ""
+      ).trim()
   );
-}
 
-if (config.solicitarTransporte) {
-  requiredFields.push(
-    "medioTransporte"
+if (missingField) {
+  const fieldLabels = {
+    nombre: "nombre completo",
+    correo: "correo electrónico",
+    telefono: "número de teléfono"
+  };
+
+  addAssistantText(
+    `⚠️ Aún falta completar tu ${fieldLabels[missingField] || "información obligatoria"} antes de enviar la postulación.`
   );
+
+  return;
 }
-
-if (config.solicitarVehiculoPropio) {
-  requiredFields.push(
-    "vehiculoPropio"
-  );
-}
-
-if (config.solicitarTiempoTraslado) {
-  requiredFields.push(
-    "tiempoMaximoTraslado"
-  );
-}
-
-  const missingField =
-    requiredFields.find(
-      (field) =>
-        !String(
-          applicationFlow.data[field] || ""
-        ).trim()
-    );
-
-  if (missingField) {
-    addAssistantText(
-      "⚠️ Aún falta completar información obligatoria antes de enviar la postulación."
-    );
-
-    return;
-  }
 
   const formData = new FormData();
 

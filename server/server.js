@@ -5501,130 +5501,87 @@ app.post(
         respuestasPersonalizadas
       } = req.body;
 
-      if (!nombre || !vacanteSeleccionada) {
-        return res.status(400).json({
-          error:
-            "Faltan el nombre o la vacante seleccionada."
-        });
-      }
+      /* =========================================================
+   VALIDACIÓN DE DATOS BASE DE POSTULACIÓN
+========================================================= */
 
-      const vacante = vacantes.find(
-        (item) =>
-          item.id === vacanteSeleccionada
-      );
+if (
+  !String(nombre || "").trim() ||
+  !String(correo || "").trim() ||
+  !String(telefono || "").trim() ||
+  !String(vacanteSeleccionada || "").trim()
+) {
+  return res.status(400).json({
+    error:
+      "Nombre completo, correo electrónico, teléfono y vacante son obligatorios."
+  });
+}
 
-      if (!vacante) {
-        return res.status(400).json({
-          error:
-            "La vacante seleccionada no existe."
-        });
-      }
 
-      const configuracion =
-        normalizarConfiguracionPostulacion(
-          vacante.configuracionPostulacion || {}
-        );
+/* =========================================================
+   VALIDAR CORREO
+========================================================= */
 
-      if (
-        configuracion.solicitarCorreo &&
-        !String(correo || "").trim()
-      ) {
-        return res.status(400).json({
-          error:
-            "El correo electrónico es obligatorio para esta vacante."
-        });
-      }
+const correoNormalizado =
+  String(correo || "").trim();
 
-      if (
-        configuracion.solicitarTelefono &&
-        !String(telefono || "").trim()
-      ) {
-        return res.status(400).json({
-          error:
-            "El teléfono es obligatorio para esta vacante."
-        });
-      }
+const correoValido =
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    .test(correoNormalizado);
 
-      if (
-        configuracion.solicitarCodigoPostal &&
-        !String(codigoPostal || "").trim()
-      ) {
-        return res.status(400).json({
-          error:
-            "El código postal es obligatorio para esta vacante."
-        });
-      }
+if (!correoValido) {
+  return res.status(400).json({
+    error:
+      "El correo electrónico no tiene un formato válido."
+  });
+}
 
-      if (
-        configuracion.solicitarCodigoPostal &&
-        !validarCodigoPostal(codigoPostal)
-      ) {
-        return res.status(400).json({
-          error:
-            "El código postal debe contener exactamente 5 números."
-        });
-      }
 
-      if (
-        configuracion.solicitarTransporte &&
-        !String(medioTransporte || "").trim()
-      ) {
-        return res.status(400).json({
-          error:
-            "El medio de transporte es obligatorio para esta vacante."
-        });
-      }
+/* =========================================================
+   VALIDAR TELÉFONO
+========================================================= */
 
-      if (
-        configuracion.solicitarVehiculoPropio &&
-        !String(vehiculoPropio || "").trim()
-      ) {
-        return res.status(400).json({
-          error:
-            "Indica si cuentas con vehículo propio."
-        });
-      }
+const telefonoNormalizado =
+  String(telefono || "")
+    .replace(/[^\d]/g, "");
 
-      if (
-        configuracion.solicitarTiempoTraslado &&
-        !String(
-          tiempoMaximoTraslado || ""
-        ).trim()
-      ) {
-        return res.status(400).json({
-          error:
-            "El tiempo máximo de traslado es obligatorio para esta vacante."
-        });
-      }
-      if (
-        configuracion.solicitarExperiencia &&
-        !String(experiencia || "").trim()
-      ) {
-        return res.status(400).json({
-          error:
-            "La experiencia es obligatoria para esta vacante."
-        });
-      }
+if (telefonoNormalizado.length < 10) {
+  return res.status(400).json({
+    error:
+      "El número de teléfono debe contener al menos 10 dígitos."
+  });
+}
 
-      if (
-        configuracion.solicitarEscolaridad &&
-        !String(escolaridad || "").trim()
-      ) {
-        return res.status(400).json({
-          error:
-            "La escolaridad es obligatoria para esta vacante."
-        });
-      }
 
-      if (
-        configuracion.solicitarDisponibilidad &&
-        !String(disponibilidad || "").trim()
-      ) {
-        return res.status(400).json({
-          error:
-            "La disponibilidad es obligatoria para esta vacante."
-        });
-      }
+/* =========================================================
+   VALIDAR VACANTE
+========================================================= */
+
+const vacante =
+  vacantes.find(
+    (item) =>
+      item.id ===
+      vacanteSeleccionada
+  );
+
+if (!vacante) {
+  return res.status(400).json({
+    error:
+      "La vacante seleccionada no existe."
+  });
+}
+
+
+/* =========================================================
+   CONFIGURACIÓN DE LA VACANTE
+========================================================= */
+
+const configuracion =
+  normalizarConfiguracionPostulacion(
+    vacante.configuracionPostulacion || {}
+  );
+
+ 
 
       const cvFile =
         req.files?.cvFile?.[0] || null;
