@@ -14,12 +14,7 @@ const consultarStatusBtn = document.getElementById("consultarStatusBtn");
 const folioConsulta = document.getElementById("folioConsulta");
 const consultaStatusResultado = document.getElementById("consultaStatusResultado");
 const chatbotToggle = document.getElementById("chatbot-toggle");
-const buscarVacantesBtn = document.getElementById("buscarVacantesBtn");
-const filtroTipo = document.getElementById("filtroTipo");
-const filtroPais = document.getElementById("filtroPais");
-const filtroEstado = document.getElementById("filtroEstado");
-const filtroCiudad = document.getElementById("filtroCiudad");
-const busquedaStatus = document.getElementById("busquedaStatus");
+
 
 let applicationFlow = {
   active: false,
