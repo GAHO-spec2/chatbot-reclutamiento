@@ -210,25 +210,8 @@ function showProgressStep(currentStep, totalSteps = 6) {
    BURBUJA CHAT
 ========================= */
 
-function buscarVacantesDesdeFiltros() {
-  const tipoVacante = filtroTipo?.value || "";
-  const pais = filtroPais?.value || "";
-  const estado = filtroEstado?.value || "";
-  const ciudad = filtroCiudad?.value || "";
 
-  const params = new URLSearchParams();
 
-  if (tipoVacante) params.set("tipoVacante", tipoVacante);
-  if (pais) params.set("pais", pais);
-  if (estado) params.set("estado", estado);
-  if (ciudad) params.set("ciudad", ciudad);
-
-  window.location.href = `vacantes.html?${params.toString()}`;
-}
-
-if (buscarVacantesBtn) {
-  buscarVacantesBtn.addEventListener("click", buscarVacantesDesdeFiltros);
-}
 
 function activateListeningState() {
   if (chatbotToggle) chatbotToggle.classList.add("is-listening");
