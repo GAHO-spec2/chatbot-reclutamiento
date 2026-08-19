@@ -281,7 +281,9 @@
   <script src="chatbot.js?v=10"></script>
   
   <!-- Script de traducción -->
-  <script>
+<script>
+  (() => {
+
     // =========================
     // TRADUCCIÓN COMPLETA DE LA PÁGINA
     // =========================
@@ -499,8 +501,8 @@
       return currentLang;
     }
     
-    window.getCurrentLanguage = getCurrentLanguage;
-    window.setLanguage = setLanguage;
-  </script>
-</body>
-</html>
+   window.getCurrentLanguage = getCurrentLanguage;
+window.setLanguage = setLanguage;
+
+})();
+</script>
