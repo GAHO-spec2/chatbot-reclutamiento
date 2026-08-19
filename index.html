@@ -278,7 +278,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="dotted-surface.js"></script>
   <script src="text-scramble.js"></script>
-  <script src="chatbot.js?v=9"></script>
+  <script src="chatbot.js?v=10"></script>
   
   <!-- Script de traducción -->
   <script>
@@ -286,7 +286,7 @@
     // TRADUCCIÓN COMPLETA DE LA PÁGINA
     // =========================
 
-    const translations = {
+    window.translations = window.translations || {
       es: {
         // Topbar
         topbar_subtitle: "Plataforma de reclutamiento",
@@ -436,28 +436,28 @@
       
       document.querySelectorAll('[data-translate]').forEach(element => {
         const key = element.dataset.translate;
-        if (translations[lang] && translations[lang][key]) {
+        if (window.translations[lang] && window.translations[lang][key]) {
           if ((element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') && element.hasAttribute('data-translate-placeholder')) {
             // Ya se maneja con data-translate-placeholder
           } else if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
             // No hacer nada
           } else {
-            element.textContent = translations[lang][key];
+            element.textContent = window.translations[lang][key];
           }
         }
       });
       
       document.querySelectorAll('[data-translate-placeholder]').forEach(element => {
         const key = element.dataset.translatePlaceholder;
-        if (translations[lang] && translations[lang][key]) {
-          element.placeholder = translations[lang][key];
+        if (window.translations[lang] && window.translations[lang][key]) {
+          element.placeholder = window.translations[lang][key];
         }
       });
       
       document.querySelectorAll('select option[data-translate]').forEach(option => {
         const key = option.dataset.translate;
-        if (translations[lang] && translations[lang][key]) {
-          option.textContent = translations[lang][key];
+        if (window.translations[lang] && window.translations[lang][key]) {
+          option.textContent = window.translations[lang][key];
         }
       });
       
