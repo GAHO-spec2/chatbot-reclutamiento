@@ -2498,7 +2498,184 @@ async function guardarVacante() {
     return;
   }
 
+/* =========================================================
+   VALIDAR CAMPOS OBLIGATORIOS DEL FORMULARIO
+========================================================= */
 
+const camposInvalidos = [
+  ...vacanteForm.querySelectorAll(
+    "[required]"
+  )
+].filter(
+  (campo) =>
+    !campo.checkValidity()
+);
+
+
+if (camposInvalidos.length) {
+
+  /* Quitar errores anteriores */
+
+  vacanteForm
+    .querySelectorAll(
+      ".field--error"
+    )
+    .forEach((field) => {
+      field.classList.remove(
+        "field--error"
+      );
+    });
+
+
+  vacanteForm
+    .querySelectorAll(
+      ".field-error-message"
+    )
+    .forEach((mensaje) => {
+      mensaje.remove();
+    });
+
+
+  /* Marcar campos incorrectos */
+
+  camposInvalidos.forEach(
+    (campo) => {
+
+      const field =
+        campo.closest(".field");
+
+      if (!field) {
+        return;
+      }
+
+
+      field.classList.add(
+        "field--error"
+      );
+
+
+      const mensaje =
+        document.createElement(
+          "small"
+        );
+
+      mensaje.className =
+        "field-error-message";
+
+
+      if (
+        campo.tagName === "SELECT"
+      ) {
+        mensaje.textContent =
+          "Selecciona una opción.";
+      } else {
+        mensaje.textContent =
+          "Este campo es obligatorio.";
+      }
+
+
+      field.appendChild(
+        mensaje
+      );
+    }
+  );
+
+
+  /* Llevar al primer error */
+
+  const primerCampo =
+    camposInvalidos[0];
+
+
+  primerCampo.scrollIntoView({
+    behavior: "smooth",
+    block: "center"
+  });
+
+
+  setTimeout(() => {
+    primerCampo.focus();
+  }, 350);
+
+
+  return;
+}
+  
+  
+
+  if (vacanteForm) {
+
+  vacanteForm.addEventListener(
+    "input",
+    (event) => {
+
+      const campo =
+        event.target;
+
+      if (
+        !campo.matches(
+          "input, select, textarea"
+        )
+      ) {
+        return;
+      }
+
+
+      if (campo.checkValidity()) {
+
+        const field =
+          campo.closest(".field");
+
+        if (!field) {
+          return;
+        }
+
+
+        field.classList.remove(
+          "field--error"
+        );
+
+
+        field
+          .querySelector(
+            ".field-error-message"
+          )
+          ?.remove();
+      }
+    }
+  );
+
+
+  vacanteForm.addEventListener(
+    "change",
+    (event) => {
+
+      const campo =
+        event.target;
+
+      if (
+        campo.matches(
+          "select"
+        ) &&
+        campo.checkValidity()
+      ) {
+
+        const field =
+          campo.closest(".field");
+
+        field?.classList.remove(
+          "field--error"
+        );
+
+        field
+          ?.querySelector(
+            ".field-error-message"
+          )
+          ?.remove();
+      }
+    }
+  );
+}
   /* =========================================================
      2. VALIDAR PREGUNTAS PERSONALIZADAS
   ========================================================= */

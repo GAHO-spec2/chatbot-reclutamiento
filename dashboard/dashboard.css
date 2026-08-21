@@ -3801,3 +3801,35 @@ body {
     background 0.2s ease,
     box-shadow 0.2s ease;
 }
+
+
+/* =========================================================
+   VALIDACIÓN VISUAL DE CAMPOS OBLIGATORIOS
+========================================================= */
+
+.field--error input,
+.field--error select,
+.field--error textarea {
+  border-color: #ff5f67 !important;
+
+  background:
+    rgba(255, 65, 75, 0.07) !important;
+
+  box-shadow:
+    0 0 0 4px
+    rgba(255, 65, 75, 0.08) !important;
+}
+
+
+.field-error-message {
+  display: block;
+
+  margin-top: 6px;
+
+  color: #ff747c;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  line-height: 1.4;
+}
