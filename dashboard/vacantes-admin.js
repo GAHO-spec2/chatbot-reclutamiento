@@ -1539,31 +1539,195 @@ function renderPreguntasPersonalizadas() {
   });
 }
 
+/* =========================================================
+   CAMPOS BASE RESERVADOS DEL CHATBOT
+========================================================= */
+
+function normalizarPreguntaReservada(texto = "") {
+  return String(texto || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+
+function detectarCampoBaseReservado(texto = "") {
+  const pregunta =
+    normalizarPreguntaReservada(texto);
+
+  if (!pregunta) {
+    return null;
+  }
+
+
+  /* =========================
+     NOMBRE
+  ========================= */
+
+  const nombreReservado = [
+    "nombre",
+    "nombre completo",
+    "cual es tu nombre",
+    "cual es tu nombre completo",
+    "nombre del candidato"
+  ];
+
+  if (
+    nombreReservado.some(
+      (item) =>
+        pregunta === item ||
+        pregunta.includes(item)
+    )
+  ) {
+    return {
+      campo: "nombre",
+      etiqueta: "Nombre completo"
+    };
+  }
+
+
+  /* =========================
+     CORREO
+  ========================= */
+
+  const correoReservado = [
+    "correo",
+    "correo electronico",
+    "email",
+    "e mail",
+    "cual es tu correo",
+    "cual es tu correo electronico"
+  ];
+
+  if (
+    correoReservado.some(
+      (item) =>
+        pregunta === item ||
+        pregunta.includes(item)
+    )
+  ) {
+    return {
+      campo: "correo",
+      etiqueta: "Correo electrónico"
+    };
+  }
+
+
+  /* =========================
+     TELÉFONO
+  ========================= */
+
+  const telefonoReservado = [
+    "telefono",
+    "numero de telefono",
+    "numero telefonico",
+    "telefono celular",
+    "celular",
+    "numero celular",
+    "cual es tu numero de telefono"
+  ];
+
+  if (
+    telefonoReservado.some(
+      (item) =>
+        pregunta === item ||
+        pregunta.includes(item)
+    )
+  ) {
+    return {
+      campo: "telefono",
+      etiqueta: "Número de teléfono"
+    };
+  }
+
+
+  return null;
+}
+
+
 function validarPreguntasPersonalizadas() {
-  for (const pregunta of preguntasPersonalizadas) {
-    if (!pregunta.texto.trim()) {
+
+  /* 1. Evitar Nombre / Correo / Teléfono */
+
+  for (
+    let i = 0;
+    i < preguntasPersonalizadas.length;
+    i++
+  ) {
+
+    const pregunta =
+      preguntasPersonalizadas[i];
+
+    const texto =
+      String(
+        pregunta?.texto || ""
+      ).trim();
+
+    const campoReservado =
+      detectarCampoBaseReservado(
+        texto
+      );
+
+    if (campoReservado) {
       return {
         ok: false,
+
+        error:
+          `La pregunta ${i + 1} intenta solicitar "${campoReservado.etiqueta}". ` +
+          `Ese dato ya se solicita automáticamente durante la postulación.`
+      };
+    }
+  }
+
+
+  /* 2. Validaciones normales de preguntas */
+
+  for (
+    const pregunta of
+    preguntasPersonalizadas
+  ) {
+
+    if (
+      !String(
+        pregunta?.texto || ""
+      ).trim()
+    ) {
+      return {
+        ok: false,
+
         error:
           `Completa el texto de la pregunta ${pregunta.orden}.`
       };
     }
 
+
     if (
       pregunta.tipo === "seleccion" &&
-      (!Array.isArray(pregunta.opciones) ||
-        pregunta.opciones.length < 2)
+      (
+        !Array.isArray(
+          pregunta.opciones
+        ) ||
+        pregunta.opciones.length < 2
+      )
     ) {
       return {
         ok: false,
+
         error:
           `La pregunta ${pregunta.orden} debe tener al menos dos opciones.`
       };
     }
   }
 
-  return { ok: true };
+
+  return {
+    ok: true
+  };
 }
+
+
 /* =========================
    FORMULARIO
 ========================= */

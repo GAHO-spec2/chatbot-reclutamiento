@@ -1,6 +1,5 @@
 const API_URL =  "https://chatbot-reclutamiento-dcqb.onrender.com";
 
-
 const toggle = document.getElementById("chatbot-toggle");
 const closeBtn = document.getElementById("chatbot-close");
 const box = document.getElementById("chatbot-box");
@@ -1881,17 +1880,83 @@ function buildApplicationQuestions(vacante = {}) {
   ========================================================= */
 
   const customQuestions =
-    normalizeCustomQuestions(
-      vacante
-    );
+  normalizeCustomQuestions(vacante);
 
 
-  questions.push(
-    ...customQuestions
+/* =========================================================
+   EVITAR PREGUNTAS PERSONALIZADAS DUPLICADAS
+   Nombre / correo / teléfono ya son preguntas base.
+========================================================= */
+
+const normalizarPregunta =
+  (texto = "") =>
+    String(texto)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+
+
+const preguntasBaseReservadas = [
+  "nombre",
+  "nombre completo",
+  "cual es tu nombre",
+  "cual es tu nombre completo",
+
+  "correo",
+  "correo electronico",
+  "email",
+  "e mail",
+  "cual es tu correo",
+  "cual es tu correo electronico",
+
+  "telefono",
+  "numero de telefono",
+  "numero telefonico",
+  "celular",
+  "telefono celular",
+  "cual es tu numero de telefono"
+];
+
+
+const customQuestionsFiltradas =
+  customQuestions.filter(
+    (pregunta) => {
+
+      const texto =
+        normalizarPregunta(
+          pregunta.label ||
+          pregunta.texto ||
+          ""
+        );
+
+      const esDuplicada =
+        preguntasBaseReservadas
+          .some(
+            (reservada) =>
+              texto === reservada ||
+              texto.includes(reservada)
+          );
+
+      if (esDuplicada) {
+        console.warn(
+          "Pregunta personalizada omitida por duplicar un dato base:",
+          pregunta
+        );
+      }
+
+      return !esDuplicada;
+    }
   );
 
 
-  return questions;
+questions.push(
+  ...customQuestionsFiltradas
+);
+
+
+return questions;
 }
 
 function getQuestionPlaceholder(question = {}) {
