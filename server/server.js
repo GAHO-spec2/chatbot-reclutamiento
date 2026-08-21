@@ -2610,6 +2610,50 @@ function slugify(texto = "") {
     .replace(/^-|-$/g, "");
 }
 
+function normalizarPreguntaBase(texto = "") {
+  return String(texto || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+
+function esPreguntaBaseReservada(texto = "") {
+  const pregunta =
+    normalizarPreguntaBase(texto);
+
+  const reservadas = [
+    "nombre",
+    "nombre completo",
+    "cual es tu nombre",
+    "cual es tu nombre completo",
+    "nombre del candidato",
+
+    "correo",
+    "correo electronico",
+    "email",
+    "e mail",
+    "cual es tu correo",
+    "cual es tu correo electronico",
+
+    "telefono",
+    "numero de telefono",
+    "numero telefonico",
+    "telefono celular",
+    "celular",
+    "numero celular",
+    "cual es tu numero de telefono"
+  ];
+
+  return reservadas.some(
+    (item) =>
+      pregunta === item ||
+      pregunta.includes(item)
+  );
+}
+
 function crearMapsUrl(query = "") {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
@@ -5612,39 +5656,64 @@ const configuracion =
         });
       }
 
-      const preguntasConfiguradas =
-        Array.isArray(
-          vacante.preguntasPersonalizadas
-        )
-          ? vacante.preguntasPersonalizadas
-          : [];
+ const preguntasConfiguradas =
+  Array.isArray(
+    vacante.preguntasPersonalizadas
+  )
+    ? vacante.preguntasPersonalizadas
+    : [];
 
-      for (const pregunta of preguntasConfiguradas) {
-        if (pregunta.obligatoria === false) {
-          continue;
-        }
 
-        const respuesta =
-          respuestasPersonalizadasParseadas[
-            pregunta.id
-          ];
+/* =========================================================
+   VALIDAR SOLO PREGUNTAS PERSONALIZADAS REALES
+   Nombre, correo y teléfono ya se validan como datos base.
+========================================================= */
 
-        const valorRespuesta =
-          typeof respuesta === "object"
-            ? respuesta?.respuesta
-            : respuesta;
+for (const pregunta of preguntasConfiguradas) {
 
-        if (
-          !String(
-            valorRespuesta || ""
-          ).trim()
-        ) {
-          return res.status(400).json({
-            error:
-              `Falta responder la pregunta obligatoria: ${pregunta.texto}`
-          });
-        }
-      }
+  /* Ignorar preguntas antiguas que duplican datos base */
+
+  if (
+    esPreguntaBaseReservada(
+      pregunta?.texto || ""
+    )
+  ) {
+    continue;
+  }
+
+
+  /* Ignorar preguntas no obligatorias */
+
+  if (
+    pregunta.obligatoria === false
+  ) {
+    continue;
+  }
+
+
+  const respuesta =
+    respuestasPersonalizadasParseadas[
+      pregunta.id
+    ];
+
+
+  const valorRespuesta =
+    typeof respuesta === "object"
+      ? respuesta?.respuesta
+      : respuesta;
+
+
+  if (
+    !String(
+      valorRespuesta || ""
+    ).trim()
+  ) {
+    return res.status(400).json({
+      error:
+        `Falta responder la pregunta obligatoria: ${pregunta.texto}`
+    });
+  }
+}
 
       let analisisIA = {
         resumen: "",
