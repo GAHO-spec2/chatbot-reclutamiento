@@ -5549,15 +5549,24 @@ app.post(
    VALIDACIÓN DE DATOS BASE DE POSTULACIÓN
 ========================================================= */
 
+/* =========================================================
+   VALIDACIÓN BASE DE POSTULACIÓN
+
+   Las preguntas del candidato son 100% configurables
+   desde preguntasPersonalizadas.
+
+   El único dato estructural obligatorio aquí es
+   identificar la vacante.
+========================================================= */
+
 if (
-  !String(nombre || "").trim() ||
-  !String(correo || "").trim() ||
-  !String(telefono || "").trim() ||
-  !String(vacanteSeleccionada || "").trim()
+  !String(
+    vacanteSeleccionada || ""
+  ).trim()
 ) {
   return res.status(400).json({
     error:
-      "Nombre completo, correo electrónico, teléfono y vacante son obligatorios."
+      "Falta seleccionar la vacante."
   });
 }
 
@@ -5566,18 +5575,27 @@ if (
    VALIDAR CORREO
 ========================================================= */
 
+/* =========================================================
+   VALIDAR CORREO SOLO SI FUE ENVIADO
+========================================================= */
+
 const correoNormalizado =
-  String(correo || "").trim();
+  String(
+    correo || ""
+  ).trim();
 
-const correoValido =
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    .test(correoNormalizado);
+if (correoNormalizado) {
 
-if (!correoValido) {
-  return res.status(400).json({
-    error:
-      "El correo electrónico no tiene un formato válido."
-  });
+  const correoValido =
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      .test(correoNormalizado);
+
+  if (!correoValido) {
+    return res.status(400).json({
+      error:
+        "El correo electrónico no tiene un formato válido."
+    });
+  }
 }
 
 
@@ -5585,17 +5603,25 @@ if (!correoValido) {
    VALIDAR TELÉFONO
 ========================================================= */
 
+/* =========================================================
+   VALIDAR TELÉFONO SOLO SI FUE ENVIADO
+========================================================= */
+
 const telefonoNormalizado =
-  String(telefono || "")
+  String(
+    telefono || ""
+  )
     .replace(/[^\d]/g, "");
 
-if (telefonoNormalizado.length < 10) {
+if (
+  telefonoNormalizado &&
+  telefonoNormalizado.length < 10
+) {
   return res.status(400).json({
     error:
       "El número de teléfono debe contener al menos 10 dígitos."
   });
 }
-
 
 /* =========================================================
    VALIDAR VACANTE
@@ -5665,25 +5691,16 @@ const configuracion =
 
 
 /* =========================================================
-   VALIDAR SOLO PREGUNTAS PERSONALIZADAS REALES
-   Nombre, correo y teléfono ya se validan como datos base.
+   VALIDAR PREGUNTAS CONFIGURADAS EN LA VACANTE
+
+   Todas las preguntas provienen del Dashboard.
+   Solo se exige respuesta cuando la pregunta
+   está marcada como obligatoria.
 ========================================================= */
 
 for (const pregunta of preguntasConfiguradas) {
 
-  /* Ignorar preguntas antiguas que duplican datos base */
-
-  if (
-    esPreguntaBaseReservada(
-      pregunta?.texto || ""
-    )
-  ) {
-    continue;
-  }
-
-
-  /* Ignorar preguntas no obligatorias */
-
+  /* Preguntas opcionales */
   if (
     pregunta.obligatoria === false
   ) {
@@ -5746,145 +5763,529 @@ for (const pregunta of preguntasConfiguradas) {
    CÁLCULO DE UBICACIÓN
 ========================= */
 
-  let ubicacionCandidato = {
-    lat: null,
-    lng: null,
-    aproximada: true,
-    encontrada: false
-  };
+/* =========================================================
+   EXTRAER DATOS IMPORTANTES DE LAS PREGUNTAS DINÁMICAS
+========================================================= */
 
-  let distanciaSucursalKm = null;
-  let clasificacionDistancia =
-    "no_disponible";
+const normalizarNombreCampo = (valor = "") =>
+  String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 
-  let etiquetaDistancia =
-    "Distancia no disponible";
 
-  let tiempoTrasladoEstimadoMin = null;
+function obtenerRespuestaDinamica({
+  tipos = [],
+  etiquetas = []
+} = {}) {
 
-  let compatibilidadTraslado = {
+  const tiposNormalizados =
+    tipos.map(normalizarNombreCampo);
+
+  const etiquetasNormalizadas =
+    etiquetas.map(normalizarNombreCampo);
+
+
+  for (
+    const item of Object.values(
+      respuestasPersonalizadasParseadas || {}
+    )
+  ) {
+
+    if (!item) {
+      continue;
+    }
+
+
+    const tipo =
+      normalizarNombreCampo(
+        typeof item === "object"
+          ? item.tipo
+          : ""
+      );
+
+
+    const pregunta =
+      normalizarNombreCampo(
+        typeof item === "object"
+          ? item.pregunta
+          : ""
+      );
+
+
+    const respuesta =
+      typeof item === "object"
+        ? item.respuesta
+        : item;
+
+
+    const valor =
+      String(
+        respuesta ?? ""
+      ).trim();
+
+
+    if (!valor) {
+      continue;
+    }
+
+
+    /* Buscar primero por tipo */
+
+    if (
+      tiposNormalizados.includes(tipo)
+    ) {
+      return valor;
+    }
+
+
+    /* Después por nombre de pregunta */
+
+    if (
+      etiquetasNormalizadas.includes(
+        pregunta
+      )
+    ) {
+      return valor;
+    }
+  }
+
+
+  return "";
+}
+
+
+/* =========================================================
+   DATOS ESTÁNDAR DEL CANDIDATO
+
+   Si el frontend envió el dato tradicional se conserva.
+   Si no, se obtiene de las preguntas configuradas por RH.
+========================================================= */
+
+const nombreFinal =
+  String(
+    nombre || ""
+  ).trim() ||
+  obtenerRespuestaDinamica({
+    etiquetas: [
+      "Nombre",
+      "Nombre completo",
+      "Nombre del candidato",
+      "¿Cuál es tu nombre?",
+      "¿Cuál es tu nombre completo?",
+      "Name",
+      "Full name",
+      "Candidate name",
+      "What is your name?",
+      "What is your full name?"
+    ]
+  });
+
+
+const correoFinal =
+  String(
+    correo || ""
+  ).trim() ||
+  obtenerRespuestaDinamica({
+    tipos: [
+      "correo"
+    ],
+
+    etiquetas: [
+      "Correo",
+      "Correo electrónico",
+      "Email",
+      "Email address",
+      "Your email",
+      "Your email address"
+    ]
+  });
+
+
+const telefonoFinal =
+  String(
+    telefono || ""
+  ).trim() ||
+  obtenerRespuestaDinamica({
+    tipos: [
+      "telefono"
+    ],
+
+    etiquetas: [
+      "Teléfono",
+      "Número de teléfono",
+      "Número telefónico",
+      "Celular",
+      "Phone",
+      "Phone number",
+      "Telephone",
+      "Mobile number"
+    ]
+  });
+
+
+const codigoPostalFinal =
+  String(
+    codigoPostal || ""
+  ).trim() ||
+  obtenerRespuestaDinamica({
+    tipos: [
+      "codigo_postal"
+    ],
+
+    etiquetas: [
+      "Código postal",
+      "Codigo postal",
+      "CP",
+      "ZIP",
+      "ZIP code",
+      "Postal code"
+    ]
+  });
+
+
+const experienciaFinal =
+  String(
+    experiencia || ""
+  ).trim() ||
+  obtenerRespuestaDinamica({
+    etiquetas: [
+      "Experiencia",
+      "Experiencia laboral",
+      "Años de experiencia",
+      "Experiencia en el puesto",
+      "Work experience",
+      "Experience"
+    ]
+  });
+
+
+const escolaridadFinal =
+  String(
+    escolaridad || ""
+  ).trim() ||
+  obtenerRespuestaDinamica({
+    etiquetas: [
+      "Escolaridad",
+      "Nivel de estudios",
+      "Nivel académico",
+      "Education",
+      "Education level"
+    ]
+  });
+
+
+const disponibilidadFinal =
+  String(
+    disponibilidad || ""
+  ).trim() ||
+  obtenerRespuestaDinamica({
+    etiquetas: [
+      "Disponibilidad",
+      "Disponibilidad de horario",
+      "Horario disponible",
+      "Availability",
+      "Schedule availability"
+    ]
+  });
+
+
+const medioTransporteFinal =
+  String(
+    medioTransporte || ""
+  ).trim() ||
+  obtenerRespuestaDinamica({
+    etiquetas: [
+      "Medio de transporte",
+      "Transporte",
+      "Cómo te transportas",
+      "Transportation",
+      "Means of transportation"
+    ]
+  });
+
+
+const vehiculoPropioFinal =
+  String(
+    vehiculoPropio || ""
+  ).trim() ||
+  obtenerRespuestaDinamica({
+    etiquetas: [
+      "Vehículo propio",
+      "Vehiculo propio",
+      "Automóvil propio",
+      "Automovil propio",
+      "Own vehicle",
+      "Own car"
+    ]
+  });
+
+
+const tiempoMaximoTrasladoFinal =
+  String(
+    tiempoMaximoTraslado || ""
+  ).trim() ||
+  obtenerRespuestaDinamica({
+    etiquetas: [
+      "Tiempo máximo de traslado",
+      "Tiempo maximo de traslado",
+      "Tiempo de traslado",
+      "Maximum commute time",
+      "Commute time"
+    ]
+  });
+
+
+/* =========================================================
+   VALIDAR CORREO SI RH LO SOLICITÓ
+========================================================= */
+
+if (correoFinal) {
+
+  const correoValido =
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      .test(correoFinal);
+
+
+  if (!correoValido) {
+    return res.status(400).json({
+      error:
+        "El correo electrónico no tiene un formato válido."
+    });
+  }
+}
+
+
+/* =========================================================
+   VALIDAR TELÉFONO SI RH LO SOLICITÓ
+========================================================= */
+
+if (telefonoFinal) {
+
+  const telefonoLimpio =
+    telefonoFinal.replace(
+      /[^\d]/g,
+      ""
+    );
+
+
+  if (
+    telefonoLimpio.length < 10
+  ) {
+    return res.status(400).json({
+      error:
+        "El número de teléfono debe contener al menos 10 dígitos."
+    });
+  }
+}
+
+
+/* =========================================================
+   CÁLCULO DE UBICACIÓN
+========================================================= */
+
+let ubicacionCandidato = {
+  lat: null,
+  lng: null,
+  aproximada: true,
+  encontrada: false
+};
+
+
+let distanciaSucursalKm = null;
+
+let clasificacionDistancia =
+  "no_disponible";
+
+let etiquetaDistancia =
+  "Distancia no disponible";
+
+let tiempoTrasladoEstimadoMin =
+  null;
+
+
+let compatibilidadTraslado = {
   estado: "no_disponible",
-  etiqueta: "Compatibilidad no disponible",
+  etiqueta:
+    "Compatibilidad no disponible",
   diferenciaMinutos: null,
   compatible: null
 };
 
+
+/*
+ * Ahora ya NO dependemos de
+ * configuracion.solicitarCodigoPostal.
+ *
+ * Si RH creó una pregunta de código postal
+ * y el candidato respondió, podemos calcular.
+ */
+
+if (
+  validarCodigoPostal(
+    codigoPostalFinal
+  )
+) {
+
+  const ubicacion =
+    await geocodificarCodigoPostal({
+      codigoPostal:
+        codigoPostalFinal,
+
+      ciudad:
+        vacante.ciudad,
+
+      estado:
+        vacante.estado,
+
+      pais:
+        vacante.pais
+    });
+
+
+  ubicacionCandidato = {
+    lat:
+      ubicacion.lat,
+
+    lng:
+      ubicacion.lng,
+
+    aproximada: true,
+
+    encontrada:
+      Boolean(
+        ubicacion.encontrado
+      )
+  };
+
+
+  let sucursalLat =
+    limpiarNumero(
+      vacante.lat
+    );
+
+
+  let sucursalLng =
+    limpiarNumero(
+      vacante.lng
+    );
+
+
+  /* =========================================================
+     SI LA VACANTE NO TIENE COORDENADAS,
+     INTENTAR GEOCODIFICAR LA SUCURSAL
+  ========================================================= */
+
   if (
-    configuracion.solicitarCodigoPostal &&
-    validarCodigoPostal(codigoPostal)
+    sucursalLat === null ||
+    sucursalLng === null
   ) {
-    const ubicacion =
-      await geocodificarCodigoPostal({
-        codigoPostal,
-        ciudad: vacante.ciudad,
-        estado: vacante.estado,
-        pais: vacante.pais
+
+    const coordenadasSucursal =
+      await resolverCoordenadas({
+
+        direccion:
+          vacante.direccion,
+
+        sucursal:
+          vacante.sucursal,
+
+        ciudad:
+          vacante.ciudad,
+
+        estado:
+          vacante.estado,
+
+        pais:
+          vacante.pais,
+
+        lat:
+          vacante.lat,
+
+        lng:
+          vacante.lng
       });
 
-    ubicacionCandidato = {
-      lat: ubicacion.lat,
-      lng: ubicacion.lng,
-      aproximada: true,
-      encontrada:
-        Boolean(ubicacion.encontrado)
-    };
 
-    let sucursalLat =
-      limpiarNumero(vacante.lat);
-
-    let sucursalLng =
-      limpiarNumero(vacante.lng);
-
-    /*
-    * Si la vacante no tiene coordenadas,
-    * se intenta geocodificar su dirección.
-    */
-    if (
-      sucursalLat === null ||
-      sucursalLng === null
-    ) {
-      const coordenadasSucursal =
-        await resolverCoordenadas({
-          direccion:
-            vacante.direccion,
-
-          sucursal:
-            vacante.sucursal,
-
-          ciudad:
-            vacante.ciudad,
-
-          estado:
-            vacante.estado,
-
-          pais:
-            vacante.pais,
-
-          lat:
-            vacante.lat,
-
-          lng:
-            vacante.lng
-        });
-
-      sucursalLat =
-        limpiarNumero(
-          coordenadasSucursal.lat
-        );
-
-      sucursalLng =
-        limpiarNumero(
-          coordenadasSucursal.lng
-        );
-    }
-
-    distanciaSucursalKm =
-      calcularDistanciaKm(
-        ubicacionCandidato.lat,
-        ubicacionCandidato.lng,
-        sucursalLat,
-        sucursalLng
+    sucursalLat =
+      limpiarNumero(
+        coordenadasSucursal.lat
       );
 
-    clasificacionDistancia =
-      clasificarDistancia(
-        distanciaSucursalKm
+
+    sucursalLng =
+      limpiarNumero(
+        coordenadasSucursal.lng
       );
+  }
 
-    etiquetaDistancia =
-      obtenerEtiquetaDistancia(
-        clasificacionDistancia
-      );
 
-    tiempoTrasladoEstimadoMin =
-      estimarTiempoTraslado({
-        distanciaKm:
-          distanciaSucursalKm,
+  distanciaSucursalKm =
+    calcularDistanciaKm(
+      ubicacionCandidato.lat,
+      ubicacionCandidato.lng,
+      sucursalLat,
+      sucursalLng
+    );
 
-        medioTransporte
-      });
-    compatibilidadTraslado =
-      evaluarCompatibilidadTraslado({
-        tiempoEstimadoMin:
-          tiempoTrasladoEstimadoMin,
 
-        tiempoMaximoTraslado
-      });
-      }
+  clasificacionDistancia =
+    clasificarDistancia(
+      distanciaSucursalKm
+    );
 
-      const resultadoCompatibilidad =
+
+  etiquetaDistancia =
+    obtenerEtiquetaDistancia(
+      clasificacionDistancia
+    );
+
+
+  tiempoTrasladoEstimadoMin =
+    estimarTiempoTraslado({
+
+      distanciaKm:
+        distanciaSucursalKm,
+
+      medioTransporte:
+        medioTransporteFinal
+    });
+
+
+  compatibilidadTraslado =
+    evaluarCompatibilidadTraslado({
+
+      tiempoEstimadoMin:
+        tiempoTrasladoEstimadoMin,
+
+      tiempoMaximoTraslado:
+        tiempoMaximoTrasladoFinal
+    });
+}
+
+
+/* =========================================================
+   COMPATIBILIDAD GENERAL
+========================================================= */
+
+const resultadoCompatibilidad =
   calcularCompatibilidadCandidato({
+
     vacante,
+
     configuracion,
+
     analisisIA,
 
     cvDisponible:
-      Boolean(cvFile),
+      Boolean(
+        cvFile
+      ),
 
     experiencia:
-      String(
-        experiencia || ""
-      ).trim(),
+      experienciaFinal,
 
     habilidades:
       String(
@@ -5892,9 +6293,7 @@ for (const pregunta of preguntasConfiguradas) {
       ).trim(),
 
     disponibilidad:
-      String(
-        disponibilidad || ""
-      ).trim(),
+      disponibilidadFinal,
 
     respuestasPersonalizadas:
       respuestasPersonalizadasParseadas,
@@ -5902,190 +6301,240 @@ for (const pregunta of preguntasConfiguradas) {
     compatibilidadTraslado
   });
 
-      const postulacion = {
-        id: Date.now().toString(),
 
-        nombre:
-          String(nombre).trim(),
+/* =========================================================
+   CREAR POSTULACIÓN
+========================================================= */
 
-        correo:
-          String(correo || "").trim(),
+const postulacion = {
 
-        telefono:
-          String(telefono || "").trim(),
+  id:
+    Date.now().toString(),
 
-        edad:
-          String(edad || "").trim(),
 
-        
-        codigoPostal:
-          String(
-            codigoPostal || ""
-          ).trim(),
+  /* =========================
+     DATOS PRINCIPALES
+  ========================= */
 
-        medioTransporte:
-          String(
-            medioTransporte || ""
-          ).trim(),
+  nombre:
+    nombreFinal,
 
-        vehiculoPropio:
-          String(
-            vehiculoPropio || ""
-          ).trim(),
+  correo:
+    correoFinal,
 
-        tiempoMaximoTraslado:
-          String(
-            tiempoMaximoTraslado || ""
-          ).trim(),
+  telefono:
+    telefonoFinal,
 
-        ubicacionCandidato,
+  edad:
+    String(
+      edad || ""
+    ).trim(),
 
-        ubicacionSucursal: {
-          lat:
-            limpiarNumero(
-              vacante.lat
-            ),
 
-          lng:
-            limpiarNumero(
-              vacante.lng
-            )
-        },
+  /* =========================
+     UBICACIÓN DEL CANDIDATO
+  ========================= */
 
-        distanciaSucursalKm,
+  codigoPostal:
+    codigoPostalFinal,
 
-        clasificacionDistancia,
+  medioTransporte:
+    medioTransporteFinal,
 
-        etiquetaDistancia,
+  vehiculoPropio:
+    vehiculoPropioFinal,
 
-        tiempoTrasladoEstimadoMin,
-        compatibilidadTraslado,
+  tiempoMaximoTraslado:
+    tiempoMaximoTrasladoFinal,
 
-        compatibilidadGeografica:
-          compatibilidadTraslado.estado,
+  ubicacionCandidato,
 
-        etiquetaCompatibilidadGeografica:
-          compatibilidadTraslado.etiqueta,
 
-        puntuacionCompatibilidad:
-          resultadoCompatibilidad.puntuacion,
+  ubicacionSucursal: {
 
-        nivelCompatibilidad:
-          resultadoCompatibilidad.nivel,
+    lat:
+      limpiarNumero(
+        vacante.lat
+      ),
 
-        etiquetaNivelCompatibilidad:
-          resultadoCompatibilidad.etiqueta,
+    lng:
+      limpiarNumero(
+        vacante.lng
+      )
+  },
 
-        desgloseCompatibilidad:
-          resultadoCompatibilidad.desglose,
 
-        detalleCompatibilidad:
-          resultadoCompatibilidad.detalleComponentes,
+  distanciaSucursalKm,
 
-        motivosCompatibilidad:
-          resultadoCompatibilidad.motivos,
+  clasificacionDistancia,
 
-        alertasCompatibilidad:
-          resultadoCompatibilidad.alertas,
+  etiquetaDistancia,
 
-        versionMotorCompatibilidad:
-          resultadoCompatibilidad.versionMotor,
+  tiempoTrasladoEstimadoMin,
 
-        pais:
-          vacante.pais,
+  compatibilidadTraslado,
 
-        estado:
-          vacante.estado,
 
-        ciudad:
-          vacante.ciudad,
+  compatibilidadGeografica:
+    compatibilidadTraslado.estado,
 
-        sucursal:
-          vacante.sucursal,
+  etiquetaCompatibilidadGeografica:
+    compatibilidadTraslado.etiqueta,
 
-        sucursalId:
-          vacante.sucursalId,
 
-        direccion:
-          vacante.direccion,
+  /* =========================
+     MOTOR DE COMPATIBILIDAD
+  ========================= */
 
-        googleMapsUrl:
-          vacante.googleMapsUrl,
+  puntuacionCompatibilidad:
+    resultadoCompatibilidad.puntuacion,
 
-        appleMapsUrl:
-          vacante.appleMapsUrl,
+  nivelCompatibilidad:
+    resultadoCompatibilidad.nivel,
 
-        disponibilidad:
-          String(
-            disponibilidad || ""
-          ).trim(),
+  etiquetaNivelCompatibilidad:
+    resultadoCompatibilidad.etiqueta,
 
-        tipoVacante:
-          vacante.tipoVacante,
+  desgloseCompatibilidad:
+    resultadoCompatibilidad.desglose,
 
-        grupoSeleccionado:
-          vacante.grupo,
+  detalleCompatibilidad:
+    resultadoCompatibilidad
+      .detalleComponentes,
 
-        vacanteId:
-          vacante.id,
+  motivosCompatibilidad:
+    resultadoCompatibilidad.motivos,
 
-        vacanteTitulo:
-          vacante.titulo,
+  alertasCompatibilidad:
+    resultadoCompatibilidad.alertas,
 
-        puestoInteres:
-          vacante.titulo,
+  versionMotorCompatibilidad:
+    resultadoCompatibilidad
+      .versionMotor,
 
-        escolaridad:
-          String(
-            escolaridad || ""
-          ).trim(),
 
-        experiencia:
-          String(
-            experiencia || ""
-          ).trim(),
+  /* =========================
+     VACANTE
+  ========================= */
 
-        habilidades:
-          String(
-            habilidades || ""
-          ).trim(),
+  pais:
+    vacante.pais,
 
-        politicaCv:
-          configuracion.cv,
+  estado:
+    vacante.estado,
 
-        configuracionPostulacion:
-          configuracion,
+  ciudad:
+    vacante.ciudad,
 
-        respuestasPersonalizadas:
-          respuestasPersonalizadasParseadas,
+  sucursal:
+    vacante.sucursal,
 
-        cvNombre,
-        cvRuta,
+  sucursalId:
+    vacante.sucursalId,
 
-        resumenIA:
-          analisisIA.resumen || "",
+  direccion:
+    vacante.direccion,
 
-        habilidadesDetectadas:
-          Array.isArray(
-            analisisIA.habilidadesDetectadas
-          )
-            ? analisisIA.habilidadesDetectadas
-            : [],
+  googleMapsUrl:
+    vacante.googleMapsUrl,
 
-        perfilRecomendado:
-          analisisIA.perfilRecomendado ||
-          "",
+  appleMapsUrl:
+    vacante.appleMapsUrl,
 
-        estadoSolicitud:
-          "pendiente",
+  tipoVacante:
+    vacante.tipoVacante,
 
-        fechaRegistro:
-          new Date().toISOString()
-      };
+  grupoSeleccionado:
+    vacante.grupo,
 
-    await guardarPostulacion(
+  vacanteId:
+    vacante.id,
+
+  vacanteTitulo:
+    vacante.titulo,
+
+  puestoInteres:
+    vacante.titulo,
+
+
+  /* =========================
+     INFORMACIÓN DEL CANDIDATO
+  ========================= */
+
+  disponibilidad:
+    disponibilidadFinal,
+
+  escolaridad:
+    escolaridadFinal,
+
+  experiencia:
+    experienciaFinal,
+
+  habilidades:
+    String(
+      habilidades || ""
+    ).trim(),
+
+
+  /* =========================
+     CONFIGURACIÓN Y RESPUESTAS
+  ========================= */
+
+  politicaCv:
+    configuracion.cv,
+
+  configuracionPostulacion:
+    configuracion,
+
+  respuestasPersonalizadas:
+    respuestasPersonalizadasParseadas,
+
+
+  /* =========================
+     CV
+  ========================= */
+
+  cvNombre,
+
+  cvRuta,
+
+  resumenIA:
+    analisisIA.resumen || "",
+
+  habilidadesDetectadas:
+    Array.isArray(
+      analisisIA.habilidadesDetectadas
+    )
+      ? analisisIA
+          .habilidadesDetectadas
+      : [],
+
+  perfilRecomendado:
+    analisisIA
+      .perfilRecomendado ||
+    "",
+
+
+  /* =========================
+     ESTADO
+  ========================= */
+
+  estadoSolicitud:
+    "pendiente",
+
+  fechaRegistro:
+    new Date().toISOString()
+};
+
+
+/* =========================================================
+   GUARDAR POSTULACIÓN
+========================================================= */
+
+await guardarPostulacion(
   postulacion
 );
+
 
 /* =========================================================
    ENCOLAR COMUNICACIÓN: POSTULACIÓN RECIBIDA
@@ -7346,41 +7795,36 @@ const TIPOS_PREGUNTA_VALIDOS = [
   "seleccion"
 ];
 
-function normalizarConfiguracionPostulacion(configuracion = {}) {
-  const cv = POLITICAS_CV_VALIDAS.includes(configuracion.cv)
-    ? configuracion.cv
-    : "opcional";
+function normalizarConfiguracionPostulacion(
+  configuracion = {}
+) {
+  const cv =
+    POLITICAS_CV_VALIDAS.includes(
+      configuracion.cv
+    )
+      ? configuracion.cv
+      : "opcional";
 
   return {
     cv,
 
-    solicitarTelefono:
-      configuracion.solicitarTelefono !== false,
+    solicitarTelefono: false,
 
-    solicitarCorreo:
-      configuracion.solicitarCorreo !== false,
+    solicitarCorreo: false,
 
-    solicitarExperiencia:
-      configuracion.solicitarExperiencia !== false,
+    solicitarExperiencia: false,
 
-    solicitarEscolaridad:
-      Boolean(configuracion.solicitarEscolaridad),
+    solicitarEscolaridad: false,
 
-    solicitarDisponibilidad:
-      configuracion.solicitarDisponibilidad !== false,
+    solicitarDisponibilidad: false,
 
-    solicitarCodigoPostal:
-      configuracion.solicitarCodigoPostal !== false,
-    solicitarTransporte:
-  configuracion.solicitarTransporte !== false,
+    solicitarCodigoPostal: false,
 
-    solicitarVehiculoPropio:
-      Boolean(
-        configuracion.solicitarVehiculoPropio
-      ),
+    solicitarTransporte: false,
 
-    solicitarTiempoTraslado:
-      configuracion.solicitarTiempoTraslado !== false,
+    solicitarVehiculoPropio: false,
+
+    solicitarTiempoTraslado: false
   };
 }
 

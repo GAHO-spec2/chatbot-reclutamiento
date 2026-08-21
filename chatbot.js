@@ -1844,119 +1844,12 @@ function normalizeCustomQuestions(vacante = {}) {
 function buildApplicationQuestions(vacante = {}) {
 
   /* =========================================================
-     PREGUNTAS BASE
-     Estas siempre se solicitarán.
+     PREGUNTAS 100% CONFIGURADAS DESDE EL DASHBOARD
   ========================================================= */
 
-  const questions = [
-    {
-      key: "nombre",
-      label: "¿Cuál es tu nombre completo?",
-      type: "texto_corto",
-      required: true,
-      custom: false
-    },
-
-    {
-      key: "correo",
-      label: "¿Cuál es tu correo electrónico?",
-      type: "correo",
-      required: true,
-      custom: false
-    },
-
-    {
-      key: "telefono",
-      label: "¿Cuál es tu número de teléfono?",
-      type: "telefono",
-      required: true,
-      custom: false
-    }
-  ];
-
-
-  /* =========================================================
-     PREGUNTAS PERSONALIZADAS DE LA VACANTE
-  ========================================================= */
-
-  const customQuestions =
-  normalizeCustomQuestions(vacante);
-
-
-/* =========================================================
-   EVITAR PREGUNTAS PERSONALIZADAS DUPLICADAS
-   Nombre / correo / teléfono ya son preguntas base.
-========================================================= */
-
-const normalizarPregunta =
-  (texto = "") =>
-    String(texto)
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, " ")
-      .trim();
-
-
-const preguntasBaseReservadas = [
-  "nombre",
-  "nombre completo",
-  "cual es tu nombre",
-  "cual es tu nombre completo",
-
-  "correo",
-  "correo electronico",
-  "email",
-  "e mail",
-  "cual es tu correo",
-  "cual es tu correo electronico",
-
-  "telefono",
-  "numero de telefono",
-  "numero telefonico",
-  "celular",
-  "telefono celular",
-  "cual es tu numero de telefono"
-];
-
-
-const customQuestionsFiltradas =
-  customQuestions.filter(
-    (pregunta) => {
-
-      const texto =
-        normalizarPregunta(
-          pregunta.label ||
-          pregunta.texto ||
-          ""
-        );
-
-      const esDuplicada =
-        preguntasBaseReservadas
-          .some(
-            (reservada) =>
-              texto === reservada ||
-              texto.includes(reservada)
-          );
-
-      if (esDuplicada) {
-        console.warn(
-          "Pregunta personalizada omitida por duplicar un dato base:",
-          pregunta
-        );
-      }
-
-      return !esDuplicada;
-    }
+  return normalizeCustomQuestions(
+    vacante
   );
-
-
-questions.push(
-  ...customQuestionsFiltradas
-);
-
-
-return questions;
 }
 
 function getQuestionPlaceholder(question = {}) {
@@ -2177,6 +2070,7 @@ function saveDynamicAnswer(
   question,
   answer
 ) {
+
   const validation =
     validateDynamicAnswer(
       question,
@@ -2184,51 +2078,193 @@ function saveDynamicAnswer(
     );
 
   if (!validation.ok) {
+
     addAssistantText(
       `⚠️ ${validation.error}`
     );
 
     showCurrentApplicationQuestion();
+
     return false;
   }
 
-  const value = validation.value;
 
-  if (question.custom) {
-    applicationFlow.answers[
-      question.id
-    ] = {
-      preguntaId: question.id,
-      pregunta: question.label,
-      tipo: question.type,
-      respuesta: value
-    };
-  } else {
-    applicationFlow.data[
-      question.key
-    ] = value;
-  }
+  const value =
+    validation.value;
 
-  if (question.key === "nombre") {
-    candidateProfile.nombre = value;
-  }
 
-  if (question.key === "correo") {
-    candidateProfile.correo = value;
-  }
+  /* =========================================================
+     GUARDAR RESPUESTA PERSONALIZADA
+  ========================================================= */
 
-  if (question.key === "telefono") {
-    candidateProfile.telefono = value;
-  }
+  applicationFlow.answers[
+    question.id
+  ] = {
 
-  if (question.key === "experiencia") {
-    applicationFlow.data.habilidades =
+    preguntaId:
+      question.id,
+
+    pregunta:
+      question.label,
+
+    tipo:
+      question.type,
+
+    respuesta:
+      value
+  };
+
+
+  /* =========================================================
+     DETECTAR DATOS IMPORTANTES SI RH LOS CONFIGURÓ
+
+     No los preguntamos automáticamente.
+
+     Solamente, si existe una pregunta como:
+     - Nombre completo
+     - Correo electrónico
+     - Teléfono
+
+     aprovechamos la respuesta para llenar los campos
+     estándar del candidato.
+  ========================================================= */
+
+  const textoPregunta =
+    String(
+      question.label || ""
+    )
+      .normalize("NFD")
+      .replace(
+        /[\u0300-\u036f]/g,
+        ""
+      )
+      .toLowerCase()
+      .replace(
+        /[^a-z0-9]+/g,
+        " "
+      )
+      .trim();
+
+
+  /* =========================
+     NOMBRE
+  ========================= */
+
+  const preguntasNombre = [
+    "nombre",
+    "nombre completo",
+    "nombre del candidato",
+    "cual es tu nombre",
+    "cual es tu nombre completo",
+
+    "name",
+    "full name",
+    "candidate name",
+    "your name",
+    "your full name",
+    "what is your name",
+    "what is your full name"
+  ];
+
+
+  if (
+    preguntasNombre.some(
+      (texto) =>
+        textoPregunta === texto
+    )
+  ) {
+
+    applicationFlow.data.nombre =
+      value;
+
+    candidateProfile.nombre =
       value;
   }
 
-  applicationFlow.currentQuestionIndex += 1;
+
+  /* =========================
+     CORREO
+  ========================= */
+
+  const preguntasCorreo = [
+    "correo",
+    "correo electronico",
+    "direccion de correo electronico",
+    "email",
+    "e mail",
+    "email address",
+    "your email",
+    "your email address",
+    "cual es tu correo",
+    "cual es tu correo electronico",
+    "what is your email",
+    "what is your email address"
+  ];
+
+
+  if (
+    preguntasCorreo.some(
+      (texto) =>
+        textoPregunta === texto
+    )
+  ) {
+
+    applicationFlow.data.correo =
+      value;
+
+    candidateProfile.correo =
+      value;
+  }
+
+
+  /* =========================
+     TELÉFONO
+  ========================= */
+
+  const preguntasTelefono = [
+    "telefono",
+    "numero de telefono",
+    "numero telefonico",
+    "telefono celular",
+    "celular",
+    "numero celular",
+
+    "phone",
+    "phone number",
+    "telephone",
+    "telephone number",
+    "mobile",
+    "mobile number",
+    "cell phone",
+    "cell phone number"
+  ];
+
+
+  if (
+    preguntasTelefono.some(
+      (texto) =>
+        textoPregunta === texto
+    )
+  ) {
+
+    applicationFlow.data.telefono =
+      value;
+
+    candidateProfile.telefono =
+      value;
+  }
+
+
+  /* =========================================================
+     SIGUIENTE PREGUNTA
+  ========================================================= */
+
+  applicationFlow
+    .currentQuestionIndex += 1;
+
 
   showCurrentApplicationQuestion();
+
 
   return true;
 }
@@ -2465,33 +2501,7 @@ async function submitApplicationFromChat() {
     return;
   }
 
- const requiredFields = [
-  "nombre",
-  "correo",
-  "telefono"
-];
 
-const missingField =
-  requiredFields.find(
-    (field) =>
-      !String(
-        applicationFlow.data[field] || ""
-      ).trim()
-  );
-
-if (missingField) {
-  const fieldLabels = {
-    nombre: "nombre completo",
-    correo: "correo electrónico",
-    telefono: "número de teléfono"
-  };
-
-  addAssistantText(
-    `⚠️ Aún falta completar tu ${fieldLabels[missingField] || "información obligatoria"} antes de enviar la postulación.`
-  );
-
-  return;
-}
 
   const formData = new FormData();
 
