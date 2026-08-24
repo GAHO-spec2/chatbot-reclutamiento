@@ -1520,25 +1520,30 @@ function getVacancyApplicationConfig(vacante = {}) {
       ? config.cv
       : DEFAULT_APPLICATION_CONFIG.cv,
 
+    solicitarNombre:
+      Boolean(
+        config.solicitarNombre
+      ),
+
     solicitarTelefono:
-      config.solicitarTelefono !== false,
+      Boolean(
+        config.solicitarTelefono
+      ),
 
     solicitarCorreo:
-      config.solicitarCorreo !== false,
+      Boolean(
+        config.solicitarCorreo
+      ),
 
-    solicitarExperiencia:
-      config.solicitarExperiencia !== false,
-
-    solicitarEscolaridad:
-      Boolean(config.solicitarEscolaridad),
-
-    solicitarDisponibilidad:
-      config.solicitarDisponibilidad !== false,
     solicitarCodigoPostal:
-      config.solicitarCodigoPostal !== false,
+      Boolean(
+        config.solicitarCodigoPostal
+      ),
 
     solicitarTransporte:
-      config.solicitarTransporte !== false,
+      Boolean(
+        config.solicitarTransporte
+      ),
 
     solicitarVehiculoPropio:
       Boolean(
@@ -1546,7 +1551,24 @@ function getVacancyApplicationConfig(vacante = {}) {
       ),
 
     solicitarTiempoTraslado:
-      config.solicitarTiempoTraslado !== false
+      Boolean(
+        config.solicitarTiempoTraslado
+      ),
+
+    solicitarExperiencia:
+      Boolean(
+        config.solicitarExperiencia
+      ),
+
+    solicitarEscolaridad:
+      Boolean(
+        config.solicitarEscolaridad
+      ),
+
+    solicitarDisponibilidad:
+      Boolean(
+        config.solicitarDisponibilidad
+      )
   };
 }
 
@@ -1843,13 +1865,158 @@ function normalizeCustomQuestions(vacante = {}) {
 
 function buildApplicationQuestions(vacante = {}) {
 
+  const config =
+    getVacancyApplicationConfig(
+      vacante
+    );
+
+  const questions = [];
+
+
   /* =========================================================
-     PREGUNTAS 100% CONFIGURADAS DESDE EL DASHBOARD
+     PREGUNTAS ESTÁNDAR CONFIGURABLES
   ========================================================= */
 
-  return normalizeCustomQuestions(
-    vacante
+  if (config.solicitarNombre) {
+    questions.push({
+      key: "nombre",
+      label:
+        "¿Cuál es tu nombre completo?",
+      type: "texto_corto",
+      required: true,
+      custom: false
+    });
+  }
+
+
+  if (config.solicitarCorreo) {
+    questions.push({
+      key: "correo",
+      label:
+        "¿Cuál es tu correo electrónico?",
+      type: "correo",
+      required: true,
+      custom: false
+    });
+  }
+
+
+  if (config.solicitarTelefono) {
+    questions.push({
+      key: "telefono",
+      label:
+        "¿Cuál es tu número de teléfono?",
+      type: "telefono",
+      required: true,
+      custom: false
+    });
+  }
+
+
+  if (config.solicitarCodigoPostal) {
+    questions.push({
+      key: "codigoPostal",
+      label:
+        "¿Cuál es tu código postal?",
+      type: "numero",
+      required: true,
+      custom: false
+    });
+  }
+
+
+  if (config.solicitarTransporte) {
+    questions.push({
+      key: "medioTransporte",
+      label:
+        "¿Cuál es tu medio de transporte habitual?",
+      type: "texto_corto",
+      required: true,
+      custom: false
+    });
+  }
+
+
+  if (config.solicitarVehiculoPropio) {
+    questions.push({
+      key: "vehiculoPropio",
+      label:
+        "¿Cuentas con vehículo propio?",
+      type: "si_no",
+      required: true,
+      options: [
+        "Sí",
+        "No"
+      ],
+      custom: false
+    });
+  }
+
+
+  if (config.solicitarTiempoTraslado) {
+    questions.push({
+      key: "tiempoMaximoTraslado",
+      label:
+        "¿Cuál es el tiempo máximo que estás dispuesto a trasladarte para trabajar?",
+      type: "texto_corto",
+      required: true,
+      custom: false
+    });
+  }
+
+
+  if (config.solicitarExperiencia) {
+    questions.push({
+      key: "experiencia",
+      label:
+        "Cuéntanos brevemente sobre tu experiencia laboral.",
+      type: "texto_largo",
+      required: true,
+      custom: false
+    });
+  }
+
+
+  if (config.solicitarEscolaridad) {
+    questions.push({
+      key: "escolaridad",
+      label:
+        "¿Cuál es tu nivel de escolaridad?",
+      type: "texto_corto",
+      required: true,
+      custom: false
+    });
+  }
+
+
+  if (config.solicitarDisponibilidad) {
+    questions.push({
+      key: "disponibilidad",
+      label:
+        "¿Cuál es tu disponibilidad para trabajar?",
+      type: "texto_largo",
+      required: true,
+      custom: false
+    });
+  }
+
+
+  /* =========================================================
+     PREGUNTAS PERSONALIZADAS
+  ========================================================= */
+
+  const customQuestions =
+    normalizeCustomQuestions(
+      vacante
+    );
+
+
+  questions.push(
+    ...customQuestions
   );
+
+
+  return questions;
 }
 
 function getQuestionPlaceholder(question = {}) {

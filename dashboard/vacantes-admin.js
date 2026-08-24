@@ -76,7 +76,10 @@ const vacanteLng = document.getElementById("vacanteLng");
 const vacanteRequisitos = document.getElementById("vacanteRequisitos");
 const vacanteCvPolicy =
   document.getElementById("vacanteCvPolicy");
-
+const vacanteSolicitarNombre =
+  document.getElementById(
+    "vacanteSolicitarNombre"
+  );
 const vacanteSolicitarTelefono =
   document.getElementById("vacanteSolicitarTelefono");
 
@@ -1775,45 +1778,58 @@ function resetVacanteForm() {
 
   /* Configuración general */
 
-  if (vacanteCvPolicy) {
-    vacanteCvPolicy.value = "opcional";
-  }
+if (vacanteCvPolicy) {
+  vacanteCvPolicy.value = "opcional";
+}
 
-  if (vacanteSolicitarTelefono) {
-    vacanteSolicitarTelefono.checked = true;
-  }
 
-  if (vacanteSolicitarCorreo) {
-    vacanteSolicitarCorreo.checked = true;
-  }
+/* Nombre completo */
 
-  if (vacanteSolicitarCodigoPostal) {
-    vacanteSolicitarCodigoPostal.checked = true;
-  }
+if (vacanteSolicitarNombre) {
+  vacanteSolicitarNombre.checked = true;
+}
 
-  if (vacanteSolicitarTransporte) {
-    vacanteSolicitarTransporte.checked = true;
-  }
 
-  if (vacanteSolicitarVehiculoPropio) {
-    vacanteSolicitarVehiculoPropio.checked = false;
-  }
+/* Teléfono */
 
-  if (vacanteSolicitarTiempoTraslado) {
-    vacanteSolicitarTiempoTraslado.checked = true;
-  }
+if (vacanteSolicitarTelefono) {
+  vacanteSolicitarTelefono.checked = true;
+}
 
-  if (vacanteSolicitarExperiencia) {
-    vacanteSolicitarExperiencia.checked = true;
-  }
 
-  if (vacanteSolicitarEscolaridad) {
-    vacanteSolicitarEscolaridad.checked = false;
-  }
+/* Correo */
 
-  if (vacanteSolicitarDisponibilidad) {
-    vacanteSolicitarDisponibilidad.checked = true;
-  }
+if (vacanteSolicitarCorreo) {
+  vacanteSolicitarCorreo.checked = true;
+}
+
+ if (vacanteSolicitarCodigoPostal) {
+  vacanteSolicitarCodigoPostal.checked = false;
+}
+
+if (vacanteSolicitarTransporte) {
+  vacanteSolicitarTransporte.checked = false;
+}
+
+if (vacanteSolicitarVehiculoPropio) {
+  vacanteSolicitarVehiculoPropio.checked = false;
+}
+
+if (vacanteSolicitarTiempoTraslado) {
+  vacanteSolicitarTiempoTraslado.checked = false;
+}
+
+if (vacanteSolicitarExperiencia) {
+  vacanteSolicitarExperiencia.checked = false;
+}
+
+if (vacanteSolicitarEscolaridad) {
+  vacanteSolicitarEscolaridad.checked = false;
+}
+
+if (vacanteSolicitarDisponibilidad) {
+  vacanteSolicitarDisponibilidad.checked = false;
+}
 
   preguntasPersonalizadas = [];
   renderPreguntasPersonalizadas();
@@ -1944,62 +1960,118 @@ if (downloadQrPngBtn) {
 
   /* Configuración de postulación */
 
-  const configuracion =
-    vacante.configuracionPostulacion || {};
+ const configuracion =
+  vacante.configuracionPostulacion || {};
 
-  if (vacanteCvPolicy) {
-    vacanteCvPolicy.value =
-      configuracion.cv || "opcional";
-  }
 
-  if (vacanteSolicitarTelefono) {
-    vacanteSolicitarTelefono.checked =
-      configuracion.solicitarTelefono !== false;
-  }
+/* =========================================================
+   CONFIGURACIÓN DE POSTULACIÓN
+========================================================= */
 
-  if (vacanteSolicitarCorreo) {
-    vacanteSolicitarCorreo.checked =
-      configuracion.solicitarCorreo !== false;
-  }
+if (vacanteCvPolicy) {
+  vacanteCvPolicy.value =
+    configuracion.cv || "opcional";
+}
 
-  if (vacanteSolicitarCodigoPostal) {
-    vacanteSolicitarCodigoPostal.checked =
-      configuracion.solicitarCodigoPostal !== false;
-  }
 
-  if (vacanteSolicitarTransporte) {
-    vacanteSolicitarTransporte.checked =
-      configuracion.solicitarTransporte !== false;
-  }
+/* Nombre completo */
 
-  if (vacanteSolicitarVehiculoPropio) {
-    vacanteSolicitarVehiculoPropio.checked =
-      Boolean(
-        configuracion.solicitarVehiculoPropio
-      );
-  }
+if (vacanteSolicitarNombre) {
+  vacanteSolicitarNombre.checked =
+    Boolean(
+      configuracion.solicitarNombre
+    );
+}
 
-  if (vacanteSolicitarTiempoTraslado) {
-    vacanteSolicitarTiempoTraslado.checked =
-      configuracion.solicitarTiempoTraslado !== false;
-  }
 
-  if (vacanteSolicitarExperiencia) {
-    vacanteSolicitarExperiencia.checked =
-      configuracion.solicitarExperiencia !== false;
-  }
+/* Teléfono */
 
-  if (vacanteSolicitarEscolaridad) {
-    vacanteSolicitarEscolaridad.checked =
-      Boolean(
-        configuracion.solicitarEscolaridad
-      );
-  }
+if (vacanteSolicitarTelefono) {
+  vacanteSolicitarTelefono.checked =
+    Boolean(
+      configuracion.solicitarTelefono
+    );
+}
 
-  if (vacanteSolicitarDisponibilidad) {
-    vacanteSolicitarDisponibilidad.checked =
-      configuracion.solicitarDisponibilidad !== false;
-  }
+
+/* Correo */
+
+if (vacanteSolicitarCorreo) {
+  vacanteSolicitarCorreo.checked =
+    Boolean(
+      configuracion.solicitarCorreo
+    );
+}
+
+
+/* Código postal */
+
+if (vacanteSolicitarCodigoPostal) {
+  vacanteSolicitarCodigoPostal.checked =
+    Boolean(
+      configuracion.solicitarCodigoPostal
+    );
+}
+
+
+/* Medio de transporte */
+
+if (vacanteSolicitarTransporte) {
+  vacanteSolicitarTransporte.checked =
+    Boolean(
+      configuracion.solicitarTransporte
+    );
+}
+
+
+/* Vehículo propio */
+
+if (vacanteSolicitarVehiculoPropio) {
+  vacanteSolicitarVehiculoPropio.checked =
+    Boolean(
+      configuracion.solicitarVehiculoPropio
+    );
+}
+
+
+/* Tiempo máximo de traslado */
+
+if (vacanteSolicitarTiempoTraslado) {
+  vacanteSolicitarTiempoTraslado.checked =
+    Boolean(
+      configuracion.solicitarTiempoTraslado
+    );
+}
+
+
+/* Experiencia */
+
+if (vacanteSolicitarExperiencia) {
+  vacanteSolicitarExperiencia.checked =
+    Boolean(
+      configuracion.solicitarExperiencia
+    );
+}
+
+
+/* Escolaridad */
+
+if (vacanteSolicitarEscolaridad) {
+  vacanteSolicitarEscolaridad.checked =
+    Boolean(
+      configuracion.solicitarEscolaridad
+    );
+}
+
+
+/* Disponibilidad */
+
+if (vacanteSolicitarDisponibilidad) {
+  vacanteSolicitarDisponibilidad.checked =
+    Boolean(
+      configuracion.solicitarDisponibilidad
+    );
+}
 
   /* Preguntas personalizadas */
 
@@ -2603,93 +2675,20 @@ if (camposInvalidos.length) {
   
   
 
-  if (vacanteForm) {
+/* =========================================================
+   2. VALIDAR PREGUNTAS PERSONALIZADAS
+========================================================= */
 
-  vacanteForm.addEventListener(
-    "input",
-    (event) => {
+const validacionPreguntas =
+  validarPreguntasPersonalizadas();
 
-      const campo =
-        event.target;
-
-      if (
-        !campo.matches(
-          "input, select, textarea"
-        )
-      ) {
-        return;
-      }
-
-
-      if (campo.checkValidity()) {
-
-        const field =
-          campo.closest(".field");
-
-        if (!field) {
-          return;
-        }
-
-
-        field.classList.remove(
-          "field--error"
-        );
-
-
-        field
-          .querySelector(
-            ".field-error-message"
-          )
-          ?.remove();
-      }
-    }
+if (!validacionPreguntas.ok) {
+  setVacantesStatus(
+    `⚠️ ${validacionPreguntas.error}`
   );
 
-
-  vacanteForm.addEventListener(
-    "change",
-    (event) => {
-
-      const campo =
-        event.target;
-
-      if (
-        campo.matches(
-          "select"
-        ) &&
-        campo.checkValidity()
-      ) {
-
-        const field =
-          campo.closest(".field");
-
-        field?.classList.remove(
-          "field--error"
-        );
-
-        field
-          ?.querySelector(
-            ".field-error-message"
-          )
-          ?.remove();
-      }
-    }
-  );
+  return;
 }
-  /* =========================================================
-     2. VALIDAR PREGUNTAS PERSONALIZADAS
-  ========================================================= */
-
-  const validacionPreguntas =
-    validarPreguntasPersonalizadas();
-
-  if (!validacionPreguntas.ok) {
-    setVacantesStatus(
-      `⚠️ ${validacionPreguntas.error}`
-    );
-
-    return;
-  }
 
 
   /* =========================================================
@@ -2782,6 +2781,10 @@ if (camposInvalidos.length) {
             ?.checked
         ),
 
+      solicitarNombre:
+        Boolean(
+          vacanteSolicitarNombre?.checked
+        ),
 
       solicitarTelefono:
         Boolean(
@@ -3197,6 +3200,74 @@ async function eliminarVacante(id) {
     setVacantesStatus(`⚠️ ${error.message}`);
   }
 }
+
+if (vacanteForm) {
+
+  vacanteForm.addEventListener(
+    "input",
+    (event) => {
+
+      const campo = event.target;
+
+      if (
+        !campo.matches(
+          "input, select, textarea"
+        )
+      ) {
+        return;
+      }
+
+      if (campo.checkValidity()) {
+
+        const field =
+          campo.closest(".field");
+
+        if (!field) {
+          return;
+        }
+
+        field.classList.remove(
+          "field--error"
+        );
+
+        field
+          .querySelector(
+            ".field-error-message"
+          )
+          ?.remove();
+      }
+    }
+  );
+
+
+  vacanteForm.addEventListener(
+    "change",
+    (event) => {
+
+      const campo = event.target;
+
+      if (
+        campo.matches("select") &&
+        campo.checkValidity()
+      ) {
+
+        const field =
+          campo.closest(".field");
+
+        field?.classList.remove(
+          "field--error"
+        );
+
+        field
+          ?.querySelector(
+            ".field-error-message"
+          )
+          ?.remove();
+      }
+    }
+  );
+}
+
 
 /* =========================
    EVENTOS

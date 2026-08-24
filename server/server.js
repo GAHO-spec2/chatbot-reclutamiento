@@ -7808,23 +7808,55 @@ function normalizarConfiguracionPostulacion(
   return {
     cv,
 
-    solicitarTelefono: false,
+    solicitarNombre:
+      Boolean(
+        configuracion.solicitarNombre
+      ),
 
-    solicitarCorreo: false,
+    solicitarTelefono:
+      Boolean(
+        configuracion.solicitarTelefono
+      ),
 
-    solicitarExperiencia: false,
+    solicitarCorreo:
+      Boolean(
+        configuracion.solicitarCorreo
+      ),
 
-    solicitarEscolaridad: false,
+    solicitarCodigoPostal:
+      Boolean(
+        configuracion.solicitarCodigoPostal
+      ),
 
-    solicitarDisponibilidad: false,
+    solicitarTransporte:
+      Boolean(
+        configuracion.solicitarTransporte
+      ),
 
-    solicitarCodigoPostal: false,
+    solicitarVehiculoPropio:
+      Boolean(
+        configuracion.solicitarVehiculoPropio
+      ),
 
-    solicitarTransporte: false,
+    solicitarTiempoTraslado:
+      Boolean(
+        configuracion.solicitarTiempoTraslado
+      ),
 
-    solicitarVehiculoPropio: false,
+    solicitarExperiencia:
+      Boolean(
+        configuracion.solicitarExperiencia
+      ),
 
-    solicitarTiempoTraslado: false
+    solicitarEscolaridad:
+      Boolean(
+        configuracion.solicitarEscolaridad
+      ),
+
+    solicitarDisponibilidad:
+      Boolean(
+        configuracion.solicitarDisponibilidad
+      )
   };
 }
 
