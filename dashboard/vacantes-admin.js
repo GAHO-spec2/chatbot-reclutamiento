@@ -1,4 +1,5 @@
-const API_URL = "https://chatbot-reclutamiento-dcqb.onrender.com";
+﻿const API_URL =
+  window.location.origin;
 
 /* =========================
    FIREBASE AUTH
@@ -15,6 +16,7 @@ const firebaseConfig = {
 
 let auth = null;
 let adminToken = "";
+let currentAdminUser = null;
 
 if (window.firebase) {
   if (!firebase.apps.length) {
@@ -213,6 +215,68 @@ let ubicaciones = {};
 
 let vacanteQrActual = null;
 
+const confirmActionModal =
+  document.getElementById(
+    "confirmActionModal"
+  );
+
+const confirmActionBackdrop =
+  document.getElementById(
+    "confirmActionBackdrop"
+  );
+
+const closeConfirmActionBtn =
+  document.getElementById(
+    "closeConfirmActionBtn"
+  );
+
+const cancelConfirmActionBtn =
+  document.getElementById(
+    "cancelConfirmActionBtn"
+  );
+
+const acceptConfirmActionBtn =
+  document.getElementById(
+    "acceptConfirmActionBtn"
+  );
+
+const confirmActionTitle =
+  document.getElementById(
+    "confirmActionTitle"
+  );
+
+const confirmActionMessage =
+  document.getElementById(
+    "confirmActionMessage"
+  );
+
+const confirmActionDetail =
+  document.getElementById(
+    "confirmActionDetail"
+  );
+const logoutBtn =
+  document.getElementById(
+    "logoutBtn"
+  );
+const themeToggleBtn =
+  document.getElementById(
+    "themeToggleBtn"
+  );
+
+const themeToggleIcon =
+  document.getElementById(
+    "themeToggleIcon"
+  );
+
+const themeMenu =
+  document.getElementById(
+    "themeMenu"
+  );
+
+const themeOptions =
+  document.querySelectorAll(
+    ".theme-option"
+  );
 /* =========================
    HELPERS
 ========================= */
@@ -229,7 +293,253 @@ function authHeaders(extra = {}) {
     Authorization: `Bearer ${adminToken}`
   };
 }
+/* =========================================================
+   USUARIO ADMINISTRATIVO Y PERMISOS
+========================================================= */
 
+async function cargarUsuarioAdministrativo() {
+  const response = await fetch(
+    `${API_URL}/api/admin/me`,
+    {
+      method: "GET",
+      headers: authHeaders(),
+      cache: "no-store"
+    }
+  );
+
+  let data = null;
+
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      data?.error ||
+      "No fue posible validar tu acceso administrativo."
+    );
+  }
+
+  if (
+    !data?.user ||
+    !data.user.uid ||
+    !data.user.email
+  ) {
+    throw new Error(
+      "El servidor no devolvió un perfil administrativo válido."
+    );
+  }
+
+  currentAdminUser = data.user;
+
+    /* =====================================================
+     SIDEBAR ADMINISTRATIVO
+  ===================================================== */
+
+  const sidebarName =
+    document.getElementById(
+      "dashboardSidebarName"
+    );
+
+  const sidebarRole =
+    document.getElementById(
+      "dashboardSidebarRole"
+    );
+
+  const sidebarAvatar =
+    document.getElementById(
+      "dashboardSidebarAvatar"
+    );
+
+  const usuariosAdminNavLink =
+    document.getElementById(
+      "usuariosAdminNavLink"
+    );
+
+
+  if (sidebarName) {
+    sidebarName.textContent =
+      currentAdminUser.nombre ||
+      currentAdminUser.email ||
+      "Administrador";
+  }
+
+
+  if (sidebarRole) {
+    const roleLabels = {
+      admin: "Administrador",
+      reclutador: "Reclutador",
+      gerente: "Gerente"
+    };
+
+    sidebarRole.textContent =
+      currentAdminUser.isPrimaryAdmin
+        ? "Administrador principal"
+        : (
+            roleLabels[
+              currentAdminUser.role
+            ] ||
+            currentAdminUser.role ||
+            "Usuario"
+          );
+  }
+
+
+  if (sidebarAvatar) {
+    const avatarValue =
+      currentAdminUser.nombre ||
+      currentAdminUser.email ||
+      "A";
+
+    sidebarAvatar.textContent =
+      String(avatarValue)
+        .trim()
+        .charAt(0)
+        .toUpperCase();
+  }
+
+
+  if (usuariosAdminNavLink) {
+    const permissions =
+      Array.isArray(
+        currentAdminUser.permissions
+      )
+        ? currentAdminUser.permissions
+        : [];
+
+    if (
+      permissions.includes(
+        "usuarios.gestionar_admins"
+      )
+    ) {
+      usuariosAdminNavLink.classList.remove(
+        "hidden"
+      );
+    } else {
+      usuariosAdminNavLink.classList.add(
+        "hidden"
+      );
+    }
+  }
+
+  console.log(
+    "Usuario administrativo en Vacantes:",
+    {
+      nombre:
+        currentAdminUser.nombre,
+
+      email:
+        currentAdminUser.email,
+
+      role:
+        currentAdminUser.role,
+
+      globalAccess:
+        currentAdminUser.globalAccess,
+
+      permissions:
+        currentAdminUser.permissions
+    }
+  );
+
+  return currentAdminUser;
+}
+
+
+function hasPermission(permission) {
+  if (
+    !currentAdminUser ||
+    !permission
+  ) {
+    return false;
+  }
+
+  const permissions =
+    Array.isArray(
+      currentAdminUser.permissions
+    )
+      ? currentAdminUser.permissions
+      : [];
+
+  return permissions.includes(
+    permission
+  );
+}
+
+function configurarNavegacionPorPermisos() {
+
+  const reglasNavegacion = [
+    {
+      selector:
+        'a[href="dashboard.html"]',
+      permiso:
+        "candidatos.ver"
+    },
+    {
+      selector:
+        'a[href="vacantes-admin.html"]',
+      permiso:
+        "vacantes.ver"
+    },
+    {
+      selector:
+        'a[href="entrevistas.html"]',
+      permiso:
+        "entrevistas.ver"
+    },
+    {
+      selector:
+        'a[href="comunicaciones.html"]',
+      permiso:
+        "comunicaciones.ver"
+    },
+    {
+      selector:
+        'a[href="usuarios-admin.html"]',
+      permiso:
+        "usuarios.gestionar_admins"
+    }
+  ];
+
+  reglasNavegacion.forEach(
+    ({ selector, permiso }) => {
+
+      const elementos =
+        document.querySelectorAll(
+          selector
+        );
+
+      elementos.forEach(
+        (elemento) => {
+
+          elemento.classList.toggle(
+            "hidden",
+            !hasPermission(
+              permiso
+            )
+          );
+        }
+      );
+    }
+  );
+}
+
+async function cerrarSesion() {
+  try {
+    await auth.signOut();
+
+    window.location.href =
+      "login-admin.html";
+
+  } catch (error) {
+    console.error(
+      "Error cerrando sesión:",
+      error
+    );
+  }
+}
 function normalizarUrl(url = "") {
   return String(url || "").trim();
 }
@@ -382,7 +692,15 @@ async function cargarVacantesAdmin() {
       ciudad: adminFiltroCiudad?.value || ""
     });
 
-    const res = await fetch(`${API_URL}/api/vacantes?${params.toString()}`);
+    const res = await fetch(
+  `${API_URL}/api/admin/vacantes?${params.toString()}`,
+  {
+    method: "GET",
+    headers: authHeaders(),
+    cache: "no-store"
+  }
+);
+
 
     if (!res.ok) {
       throw new Error(`Error HTTP ${res.status}`);
@@ -857,123 +1175,6 @@ function abrirEnlaceQr() {
 
 
 function descargarQrPng() {
-  if (!qrCodeContainer) return;
-
-  const canvas =
-    qrCodeContainer.querySelector(
-      "canvas"
-    );
-
-  const img =
-    qrCodeContainer.querySelector(
-      "img"
-    );
-
-  let dataUrl = "";
-
-  if (canvas) {
-    dataUrl =
-      canvas.toDataURL("image/png");
-  } else if (img) {
-    dataUrl =
-      img.src;
-  }
-
-  if (!dataUrl) {
-    alert(
-      "No fue posible obtener la imagen del QR."
-    );
-    return;
-  }
-
-  const nombre =
-    String(
-      vacanteQrActual?.titulo ||
-      "vacante"
-    )
-      .toLowerCase()
-      .replace(
-        /[^a-z0-9]+/gi,
-        "-"
-      )
-      .replace(
-        /^-+|-+$/g,
-        ""
-      );
-
-  const link =
-    document.createElement("a");
-
-  link.href = dataUrl;
-
-  link.download =
-    `qr-${nombre || "vacante"}.png`;
-
-  document.body.appendChild(link);
-
-  link.click();
-
-  link.remove();
-}
-
-async function copiarEnlaceQr() {
-  const url =
-    qrVacanteUrl?.value || "";
-
-  if (!url) return;
-
-  try {
-    await navigator.clipboard
-      .writeText(url);
-
-    const textoAnterior =
-      copyQrVacanteUrlBtn
-        ?.textContent;
-
-    if (copyQrVacanteUrlBtn) {
-      copyQrVacanteUrlBtn
-        .textContent =
-        "✓ Copiado";
-
-      setTimeout(() => {
-        copyQrVacanteUrlBtn
-          .textContent =
-          textoAnterior ||
-          "Copiar enlace";
-      }, 1600);
-    }
-  } catch (error) {
-    console.error(
-      "Error copiando enlace QR:",
-      error
-    );
-
-    if (qrVacanteUrl) {
-      qrVacanteUrl.select();
-
-      document.execCommand(
-        "copy"
-      );
-    }
-  }
-}
-
-
-function abrirEnlaceQr() {
-  const url =
-    qrVacanteUrl?.value || "";
-
-  if (!url) return;
-
-  window.open(
-    url,
-    "_blank",
-    "noopener,noreferrer"
-  );
-}
-
-
-function descargarQrPng() {
   if (
     !qrCodeContainer ||
     !vacanteQrActual
@@ -983,11 +1184,15 @@ function descargarQrPng() {
 
   const canvas =
     qrCodeContainer
-      .querySelector("canvas");
+      .querySelector(
+        "canvas"
+      );
 
   const image =
     qrCodeContainer
-      .querySelector("img");
+      .querySelector(
+        "img"
+      );
 
   let dataUrl = "";
 
@@ -996,6 +1201,7 @@ function descargarQrPng() {
       canvas.toDataURL(
         "image/png"
       );
+
   } else if (image) {
     dataUrl =
       image.src;
@@ -1025,187 +1231,118 @@ function descargarQrPng() {
       );
 
   const link =
-    document.createElement("a");
+    document.createElement(
+      "a"
+    );
 
   link.href =
     dataUrl;
 
   link.download =
-    `qr-${nombre || "vacante"}.png`;
+    `qr-${
+      nombre || "vacante"
+    }.png`;
 
-  document.body
-    .appendChild(link);
+  document.body.appendChild(
+    link
+  );
 
   link.click();
+
   link.remove();
 }
 
-/* =========================================================
-   QR DE VACANTE
-========================================================= */
-
-function construirUrlQrVacante(vacante) {
-  const slug =
-    String(
-      vacante?.qr?.slug || ""
-    ).trim();
-
-  if (!slug) return "";
-
-  return `${API_URL}/?v=${encodeURIComponent(slug)}`;
-}
 
 
-function calcularConversionQr(vacante) {
-  const visitas =
-    Number(vacante?.qr?.visitas || 0);
+function confirmarAccion({
+  titulo = "Confirmar acción",
+  mensaje = "¿Deseas continuar?",
+  detalle = "",
+  textoConfirmar = "Confirmar",
+  tipo = "default"
+} = {}) {
 
-  const postulaciones =
-    Number(
-      vacante?.qr?.postulaciones || 0
+  return new Promise((resolve) => {
+
+    if (!confirmActionModal) {
+      resolve(false);
+      return;
+    }
+
+    confirmActionTitle.textContent =
+      titulo;
+
+    confirmActionMessage.textContent =
+      mensaje;
+
+    acceptConfirmActionBtn.textContent =
+      textoConfirmar;
+
+    confirmActionModal.classList.remove(
+      "confirm-action--danger",
+      "confirm-action--success"
     );
 
-  if (!visitas) return 0;
-
-  return Math.round(
-    (
-      postulaciones /
-      visitas *
-      100
-    ) * 10
-  ) / 10;
-}
-
-
-function renderQrVacante(url) {
-  if (!qrCodeContainer) return;
-
-  qrCodeContainer.innerHTML = "";
-
-  if (!url) {
-    qrCodeContainer.innerHTML =
-      `<div class="qr-placeholder">
-        QR no disponible
-      </div>`;
-
-    return;
-  }
-
-  if (
-    typeof window.QRCode !==
-    "function"
-  ) {
-    qrCodeContainer.innerHTML =
-      `<div class="qr-placeholder">
-        No fue posible cargar el QR
-      </div>`;
-
-    return;
-  }
-
-  new QRCode(
-    qrCodeContainer,
-    {
-      text: url,
-      width: 220,
-      height: 220,
-      correctLevel:
-        QRCode.CorrectLevel.H
+    if (tipo === "danger") {
+      confirmActionModal.classList.add(
+        "confirm-action--danger"
+      );
     }
-  );
-}
 
-
-function openVacanteQrModal(vacante) {
-  if (!vacanteQrModal) return;
-
-  vacanteQrActual = vacante;
-
-  const qr =
-    vacante.qr || {};
-
-  const url =
-    construirUrlQrVacante(vacante);
-
-  if (qrVacanteTitulo) {
-    qrVacanteTitulo.textContent =
-      vacante.titulo || "Vacante";
-  }
-
-  if (qrVacanteUbicacion) {
-    qrVacanteUbicacion.textContent =
-      [
-        vacante.grupo,
-        vacante.sucursal,
-        vacante.ciudad
-      ]
-        .filter(Boolean)
-        .join(" · ");
-  }
-
-  if (qrVacanteUrl) {
-    qrVacanteUrl.value = url;
-  }
-
-  if (qrVacanteVisitas) {
-    qrVacanteVisitas.textContent =
-      Number(
-        qr.visitas || 0
+    if (tipo === "success") {
+      confirmActionModal.classList.add(
+        "confirm-action--success"
       );
-  }
+    }
 
-  if (qrVacantePostulaciones) {
-    qrVacantePostulaciones.textContent =
-      Number(
-        qr.postulaciones || 0
+    if (detalle) {
+      confirmActionDetail.textContent =
+        detalle;
+
+      confirmActionDetail.classList.remove(
+        "hidden"
       );
-  }
+    } else {
+      confirmActionDetail.textContent = "";
 
-  if (qrVacanteConversion) {
-    qrVacanteConversion.textContent =
-      `${calcularConversionQr(
-        vacante
-      )}%`;
-  }
+      confirmActionDetail.classList.add(
+        "hidden"
+      );
+    }
 
-  const activo =
-    qr.activo !== false;
+    confirmActionModal.classList.remove(
+      "hidden"
+    );
 
-  if (qrVacanteStatus) {
-    qrVacanteStatus.textContent =
-      activo
-        ? "● QR activo"
-        : "● QR desactivado";
-  }
+    const cerrar = (resultado) => {
 
-  if (toggleVacanteQrBtn) {
-    toggleVacanteQrBtn.textContent =
-      activo
-        ? "Desactivar QR"
-        : "Activar QR";
-  }
+      confirmActionModal.classList.add(
+        "hidden"
+      );
 
-  renderQrVacante(url);
+      acceptConfirmActionBtn.onclick = null;
+      cancelConfirmActionBtn.onclick = null;
+      closeConfirmActionBtn.onclick = null;
+      confirmActionBackdrop.onclick = null;
 
-  vacanteQrModal
-    .classList
-    .remove("hidden");
+      resolve(resultado);
+    };
+
+    acceptConfirmActionBtn.onclick =
+      () => cerrar(true);
+
+    cancelConfirmActionBtn.onclick =
+      () => cerrar(false);
+
+    closeConfirmActionBtn.onclick =
+      () => cerrar(false);
+
+    confirmActionBackdrop.onclick =
+      () => cerrar(false);
+  });
 }
 
 
-function closeVacanteQrModal() {
-  if (!vacanteQrModal) return;
-
-  vacanteQrModal
-    .classList
-    .add("hidden");
-
-  vacanteQrActual = null;
-
-  if (qrCodeContainer) {
-    qrCodeContainer.innerHTML = "";
-  }
-}
 /* =========================
    PREGUNTAS PERSONALIZADAS
 ========================= */
@@ -1909,7 +2046,7 @@ function openVacanteModal(vacante = null) {
     vacanteLng.value =
       vacante.lng ?? "";
   }
-  /* =========================
+ /* =========================
    EVENTOS QR
 ========================= */
 
@@ -3036,6 +3173,46 @@ if (!validacionPreguntas.ok) {
       isEdit
         ? "PUT"
         : "POST";
+    
+    /* =========================================================
+   CONFIRMAR CREACIÓN / ACTUALIZACIÓN
+========================================================= */
+
+const confirmacionGuardado =
+  await confirmarAccion({
+
+    titulo:
+      isEdit
+        ? "Actualizar vacante"
+        : "Crear nueva vacante",
+
+    mensaje:
+      isEdit
+        ? "¿Deseas guardar los cambios realizados en esta vacante?"
+        : "¿Deseas publicar esta nueva vacante?",
+
+    detalle:
+      `${payload.titulo || "Vacante"} · ${
+        payload.sucursal || "Sin sucursal"
+      } · ${
+        payload.ciudad || "Sin ciudad"
+      }`,
+
+    textoConfirmar:
+      isEdit
+        ? "Actualizar vacante"
+        : "Crear vacante",
+
+    tipo:
+      isEdit
+        ? "default"
+        : "success"
+  });
+
+
+if (!confirmacionGuardado) {
+  return;
+}
 
 
     /* Desactivar botón mientras procesa */
@@ -3172,9 +3349,34 @@ if (!validacionPreguntas.ok) {
    ELIMINAR VACANTE
 ========================= */
 async function eliminarVacante(id) {
-  const confirmDelete = confirm("¿Seguro que deseas eliminar esta vacante?");
+  const vacante =
+  vacantes.find(
+    (item) => item.id === id
+  );
 
-  if (!confirmDelete) return;
+const confirmDelete =
+  await confirmarAccion({
+    titulo:
+      "Eliminar vacante",
+
+    mensaje:
+      "¿Deseas eliminar esta vacante permanentemente?",
+
+    detalle:
+      vacante
+        ? `${vacante.titulo || "Vacante"} · ${vacante.sucursal || "Sin sucursal"}`
+        : "Esta acción no se puede deshacer.",
+
+    textoConfirmar:
+      "Eliminar vacante",
+
+    tipo:
+      "danger"
+  });
+
+if (!confirmDelete) {
+  return;
+}
 
   if (!adminToken) {
     setVacantesStatus("⚠️ Tu sesión administrativa no está lista. Cierra sesión e inicia sesión de nuevo.");
@@ -3268,6 +3470,148 @@ if (vacanteForm) {
   );
 }
 
+/* =========================================================
+   APARIENCIA DEL DASHBOARD
+========================================================= */
+
+const THEME_STORAGE_KEY =
+  "gah-dashboard-theme";
+
+
+function getSystemTheme() {
+  return window.matchMedia(
+    "(prefers-color-scheme: dark)"
+  ).matches
+    ? "dark"
+    : "light";
+}
+
+
+function getSavedTheme() {
+  const saved =
+    localStorage.getItem(
+      THEME_STORAGE_KEY
+    );
+
+  if (
+    saved === "dark" ||
+    saved === "light" ||
+    saved === "system"
+  ) {
+    return saved;
+  }
+
+  return "system";
+}
+
+
+function applyTheme(
+  theme = "system"
+) {
+
+  const resolvedTheme =
+    theme === "system"
+      ? getSystemTheme()
+      : theme;
+
+
+  document.documentElement.dataset.theme =
+    resolvedTheme;
+
+
+  document.documentElement.dataset.themePreference =
+    theme;
+
+
+  themeOptions.forEach(
+    (option) => {
+
+      option.classList.toggle(
+        "is-active",
+        option.dataset.themeValue ===
+          theme
+      );
+    }
+  );
+
+
+  if (themeToggleIcon) {
+
+    themeToggleIcon.textContent =
+      theme === "light"
+        ? "☀️"
+        : theme === "dark"
+          ? "🌙"
+          : "◐";
+  }
+}
+
+
+function saveTheme(
+  theme
+) {
+
+  localStorage.setItem(
+    THEME_STORAGE_KEY,
+    theme
+  );
+
+  applyTheme(theme);
+}
+
+
+function closeThemeMenu() {
+
+  if (!themeMenu) {
+    return;
+  }
+
+  themeMenu.classList.add(
+    "hidden"
+  );
+
+  themeToggleBtn?.setAttribute(
+    "aria-expanded",
+    "false"
+  );
+}
+
+
+function openThemeMenu() {
+
+  if (!themeMenu) {
+    return;
+  }
+
+  themeMenu.classList.remove(
+    "hidden"
+  );
+
+  themeToggleBtn?.setAttribute(
+    "aria-expanded",
+    "true"
+  );
+}
+
+
+function toggleThemeMenu() {
+
+  if (!themeMenu) {
+    return;
+  }
+
+  const isHidden =
+    themeMenu.classList.contains(
+      "hidden"
+    );
+
+  if (isHidden) {
+    openThemeMenu();
+  } else {
+    closeThemeMenu();
+  }
+}
+
 
 /* =========================
    EVENTOS
@@ -3357,17 +3701,173 @@ if (closeVacanteQrBackdrop) {
       closeVacanteQrModal
     );
 }
+
+/* =========================================================
+   EVENTOS DE APARIENCIA
+========================================================= */
+
+if (logoutBtn) {
+  logoutBtn.addEventListener(
+    "click",
+    cerrarSesion
+  );
+}
+if (themeToggleBtn) {
+
+  themeToggleBtn.addEventListener(
+    "click",
+    (event) => {
+
+      event.stopPropagation();
+
+      toggleThemeMenu();
+    }
+  );
+}
+
+
+themeOptions.forEach(
+  (option) => {
+
+    option.addEventListener(
+      "click",
+      () => {
+
+        const theme =
+          option.dataset.themeValue;
+
+        saveTheme(theme);
+
+        closeThemeMenu();
+      }
+    );
+  }
+);
+
+
+document.addEventListener(
+  "click",
+  (event) => {
+
+    if (
+      !themeMenu ||
+      themeMenu.classList.contains(
+        "hidden"
+      )
+    ) {
+      return;
+    }
+
+    if (
+      themeMenu.contains(
+        event.target
+      ) ||
+      themeToggleBtn?.contains(
+        event.target
+      )
+    ) {
+      return;
+    }
+
+    closeThemeMenu();
+  }
+);
+
+
+
+const systemThemeMedia =
+  window.matchMedia(
+    "(prefers-color-scheme: dark)"
+  );
+
+
+systemThemeMedia.addEventListener(
+  "change",
+  () => {
+
+    const savedTheme =
+      getSavedTheme();
+
+    if (
+      savedTheme === "system"
+    ) {
+      applyTheme(
+        "system"
+      );
+    }
+  }
+);
+
+
+
 /* =========================
    INIT
 ========================= */
 
 async function init() {
 
-  /* Etiquetas Obligatorio / Opcional */
+  /* =========================================================
+     CARGAR PERFIL ADMINISTRATIVO
+  ========================================================= */
+
+  await cargarUsuarioAdministrativo();
+
+  configurarNavegacionPorPermisos();
+
+
+  /* =========================================================
+     CONTROL DE ACCESO AL MÓDULO DE VACANTES
+  ========================================================= */
+
+  if (
+    !hasPermission(
+      "vacantes.ver"
+    )
+  ) {
+    console.warn(
+      "Acceso denegado al módulo de Vacantes:",
+      {
+        email:
+          currentAdminUser?.email ||
+          "",
+
+        permisoRequerido:
+          "vacantes.ver"
+      }
+    );
+
+    window.location.href =
+      "dashboard.html";
+
+    return;
+  }
+
+
+  /* =========================================================
+     CONTROL DE ACCIONES SEGÚN PERMISOS
+  ========================================================= */
+
+  if (openVacanteModalBtn) {
+    openVacanteModalBtn.hidden =
+      !hasPermission(
+        "vacantes.crear"
+      );
+  }
+
+
+  /* =========================================================
+     ETIQUETAS OBLIGATORIO / OPCIONAL
+  ========================================================= */
+
   configurarIndicadoresCamposVacante();
 
-  /* Cargar ubicaciones */
+
+  /* =========================================================
+     CARGAR UBICACIONES
+  ========================================================= */
+
   await cargarUbicaciones();
+
 
   if (
     adminFiltroPais &&
@@ -3381,7 +3881,11 @@ async function init() {
     );
   }
 
-  /* Cargar vacantes */
+
+  /* =========================================================
+     CARGAR VACANTES
+  ========================================================= */
+
   await cargarVacantesAdmin();
 }
 /* =========================
@@ -3389,20 +3893,75 @@ async function init() {
 ========================= */
 if (auth) {
   auth.onAuthStateChanged(async (user) => {
+
     if (!user) {
       window.location.href = "login-admin.html";
       return;
     }
 
+
+    /* =====================================================
+       1. VALIDAR AUTENTICACIÓN
+    ===================================================== */
+
     try {
-      adminToken = await user.getIdToken(true);
-      await init();
+
+      adminToken =
+        await user.getIdToken(true);
+
     } catch (error) {
-      console.error("Error obteniendo token admin:", error);
-      window.location.href = "login-admin.html";
+
+      console.error(
+        "Error obteniendo token admin:",
+        error
+      );
+
+      window.location.href =
+        "login-admin.html";
+
+      return;
     }
+
+
+    /* =====================================================
+       2. INICIALIZAR MÓDULO DE VACANTES
+    ===================================================== */
+
+    try {
+
+      await init();
+
+    } catch (error) {
+
+      console.error(
+        "Error inicializando administración de vacantes:",
+        error
+      );
+
+
+      if (vacantesAdminStatus) {
+
+        vacantesAdminStatus.textContent =
+          error?.message ||
+          "No fue posible cargar la administración de vacantes.";
+
+      }
+    }
+
   });
+
 } else {
-  console.warn("Firebase Auth no está cargado en vacantes-admin.html.");
-  init();
+
+  console.warn(
+    "Firebase Auth no está cargado en vacantes-admin.html."
+  );
+
+  init().catch((error) => {
+
+    console.error(
+      "Error inicializando administración de vacantes:",
+      error
+    );
+
+  });
 }

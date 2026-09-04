@@ -235,12 +235,15 @@ function crearCommunicationsService({
           datos.creadoPor
         ) || "sistema",
 
-      metadata:
+            metadata:
         datos.metadata &&
         typeof datos.metadata ===
           "object"
           ? datos.metadata
-          : {}
+          : {},
+
+      sensible:
+        datos.sensible === true
     });
   }
 

@@ -903,13 +903,13 @@ Departamento de Reclutamiento
 
   {
     id:
-      "entrevista_reagendada",
+      "acceso_usuario",
 
     nombre:
-      "Entrevista reagendada",
+      "Acceso al sistema de reclutamiento",
 
     tipo:
-      "entrevista_reagendada",
+      "acceso_usuario",
 
     canal:
       "email",
@@ -918,33 +918,26 @@ Departamento de Reclutamiento
       "es",
 
     descripcion:
-      "Notificación con la nueva fecha, hora y detalles de una entrevista reprogramada.",
+      "Correo para que un usuario administrativo configure o restablezca su contraseña de acceso.",
 
     asunto:
-      "Tu entrevista fue reprogramada | GA Hospitality",
+      "Configura tu acceso | GA Hospitality",
 
     contenidoTexto:
 `Hola {{nombre}},
 
-Tu entrevista ha sido reprogramada.
+Se ha habilitado tu acceso al Sistema de Reclutamiento de GA Hospitality.
 
-Vacante: {{vacante}}
-Nueva fecha: {{fecha}}
-Nueva hora: {{hora}}
-Duración: {{duracion}}
-Modalidad: {{modalidad}}
+Correo de acceso:
+{{correo}}
 
-Sucursal: {{sucursal}}
-Dirección: {{direccion}}
-Lugar específico: {{lugarEntrevista}}
+Para crear o restablecer tu contraseña, utiliza el siguiente enlace:
 
-Entrevistador: {{reclutador}}
+{{accesoUrl}}
 
-Ubicación:
-{{googleMaps}}
+Por seguridad, este enlace es personal. No lo compartas con otras personas.
 
-Confirma nuevamente tu asistencia:
-{{confirmarUrl}}
+Si tú no solicitaste este acceso o no reconoces esta invitación, puedes ignorar este mensaje.
 
 Atentamente,
 Departamento de Reclutamiento
@@ -962,7 +955,7 @@ Departamento de Reclutamiento
   >
 
   <title>
-    Entrevista reprogramada
+    Configura tu acceso
   </title>
 </head>
 
@@ -1005,32 +998,19 @@ Departamento de Reclutamiento
             box-shadow:0 14px 40px rgba(31,44,68,0.12);
           "
         >
+
           <tr>
             <td
               style="
-                padding:31px;
+                padding:32px;
                 background:linear-gradient(
                   135deg,
-                  #171c2c,
-                  #7254b7
+                  #111b2e,
+                  #244d88
                 );
                 text-align:center;
               "
             >
-              <div
-                style="
-                  margin:0 auto 13px;
-                  width:54px;
-                  height:54px;
-                  line-height:54px;
-                  border-radius:50%;
-                  background:rgba(255,255,255,0.14);
-                  font-size:25px;
-                "
-              >
-                🔄
-              </div>
-
               <h1
                 style="
                   margin:0;
@@ -1038,26 +1018,96 @@ Departamento de Reclutamiento
                   font-size:25px;
                 "
               >
-                Entrevista reprogramada
+                GA Hospitality
               </h1>
+
+              <p
+                style="
+                  margin:8px 0 0;
+                  color:#d9e4f4;
+                  font-size:14px;
+                "
+              >
+                Sistema de Reclutamiento
+              </p>
             </td>
           </tr>
 
           <tr>
             <td
               style="
-                padding:34px;
+                padding:36px 34px;
               "
             >
+              <p
+                style="
+                  margin:0 0 8px;
+                  color:#718096;
+                  font-size:13px;
+                  font-weight:bold;
+                  text-transform:uppercase;
+                  letter-spacing:0.06em;
+                "
+              >
+                Acceso administrativo
+              </p>
+
               <h2
                 style="
-                  margin:0 0 17px;
-                  color:#17243a;
-                  font-size:24px;
+                  margin:0 0 18px;
+                  color:#162238;
+                  font-size:25px;
+                  line-height:1.3;
                 "
               >
                 Hola {{nombre}}
               </h2>
+
+              <p
+                style="
+                  margin:0 0 20px;
+                  color:#55637a;
+                  font-size:15px;
+                  line-height:1.75;
+                "
+              >
+                Se ha habilitado tu acceso al
+                Sistema de Reclutamiento de
+                <strong>{{empresa}}</strong>.
+              </p>
+
+              <div
+                style="
+                  margin:22px 0;
+                  padding:18px 20px;
+                  background:#f6f8fc;
+                  border:1px solid #e6ebf2;
+                  border-radius:12px;
+                "
+              >
+                <p
+                  style="
+                    margin:0 0 5px;
+                    color:#718096;
+                    font-size:12px;
+                    font-weight:bold;
+                    text-transform:uppercase;
+                  "
+                >
+                  Correo de acceso
+                </p>
+
+                <p
+                  style="
+                    margin:0;
+                    color:#17243a;
+                    font-size:15px;
+                    font-weight:bold;
+                  "
+                >
+                  {{correo}}
+                </p>
+              </div>
 
               <p
                 style="
@@ -1067,163 +1117,46 @@ Departamento de Reclutamiento
                   line-height:1.75;
                 "
               >
-                Tu entrevista para la vacante
-                <strong>{{vacante}}</strong>
-                ha sido reprogramada.
+                Utiliza el siguiente botón para crear o
+                restablecer tu contraseña.
               </p>
 
               <div
                 style="
-                  margin:24px 0;
-                  padding:22px;
-                  background:#f6f3fc;
-                  border:1px solid #e8e0f6;
-                  border-radius:13px;
+                  margin:28px 0;
+                  text-align:center;
                 "
               >
-                <p
+                <a
+                  href="{{accesoUrl}}"
                   style="
-                    margin:0 0 12px;
-                    color:#6e5c91;
-                    font-size:12px;
+                    display:inline-block;
+                    padding:15px 26px;
+                    background:#244d88;
+                    color:#ffffff;
+                    text-decoration:none;
+                    border-radius:9px;
+                    font-size:15px;
                     font-weight:bold;
-                    text-transform:uppercase;
                   "
                 >
-                  Nueva información
-                </p>
-
-                <p
-                  style="
-                    margin:7px 0;
-                    color:#29354a;
-                    font-size:14px;
-                  "
-                >
-                  <strong>
-                    Fecha:
-                  </strong>
-
-                  {{fecha}}
-                </p>
-
-                <p
-                  style="
-                    margin:7px 0;
-                    color:#29354a;
-                    font-size:14px;
-                  "
-                >
-                  <strong>
-                    Hora:
-                  </strong>
-
-                  {{hora}}
-                </p>
-
-                <p
-                  style="
-                    margin:7px 0;
-                    color:#29354a;
-                    font-size:14px;
-                  "
-                >
-                  <strong>
-                    Duración:
-                  </strong>
-
-                  {{duracion}}
-                </p>
-
-                <p
-                  style="
-                    margin:7px 0;
-                    color:#29354a;
-                    font-size:14px;
-                  "
-                >
-                  <strong>
-                    Modalidad:
-                  </strong>
-
-                  {{modalidad}}
-                </p>
+                  Configurar mi contraseña
+                </a>
               </div>
-
-              <h3
-                style="
-                  margin:0 0 10px;
-                  color:#17243a;
-                  font-size:17px;
-                "
-              >
-                Lugar
-              </h3>
 
               <p
                 style="
-                  margin:0 0 23px;
-                  color:#55637a;
-                  font-size:14px;
+                  margin:24px 0 0;
+                  color:#7c8798;
+                  font-size:12px;
                   line-height:1.7;
                 "
               >
-                <strong>
-                  {{sucursal}}
-                </strong>
-                <br>
-
-                {{direccion}}
-                <br>
-
-                {{lugarEntrevista}}
+                Por seguridad, este enlace es personal.
+                No lo compartas con otras personas.
+                Si no reconoces esta invitación,
+                puedes ignorar este mensaje.
               </p>
-
-              <div
-                style="
-                  margin:0 0 25px;
-                  text-align:center;
-                "
-              >
-                <a
-                  href="{{googleMaps}}"
-                  style="
-                    display:inline-block;
-                    padding:13px 21px;
-                    background:#7254b7;
-                    color:#ffffff;
-                    text-decoration:none;
-                    border-radius:9px;
-                    font-size:14px;
-                    font-weight:bold;
-                  "
-                >
-                  Consultar ubicación
-                </a>
-              </div>
-
-              <div
-                style="
-                  margin-top:25px;
-                  text-align:center;
-                "
-              >
-                <a
-                  href="{{confirmarUrl}}"
-                  style="
-                    display:inline-block;
-                    padding:14px 23px;
-                    background:#1f9a62;
-                    color:#ffffff;
-                    text-decoration:none;
-                    border-radius:9px;
-                    font-size:14px;
-                    font-weight:bold;
-                  "
-                >
-                  Confirmar nueva fecha
-                </a>
-              </div>
             </td>
           </tr>
 
@@ -1235,11 +1168,13 @@ Departamento de Reclutamiento
                 color:#7b8799;
                 text-align:center;
                 font-size:12px;
+                line-height:1.6;
               "
             >
               {{empresa}} · Departamento de Reclutamiento
             </td>
           </tr>
+
         </table>
 
       </td>
@@ -1255,6 +1190,7 @@ Departamento de Reclutamiento
       1
   }
 ];
+    
 
 /* =========================================================
    OBTENER COPIA SEGURA

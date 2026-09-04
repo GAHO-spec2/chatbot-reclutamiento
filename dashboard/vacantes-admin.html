@@ -9,19 +9,186 @@
 </head>
 <body>
 
-  <header class="topbar">
-    <div class="topbar__left">
-      <img src="gaho.png" alt="GA Hospitality" class="corporativo-logo" />
-      <div>
-        <h2>GA Hospitality</h2>
-        <p>Administración de vacantes</p>
+<!-- =======================================================
+     LAYOUT PRINCIPAL
+======================================================== -->
+<div class="admin-shell">
+
+  <!-- =====================================================
+       SIDEBAR
+  ====================================================== -->
+  <aside class="admin-sidebar">
+
+    <div class="admin-brand">
+
+      <img
+        src="gaho.png"
+        alt="GA Hospitality"
+        class="admin-brand-logo"
+      />
+
+      <div class="admin-brand-copy">
+        <strong>GA Hospitality</strong>
+        <span>Recruitment Center</span>
       </div>
+
     </div>
 
-    <div class="topbar__right">
-      <a href="dashboard.html" class="btn btn--secondary">Ver candidatos</a>
+
+    <nav class="admin-nav">
+
+      <a
+        href="dashboard.html"
+        class="admin-nav-item"
+      >
+        <span class="admin-nav-icon">⌂</span>
+        <span>Dashboard</span>
+      </a>
+
+      <a
+        href="vacantes-admin.html"
+        class="admin-nav-item active"
+      >
+        <span class="admin-nav-icon">▣</span>
+        <span>Vacantes</span>
+      </a>
+
+      <a
+        href="entrevistas.html"
+        class="admin-nav-item"
+      >
+        <span class="admin-nav-icon">◷</span>
+        <span>Entrevistas</span>
+      </a>
+
+      <a
+        href="comunicaciones.html"
+        class="admin-nav-item"
+      >
+        <span class="admin-nav-icon">✉</span>
+        <span>Comunicaciones</span>
+      </a>
+
+      <a
+        id="usuariosAdminNavLink"
+        href="usuarios-admin.html"
+        class="admin-nav-item hidden"
+      >
+        <span class="admin-nav-icon">♙</span>
+        <span>Usuarios y accesos</span>
+      </a>
+
+    </nav>
+
+
+    <div class="admin-sidebar-footer">
+
+      <div class="theme-switcher admin-theme-switcher">
+
+        <button
+          id="themeToggleBtn"
+          class="admin-sidebar-action"
+          type="button"
+          aria-haspopup="true"
+          aria-expanded="false"
+        >
+          <span id="themeToggleIcon">◐</span>
+          <span>Apariencia</span>
+        </button>
+
+        <div
+          id="themeMenu"
+          class="theme-menu hidden"
+        >
+
+          <button
+            class="theme-option"
+            type="button"
+            data-theme-value="system"
+          >
+            <span class="theme-option__icon">🖥️</span>
+
+            <span>
+              <strong>Sistema</strong>
+              <small>
+                Usa la apariencia de tu dispositivo
+              </small>
+            </span>
+          </button>
+
+          <button
+            class="theme-option"
+            type="button"
+            data-theme-value="dark"
+          >
+            <span class="theme-option__icon">🌙</span>
+
+            <span>
+              <strong>Oscuro</strong>
+              <small>Interfaz oscura</small>
+            </span>
+          </button>
+
+          <button
+            class="theme-option"
+            type="button"
+            data-theme-value="light"
+          >
+            <span class="theme-option__icon">☀️</span>
+
+            <span>
+              <strong>Claro</strong>
+              <small>Interfaz clara</small>
+            </span>
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <div class="admin-current-user">
+
+        <div
+          id="dashboardSidebarAvatar"
+          class="admin-user-avatar"
+        >
+          A
+        </div>
+
+        <div class="admin-current-user-copy">
+
+          <strong id="dashboardSidebarName">
+            Administrador
+          </strong>
+
+          <span id="dashboardSidebarRole">
+            Cargando...
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <button
+        id="logoutBtn"
+        class="admin-sidebar-action admin-logout-btn"
+        type="button"
+      >
+        <span>↪</span>
+        <span>Cerrar sesión</span>
+      </button>
+
     </div>
-  </header>
+
+  </aside>
+
+
+  <!-- =====================================================
+       CONTENIDO DE VACANTES
+  ====================================================== -->
+  <div class="admin-main">
 
   <main class="container dashboard-container">
     <section class="card">
@@ -926,6 +1093,88 @@
 
     </div>
   </div>
+  
+  <!-- ==========================================
+     MODAL DE CONFIRMACIÓN GENERAL
+=========================================== -->
+
+<div id="confirmActionModal" class="modal hidden">
+
+  <div
+    id="confirmActionBackdrop"
+    class="modal__backdrop"
+  ></div>
+
+  <div class="modal__content confirm-modal__content">
+
+    <div class="modal__header">
+
+      <div>
+        <span
+          id="confirmActionEyebrow"
+          class="config-eyebrow"
+        >
+          Confirmación
+        </span>
+
+        <h3 id="confirmActionTitle">
+          Confirmar acción
+        </h3>
+
+        <p id="confirmActionMessage">
+          ¿Deseas continuar?
+        </p>
+      </div>
+
+      <button
+        id="closeConfirmActionBtn"
+        class="chatbot-close"
+        type="button"
+        aria-label="Cerrar"
+      >
+        ✕
+      </button>
+
+    </div>
+
+    <div class="modal__body">
+
+      <div
+        id="confirmActionDetail"
+        class="confirm-action-detail hidden"
+      ></div>
+
+    </div>
+
+    <div class="modal__footer confirm-modal__footer">
+
+      <button
+        id="cancelConfirmActionBtn"
+        class="btn btn--secondary"
+        type="button"
+      >
+        Cancelar
+      </button>
+
+      <button
+        id="acceptConfirmActionBtn"
+        class="btn btn--primary"
+        type="button"
+      >
+        Confirmar
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+  </div>
+  <!-- FIN admin-main -->
+
+</div>
+<!-- FIN admin-shell -->
 
 
   <!-- FIREBASE -->

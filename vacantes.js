@@ -1,4 +1,6 @@
-const API_URL = "https://chatbot-reclutamiento-dcqb.onrender.com";
+﻿const API_URL =
+  window.location.origin;
+
 
 const vacantesResultados = document.getElementById("vacantesResultados");
 const vacantesStatus = document.getElementById("vacantesStatus");
@@ -233,5 +235,6 @@ async function cargarVacantesFiltradas() {
 }
 
 cargarVacantesFiltradas();
+
 
 

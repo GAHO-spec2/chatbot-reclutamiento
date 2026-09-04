@@ -8,6 +8,11 @@ const {
 
 /* =========================================================
    INSTALADOR DE PLANTILLAS INICIALES
+
+   Comportamiento:
+   - Conserva las plantillas existentes.
+   - Instala únicamente las que falten.
+   - No sobrescribe personalizaciones existentes.
 ========================================================= */
 
 async function instalarPlantillasIniciales({
@@ -20,47 +25,41 @@ async function instalarPlantillasIniciales({
     );
   }
 
-  /*
-   * Consultamos todas las plantillas,
-   * incluyendo activas e inactivas.
-   */
   const existentes =
     await service.listarPlantillas({
-      incluirInactivas:
-        true
+      incluirInactivas: true
     });
-
-  /*
-   * Si ya existe al menos una plantilla,
-   * no instalamos nada.
-   */
-  if (
-    Array.isArray(existentes) &&
-    existentes.length > 0
-  ) {
-    return {
-      instalado:
-        false,
-
-      motivo:
-        "plantillas_existentes",
-
-      totalExistentes:
-        existentes.length,
-
-      creadas: []
-    };
-  }
 
   const plantillasIniciales =
     obtenerPlantillasIniciales();
 
+  const idsExistentes =
+    new Set(
+      (Array.isArray(existentes)
+        ? existentes
+        : []
+      )
+        .map((plantilla) =>
+          String(
+            plantilla?.id || ""
+          ).trim()
+        )
+        .filter(Boolean)
+    );
+
+  const faltantes =
+    plantillasIniciales.filter(
+      (plantilla) =>
+        !idsExistentes.has(
+          String(
+            plantilla?.id || ""
+          ).trim()
+        )
+    );
+
   const creadas = [];
 
-  for (
-    const plantilla
-    of plantillasIniciales
-  ) {
+  for (const plantilla of faltantes) {
     try {
       const creada =
         await service.crearPlantilla(
@@ -70,14 +69,12 @@ async function instalarPlantillasIniciales({
           }
         );
 
-      creadas.push(
-        creada
-      );
+      creadas.push(creada);
     } catch (error) {
       /*
-       * Si una plantilla apareció entre
-       * la consulta y la creación, no
-       * detenemos toda la instalación.
+       * Si otra ejecución creó la plantilla
+       * mientras se procesaba la instalación,
+       * simplemente continuamos.
        */
       if (
         error.code ===
@@ -96,13 +93,23 @@ async function instalarPlantillasIniciales({
 
   return {
     instalado:
-      true,
+      creadas.length > 0,
 
     motivo:
-      "base_vacia",
+      faltantes.length > 0
+        ? "plantillas_faltantes_instaladas"
+        : "plantillas_actualizadas",
 
     totalExistentes:
-      0,
+      Array.isArray(existentes)
+        ? existentes.length
+        : 0,
+
+    totalIniciales:
+      plantillasIniciales.length,
+
+    totalFaltantes:
+      faltantes.length,
 
     totalCreadas:
       creadas.length,

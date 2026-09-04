@@ -26,51 +26,203 @@
   <!-- =========================
        ENCABEZADO
   ========================== -->
-  <header class="topbar">
-    <div class="topbar__left">
+ <!-- =======================================================
+     LAYOUT PRINCIPAL
+======================================================== -->
+<div class="admin-shell">
+
+  <!-- =====================================================
+       SIDEBAR
+  ====================================================== -->
+  <aside class="admin-sidebar">
+
+    <div class="admin-brand">
+
       <img
         src="gaho.png"
         alt="GA Hospitality"
-        class="corporativo-logo"
+        class="admin-brand-logo"
       />
 
-      <div>
-        <h2>GA Hospitality</h2>
-        <p>Dashboard de reclutamiento</p>
+      <div class="admin-brand-copy">
+        <strong>GA Hospitality</strong>
+        <span>Recruitment Center</span>
       </div>
+
     </div>
 
-    <div class="topbar__right">
+
+    <nav class="admin-nav">
+
       <a
-        href="entrevistas.html"
-        class="btn btn--secondary"
+        href="dashboard.html"
+        class="admin-nav-item active"
       >
-        Entrevistas
+        <span class="admin-nav-icon">⌂</span>
+        <span>Dashboard</span>
       </a>
 
       <a
         href="vacantes-admin.html"
-        class="btn btn--secondary"
+        class="admin-nav-item"
       >
-        Administrar vacantes
-      </a>
-      
-      <a
-        href="comunicaciones.html"
-        class="btn btn--secondary"
-      >
-        Communication Center
+        <span class="admin-nav-icon">▣</span>
+        <span>Vacantes</span>
       </a>
 
+      <a
+        href="entrevistas.html"
+        class="admin-nav-item"
+      >
+        <span class="admin-nav-icon">◷</span>
+        <span>Entrevistas</span>
+      </a>
+
+      <a
+        href="comunicaciones.html"
+        class="admin-nav-item"
+      >
+        <span class="admin-nav-icon">✉</span>
+        <span>Comunicaciones</span>
+      </a>
+
+      <a
+        id="usuariosAdminNavLink"
+        href="usuarios-admin.html"
+        class="admin-nav-item hidden"
+      >
+        <span class="admin-nav-icon">♙</span>
+        <span>Usuarios y accesos</span>
+      </a>
+
+    </nav>
+
+
+    <div class="admin-sidebar-footer">
+
+      <!-- ===============================================
+           APARIENCIA
+      ================================================ -->
+      <div class="theme-switcher admin-theme-switcher">
+
+        <button
+          id="themeToggleBtn"
+          class="admin-sidebar-action"
+          type="button"
+          aria-haspopup="true"
+          aria-expanded="false"
+        >
+          <span id="themeToggleIcon">◐</span>
+          <span>Apariencia</span>
+        </button>
+
+        <div
+          id="themeMenu"
+          class="theme-menu hidden"
+        >
+
+          <button
+            class="theme-option"
+            type="button"
+            data-theme-value="system"
+          >
+            <span class="theme-option__icon">🖥️</span>
+
+            <span>
+              <strong>Sistema</strong>
+              <small>
+                Usa la apariencia de tu dispositivo
+              </small>
+            </span>
+          </button>
+
+
+          <button
+            class="theme-option"
+            type="button"
+            data-theme-value="dark"
+          >
+            <span class="theme-option__icon">🌙</span>
+
+            <span>
+              <strong>Oscuro</strong>
+              <small>
+                Interfaz oscura
+              </small>
+            </span>
+          </button>
+
+
+          <button
+            class="theme-option"
+            type="button"
+            data-theme-value="light"
+          >
+            <span class="theme-option__icon">☀️</span>
+
+            <span>
+              <strong>Claro</strong>
+              <small>
+                Interfaz clara
+              </small>
+            </span>
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <!-- ===============================================
+           USUARIO ACTUAL
+      ================================================ -->
+      <div class="admin-current-user">
+
+        <div
+          id="dashboardSidebarAvatar"
+          class="admin-user-avatar"
+        >
+          A
+        </div>
+
+        <div class="admin-current-user-copy">
+
+          <strong id="dashboardSidebarName">
+            Administrador
+          </strong>
+
+          <span id="dashboardSidebarRole">
+            Cargando...
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <!-- ===============================================
+           CERRAR SESIÓN
+      ================================================ -->
       <button
         id="logoutBtn"
-        class="btn btn--primary"
+        class="admin-sidebar-action admin-logout-btn"
         type="button"
       >
-        Cerrar sesión
+        <span>↪</span>
+        <span>Cerrar sesión</span>
       </button>
+
     </div>
-  </header>
+
+  </aside>
+
+
+  <!-- =====================================================
+       CONTENIDO DERECHO
+  ====================================================== -->
+  <div class="admin-main">
+
+    
 
   <!-- =========================
        DASHBOARD
@@ -825,6 +977,12 @@
 
     </div>
   </div>
+
+    </div>
+  <!-- FIN admin-main -->
+
+</div>
+<!-- FIN admin-shell -->
 
   <!-- =========================
        FIREBASE Y JAVASCRIPT

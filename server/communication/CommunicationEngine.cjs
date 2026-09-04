@@ -641,11 +641,30 @@ function crearCommunicationEngine({
     postulacionId = "",
     entrevistaId = "",
 
-    fechaProgramada = "",
+        fechaProgramada = "",
     creadoPor = "sistema",
 
-    metadata = {}
+    metadata = {},
+
+    sensible = false
   } = {}) {
+        /* =====================================================
+       SEGURIDAD PARA COMUNICACIONES SENSIBLES
+    ===================================================== */
+
+    const esSensible =
+      sensible === true;
+
+
+    if (
+      esSensible &&
+      fechaProgramada
+    ) {
+      throw construirError(
+        "Las comunicaciones sensibles no pueden programarse para envío posterior.",
+        "COMUNICACION_SENSIBLE_NO_PROGRAMABLE"
+      );
+    }
     const canalNormalizado =
       normalizarCanal(
         canal
@@ -733,14 +752,79 @@ function crearCommunicationEngine({
         metadata
       });
 
+        /* =====================================================
+       PERSISTENCIA SEGURA
+    ===================================================== */
+
+    const registroPersistible =
+      esSensible
+        ? {
+            ...registro,
+
+            contenidoTexto:
+              "[CONTENIDO SENSIBLE NO ALMACENADO]",
+
+            contenidoHtml:
+              "[CONTENIDO SENSIBLE NO ALMACENADO]",
+
+            variables:
+              {},
+
+            metadata: {
+              ...(
+                registro.metadata &&
+                typeof registro.metadata ===
+                  "object"
+                  ? registro.metadata
+                  : {}
+              ),
+
+              contenidoProtegido:
+                true
+            }
+          }
+        : registro;
+
+
     const guardada =
       await guardarRegistro(
-        registro
+        registroPersistible
       );
+
+
+    /*
+     * Para una comunicación sensible,
+     * devolvemos al proceso de envío
+     * el contenido REAL únicamente
+     * en memoria.
+     *
+     * El repositorio conserva solamente
+     * la versión protegida.
+     */
+    const registroParaProcesar =
+      esSensible
+        ? {
+            ...registro,
+
+            metadata: {
+              ...(
+                registro.metadata &&
+                typeof registro.metadata ===
+                  "object"
+                  ? registro.metadata
+                  : {}
+              ),
+
+              contenidoProtegido:
+                true
+            }
+          }
+        : guardada;
+
 
     return {
       registro:
-        guardada,
+        registroParaProcesar,
 
       plantilla,
 

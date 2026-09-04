@@ -8,3 +8,15 @@ server/data/postulaciones.json
 server/data/entrevistas.json
 server/data/recordatorios-comunicacion.json
 server/data/disponibilidades-entrevista.json
+
+# Variables de entorno adicionales
+.env.*
+!.env.example
+
+# Backups y temporales
+*.bak
+*.bak-*
+*.tmp
+
+# Archivos de diagnóstico local
+revision-scopes.txt

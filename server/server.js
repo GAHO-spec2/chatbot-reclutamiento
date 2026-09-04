@@ -87,6 +87,17 @@ const app =
 const PORT =
   process.env.PORT || 3000;
 
+const NODE_ENV =
+  String(
+    process.env.NODE_ENV ||
+    "development"
+  )
+    .trim()
+    .toLowerCase();
+
+const ES_PRODUCCION =
+  NODE_ENV === "production";
+
 const __filename =
   fileURLToPath(import.meta.url);
 
@@ -140,19 +151,123 @@ const openai = new OpenAI({
     process.env.OPENAI_API_KEY
 });
 
-/* =========================
+/* =========================================================
    FIREBASE ADMIN
-========================= */
+   Compatible con:
+   1. FIREBASE_SERVICE_ACCOUNT_JSON
+   2. Variables separadas de Firebase
+========================================================= */
 
 if (!admin.apps.length) {
+
   try {
-    const serviceAccount =
-      JSON.parse(
+
+    let serviceAccount = null;
+
+
+    /* =====================================================
+       OPCIÓN 1
+       Service Account completo en JSON
+    ===================================================== */
+
+    const serviceAccountJson =
+      String(
         process.env
-          .FIREBASE_SERVICE_ACCOUNT_JSON
+          .FIREBASE_SERVICE_ACCOUNT_JSON ||
+        ""
+      ).trim();
+
+
+    if (serviceAccountJson) {
+
+      serviceAccount =
+        JSON.parse(
+          serviceAccountJson
+        );
+
+    } else {
+
+      /* ===================================================
+         OPCIÓN 2
+         Credenciales separadas en variables de entorno
+      =================================================== */
+
+      const projectId =
+        String(
+          process.env
+            .FIREBASE_PROJECT_ID ||
+          ""
+        ).trim();
+
+
+      const clientEmail =
+        String(
+          process.env
+            .FIREBASE_CLIENT_EMAIL ||
+          ""
+        ).trim();
+
+
+      const privateKey =
+        String(
+          process.env
+            .FIREBASE_PRIVATE_KEY ||
+          ""
+        )
+          .replace(
+            /\\n/g,
+            "\n"
+          )
+          .trim();
+
+
+      if (
+        !projectId ||
+        !clientEmail ||
+        !privateKey
+      ) {
+
+        throw new Error(
+          "Faltan credenciales de Firebase Admin."
+        );
+      }
+
+
+      serviceAccount = {
+        project_id:
+          projectId,
+
+        client_email:
+          clientEmail,
+
+        private_key:
+          privateKey
+      };
+    }
+
+
+    /* =====================================================
+       VALIDACIÓN
+    ===================================================== */
+
+    if (
+      !serviceAccount?.project_id ||
+      !serviceAccount?.client_email ||
+      !serviceAccount?.private_key
+    ) {
+
+      throw new Error(
+        "Las credenciales de Firebase Admin están incompletas."
       );
+    }
+
+
+    /* =====================================================
+       INICIALIZAR FIREBASE ADMIN
+    ===================================================== */
 
     admin.initializeApp({
+
       credential:
         admin.credential.cert(
           serviceAccount
@@ -162,16 +277,20 @@ if (!admin.apps.length) {
         serviceAccount.project_id
     });
 
+
     console.log(
       "Firebase Admin inicializado correctamente."
     );
+
   } catch (error) {
+
     console.error(
       "Firebase Admin no inicializado:",
       error.message
     );
   }
 }
+
 
 const db =
   admin.apps.length
@@ -195,40 +314,897 @@ const DISPONIBILIDADES_ENTREVISTA_COLLECTION =
 const BLOQUEOS_ENTREVISTA_COLLECTION =
   "bloqueos_entrevista";
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
-  .split(",")
-  .map((email) => email.trim().toLowerCase())
-  .filter(Boolean);
+/* =========================================================
+   USUARIOS ADMINISTRATIVOS / ROLES
+========================================================= */
 
-async function verifyAdmin(req, res, next) {
-  try {
-    if (!admin.apps.length) {
-      return res.status(500).json({ error: "Firebase Admin no esta inicializado." });
-    }
+const ADMIN_USERS_COLLECTION =
+  "admin_users";
 
-    const authHeader = req.headers.authorization || "";
 
-    if (!authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "Token no enviado." });
-    }
+const ADMIN_EMAILS =
+  (process.env.ADMIN_EMAILS || "")
+    .split(",")
+    .map((email) =>
+      email.trim().toLowerCase()
+    )
+    .filter(Boolean);
+/* =========================================================
+   ADMINISTRADORES PRINCIPALES
+========================================================= */
 
-    const token = authHeader.replace("Bearer ", "");
-    const decoded = await admin.auth().verifyIdToken(token);
-    const email = decoded.email?.toLowerCase();
+const PRIMARY_ADMIN_EMAILS =
+  (process.env.PRIMARY_ADMIN_EMAILS || "")
+    .split(",")
+    .map((email) =>
+      email.trim().toLowerCase()
+    )
+    .filter(Boolean);
 
-    if (!email || !ADMIN_EMAILS.includes(email)) {
-      return res.status(403).json({ error: "No tienes permisos administrativos." });
-    }
 
-    req.adminUser = decoded;
-    next();
-  } catch (error) {
-    console.error("Error verificando admin:", error);
-    return res.status(401).json({ error: "Sesion invalida o expirada." });
-  }
+function isPrimaryAdminEmail(email = "") {
+  const normalizedEmail =
+    String(email || "")
+      .trim()
+      .toLowerCase();
+
+  return PRIMARY_ADMIN_EMAILS.includes(
+    normalizedEmail
+  );
+}
+
+/* =========================================================
+   ROLES VÁLIDOS
+========================================================= */
+
+const ADMIN_ROLES = [
+  "admin",
+  "reclutador",
+  "gerente"
+];
+
+
+/* =========================================================
+   PERMISOS PREDETERMINADOS POR ROL
+========================================================= */
+
+const ROLE_PERMISSIONS = {
+
+  admin: [
+    "usuarios.ver",
+    "usuarios.crear",
+    "usuarios.editar",
+    "usuarios.desactivar",
+
+    "vacantes.ver",
+    "vacantes.crear",
+    "vacantes.editar",
+    "vacantes.eliminar",
+
+    "candidatos.ver",
+    "candidatos.editar",
+    "candidatos.eliminar",
+    "candidatos.aprobar",
+    "candidatos.rechazar",
+    "candidatos.contratar",
+
+    "entrevistas.ver",
+    "entrevistas.crear",
+    "entrevistas.editar",
+    "entrevistas.cancelar",
+
+    "comunicaciones.ver",
+    "comunicaciones.enviar",
+
+    "auditoria.ver",
+    "metricas.ver"
+  ],
+
+
+  reclutador: [
+    "vacantes.ver",
+    "vacantes.crear",
+    "vacantes.editar",
+
+    "candidatos.ver",
+    "candidatos.editar",
+    "candidatos.aprobar",
+    "candidatos.rechazar",
+
+    "entrevistas.ver",
+    "entrevistas.crear",
+    "entrevistas.editar",
+    "entrevistas.cancelar",
+
+    "comunicaciones.ver",
+    "comunicaciones.enviar",
+
+    "metricas.ver"
+  ],
+
+
+  gerente: [
+    "vacantes.ver",
+
+    "candidatos.ver",
+    "candidatos.editar",
+    "candidatos.aprobar",
+    "candidatos.rechazar",
+
+    "entrevistas.ver",
+
+    "metricas.ver"
+  ]
+};
+
+const VALID_PERMISSIONS = new Set([
+  ...Object.values(ROLE_PERMISSIONS).flat(),
+  "usuarios.gestionar_admins"
+]);
+
+/* =========================================================
+   NORMALIZAR PERFIL ADMINISTRATIVO
+========================================================= */
+
+function normalizarAdminUser({
+  uid,
+  email,
+  firebaseUser = {},
+  firestoreUser = null
+}) {
+
+  const roleOriginal =
+    String(
+      firestoreUser?.role ||
+      firestoreUser?.rol ||
+      ""
+    )
+      .trim()
+      .toLowerCase();
+
+
+  const role =
+    ADMIN_ROLES.includes(
+      roleOriginal
+    )
+      ? roleOriginal
+      : "reclutador";
+
+
+  const permisosPersonalizados =
+    Array.isArray(
+      firestoreUser?.permissions
+    )
+      ? firestoreUser.permissions
+      : Array.isArray(
+          firestoreUser?.permisos
+        )
+        ? firestoreUser.permisos
+        : [];
+
+
+  const isPrimaryAdmin =
+  role === "admin" &&
+  isPrimaryAdminEmail(email);
+
+
+const permissionsBase =
+  permisosPersonalizados.length
+    ? [
+        ...new Set(
+          permisosPersonalizados
+            .map((item) =>
+              String(item).trim()
+            )
+            .filter(Boolean)
+        )
+      ]
+    : [
+        ...(ROLE_PERMISSIONS[role] || [])
+      ];
+
+
+const permissionsSinPrivilegioPrincipal =
+  permissionsBase.filter(
+    (permission) =>
+      permission !==
+      "usuarios.gestionar_admins"
+  );
+
+const permissions =
+  isPrimaryAdmin
+    ? [
+        ...new Set([
+          ...permissionsSinPrivilegioPrincipal,
+          "usuarios.gestionar_admins"
+        ])
+      ]
+    : permissionsSinPrivilegioPrincipal;
+
+
+  return {
+
+    uid,
+
+    email:
+      String(email || "")
+        .trim()
+        .toLowerCase(),
+
+    nombre:
+      String(
+        firestoreUser?.nombre ||
+        firestoreUser?.name ||
+        firebaseUser?.name ||
+        firebaseUser?.displayName ||
+        ""
+      ).trim(),
+
+    role,
+
+    isPrimaryAdmin,
+
+    active:
+      firestoreUser?.active !== false &&
+      firestoreUser?.activo !== false,
+
+    globalAccess:
+  isPrimaryAdmin
+    ? true
+    : (
+        firestoreUser?.globalAccess === true ||
+        firestoreUser?.accesoGlobal === true
+      ),
+
+    allowedBrands:
+      Array.isArray(
+        firestoreUser?.allowedBrands
+      )
+        ? firestoreUser.allowedBrands
+        : Array.isArray(
+            firestoreUser?.marcasPermitidas
+          )
+          ? firestoreUser.marcasPermitidas
+          : [],
+
+    allowedBranches:
+      Array.isArray(
+        firestoreUser?.allowedBranches
+      )
+        ? firestoreUser.allowedBranches
+        : Array.isArray(
+            firestoreUser?.sucursalesPermitidas
+          )
+          ? firestoreUser
+              .sucursalesPermitidas
+          : [],
+
+    allowedCountries:
+      Array.isArray(
+        firestoreUser?.allowedCountries
+      )
+        ? firestoreUser.allowedCountries
+        : Array.isArray(
+            firestoreUser?.paisesPermitidos
+          )
+          ? firestoreUser
+              .paisesPermitidos
+          : [],
+
+    permissions
+  };
 }
 
 
+/* =========================================================
+   BUSCAR PERFIL ADMINISTRATIVO
+========================================================= */
+
+async function obtenerAdminUser(
+  decoded
+) {
+
+  if (!db) {
+    return null;
+  }
+
+
+  const uid =
+    String(decoded?.uid || "").trim();
+
+
+  if (!uid) {
+    return null;
+  }
+
+
+  const snapshot =
+    await db
+      .collection(
+        ADMIN_USERS_COLLECTION
+      )
+      .doc(uid)
+      .get();
+
+
+  if (!snapshot.exists) {
+    return null;
+  }
+
+
+  return snapshot.data() || null;
+}
+
+/* =========================================================
+   VERIFICAR ADMINISTRADOR / USUARIO RH
+========================================================= */
+
+async function verifyAdmin(
+  req,
+  res,
+  next
+) {
+
+  try {
+
+    if (!admin.apps.length) {
+
+      return res.status(500).json({
+        error:
+          "Firebase Admin no esta inicializado."
+      });
+    }
+
+
+    const authHeader =
+      req.headers.authorization || "";
+
+
+    if (
+      !authHeader.startsWith(
+        "Bearer "
+      )
+    ) {
+
+      return res.status(401).json({
+        error:
+          "Token no enviado."
+      });
+    }
+
+
+    const token =
+      authHeader.replace(
+        "Bearer ",
+        ""
+      );
+
+
+    const decoded =
+      await admin
+        .auth()
+        .verifyIdToken(token);
+
+
+    const uid =
+      String(
+        decoded.uid || ""
+      ).trim();
+
+
+    const email =
+      String(
+        decoded.email || ""
+      )
+        .trim()
+        .toLowerCase();
+
+
+    if (!uid || !email) {
+
+      return res.status(401).json({
+        error:
+          "La sesión no contiene información válida del usuario."
+      });
+    }
+
+
+    /* =====================================================
+       BUSCAR PERFIL EN FIRESTORE
+    ===================================================== */
+
+    const firestoreUser =
+      await obtenerAdminUser(
+        decoded
+      );
+
+
+    /*
+     * Compatibilidad temporal:
+     *
+     * Los correos actuales registrados en ADMIN_EMAILS
+     * siguen teniendo acceso de administrador mientras
+     * migramos al nuevo sistema de roles.
+     */
+
+    if (!firestoreUser) {
+
+      if (
+        !ADMIN_EMAILS.includes(
+          email
+        )
+      ) {
+
+        return res.status(403).json({
+          error:
+            "No tienes acceso administrativo al sistema."
+        });
+      }
+
+
+      req.adminUser =
+        normalizarAdminUser({
+
+          uid,
+
+          email,
+
+          firebaseUser:
+            decoded,
+
+          firestoreUser: {
+            nombre:
+              decoded.name || "",
+
+            role:
+              "admin",
+
+            active:
+              true,
+
+            globalAccess:
+              true
+          }
+        });
+
+
+      return next();
+    }
+
+
+    /* =====================================================
+       NORMALIZAR USUARIO
+    ===================================================== */
+
+    const adminUser =
+      normalizarAdminUser({
+
+        uid,
+
+        email,
+
+        firebaseUser:
+          decoded,
+
+        firestoreUser
+      });
+
+
+    /* =====================================================
+       VALIDAR ESTADO
+    ===================================================== */
+
+    if (!adminUser.active) {
+
+      return res.status(403).json({
+        error:
+          "Tu cuenta administrativa está desactivada."
+      });
+    }
+
+
+    /* =====================================================
+       GUARDAR CONTEXTO AUTENTICADO
+    ===================================================== */
+
+    req.adminUser =
+      adminUser;
+
+
+    next();
+
+  } catch (error) {
+
+    console.error(
+      "Error verificando usuario administrativo:",
+      error
+    );
+
+
+    return res.status(401).json({
+      error:
+        "Sesión inválida o expirada."
+    });
+  }
+}
+
+/* =========================================================
+   VERIFICAR PERMISOS ADMINISTRATIVOS
+========================================================= */
+
+function requirePermission(permission) {
+
+  return (req, res, next) => {
+
+    const adminUser =
+      req.adminUser;
+
+
+    if (!adminUser) {
+
+      return res.status(401).json({
+        error:
+          "No existe una sesión administrativa válida."
+      });
+    }
+
+
+    const permissions =
+      Array.isArray(
+        adminUser.permissions
+      )
+        ? adminUser.permissions
+        : [];
+
+
+    if (
+      !permissions.includes(
+        permission
+      )
+    ) {
+
+      console.warn(
+        "Permiso administrativo denegado:",
+        {
+          email:
+            adminUser.email || "",
+
+          role:
+            adminUser.role || "",
+
+          permission
+        }
+      );
+
+
+      return res.status(403).json({
+        error:
+          "No tienes permiso para realizar esta acción.",
+
+        code:
+          "PERMISSION_DENIED"
+      });
+    }
+
+
+    next();
+  };
+}
+
+/* =========================================================
+   VERIFICAR ROL ADMINISTRATIVO
+========================================================= */
+
+function requireRole(...allowedRoles) {
+
+  const normalizedRoles =
+    allowedRoles
+      .map((role) =>
+        String(role || "")
+          .trim()
+          .toLowerCase()
+      )
+      .filter(Boolean);
+
+
+  return (req, res, next) => {
+
+    const adminUser =
+      req.adminUser;
+
+
+    if (!adminUser) {
+
+      return res.status(401).json({
+        error:
+          "No existe una sesión administrativa válida."
+      });
+    }
+
+
+    const currentRole =
+      String(
+        adminUser.role || ""
+      )
+        .trim()
+        .toLowerCase();
+
+
+    if (
+      !normalizedRoles.includes(
+        currentRole
+      )
+    ) {
+
+      console.warn(
+        "Rol administrativo denegado:",
+        {
+          email:
+            adminUser.email || "",
+
+          role:
+            currentRole,
+
+          allowedRoles:
+            normalizedRoles
+        }
+      );
+
+
+      return res.status(403).json({
+        error:
+          "Tu rol no permite realizar esta operación.",
+
+        code:
+          "ROLE_DENIED"
+      });
+    }
+
+
+    next();
+  };
+}
+
+function normalizarValorScope(
+  valor
+) {
+  return String(valor || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(
+      /[\u0300-\u036f]/g,
+      ""
+    );
+}
+
+
+function listaScopeIncluye(
+  lista,
+  valor
+) {
+  if (!Array.isArray(lista)) {
+    return false;
+  }
+
+  const valorNormalizado =
+    normalizarValorScope(valor);
+
+  if (!valorNormalizado) {
+    return false;
+  }
+
+  return lista.some(
+    (item) =>
+      normalizarValorScope(item) ===
+      valorNormalizado
+  );
+}
+
+
+function obtenerScopeRecurso(
+  recurso = {}
+) {
+  return {
+    brand:
+      recurso.grupo ||
+      recurso.grupoSeleccionado ||
+      recurso.marca ||
+      recurso.brand ||
+      "",
+
+    branch:
+      recurso.sucursalId ||
+      recurso.branchId ||
+      recurso.sucursal ||
+      recurso.branch ||
+      "",
+
+    branchName:
+      recurso.sucursal ||
+      recurso.branch ||
+      "",
+
+    country:
+      recurso.pais ||
+      recurso.country ||
+      ""
+  };
+}
+
+
+function adminTieneAccesoRecurso(
+  adminUser,
+  recurso = {}
+) {
+  if (!adminUser) {
+    return false;
+  }
+
+
+  /*
+   * El acceso global siempre
+   * permite acceder al recurso.
+   */
+  if (
+    adminUser.globalAccess === true
+  ) {
+    return true;
+  }
+
+
+  const scope =
+    obtenerScopeRecurso(
+      recurso
+    );
+
+
+  const allowedBrands =
+    Array.isArray(
+      adminUser.allowedBrands
+    )
+      ? adminUser.allowedBrands
+      : [];
+
+
+  const allowedBranches =
+    Array.isArray(
+      adminUser.allowedBranches
+    )
+      ? adminUser.allowedBranches
+      : [];
+
+
+  const allowedCountries =
+    Array.isArray(
+      adminUser.allowedCountries
+    )
+      ? adminUser.allowedCountries
+      : [];
+
+
+  /*
+   * Un usuario sin acceso global
+   * debe tener al menos un alcance
+   * configurado.
+   */
+  if (
+    allowedBrands.length === 0 &&
+    allowedBranches.length === 0 &&
+    allowedCountries.length === 0
+  ) {
+    return false;
+  }
+
+
+  /*
+   * Si existe restricción por país,
+   * el recurso debe indicar país
+   * y pertenecer a uno permitido.
+   */
+  if (
+    allowedCountries.length > 0
+  ) {
+    if (!scope.country) {
+      return false;
+    }
+
+    if (
+      !listaScopeIncluye(
+        allowedCountries,
+        scope.country
+      )
+    ) {
+      return false;
+    }
+  }
+
+
+  /*
+   * Si existe restricción por marca,
+   * el recurso debe indicar marca
+   * y pertenecer a una permitida.
+   */
+  if (
+    allowedBrands.length > 0
+  ) {
+    if (!scope.brand) {
+      return false;
+    }
+
+    if (
+      !listaScopeIncluye(
+        allowedBrands,
+        scope.brand
+      )
+    ) {
+      return false;
+    }
+  }
+
+
+  /*
+   * Si existe restricción por sucursal,
+   * primero intentamos comparar por ID.
+   *
+   * Para registros históricos que todavía
+   * no tengan sucursalId permitimos
+   * comparar por nombre de sucursal.
+   */
+  if (
+    allowedBranches.length > 0
+  ) {
+    const accesoPorId =
+      scope.branch &&
+      listaScopeIncluye(
+        allowedBranches,
+        scope.branch
+      );
+
+
+    const accesoPorNombre =
+      scope.branchName &&
+      listaScopeIncluye(
+        allowedBranches,
+        scope.branchName
+      );
+
+
+    if (
+      !accesoPorId &&
+      !accesoPorNombre
+    ) {
+      return false;
+    }
+  }
+
+
+  return true;
+}
+
+
+function filtrarRecursosPorScope(
+  adminUser,
+  recursos = []
+) {
+  if (!Array.isArray(recursos)) {
+    return [];
+  }
+
+  if (
+    adminUser?.globalAccess === true
+  ) {
+    return recursos;
+  }
+
+  return recursos.filter(
+    (recurso) =>
+      adminTieneAccesoRecurso(
+        adminUser,
+        recurso
+      )
+  );
+}
 
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
@@ -486,8 +1462,12 @@ const {
   "./services/defaultTemplatesInstaller.cjs"
 );
 
-dotenv.config();
 
+
+
+if (!fs.existsSync(postulacionesFile)) {
+  fs.writeFileSync(postulacionesFile, "[]", "utf-8");
+}
 
 if (!fs.existsSync(postulacionesFile)) {
   fs.writeFileSync(postulacionesFile, "[]", "utf-8");
@@ -1892,7 +2872,8 @@ async function reagendarEntrevistaAtomica({
   nuevaFecha,
   nuevaHora,
   cambiosAdicionales = {},
-  actualizadoPor = ""
+  actualizadoPor = "",
+  adminUser = null
 } = {}) {
   if (
     !entrevistaActual?.id ||
@@ -2043,6 +3024,24 @@ async function reagendarEntrevistaAtomica({
 
     actualizadoPor
   };
+
+
+  if (
+  adminUser &&
+  !adminTieneAccesoRecurso(
+    adminUser,
+    entrevistaActualizada
+  )
+) {
+  const error = new Error(
+    "No tienes acceso para mover o modificar esta entrevista hacia ese alcance."
+  );
+
+  error.code =
+    "SCOPE_DENIED";
+
+  throw error;
+}
 
   /*
    * MODO LOCAL
@@ -3130,7 +4129,56 @@ async function geocodificarCodigoPostal({
 }
 
 async function iniciarServidor() {
+
+  /* =========================================================
+     VALIDACIÓN DE INFRAESTRUCTURA PARA PRODUCCIÓN
+  ========================================================= */
+
+  if (
+    ES_PRODUCCION &&
+    !db
+  ) {
+    const error =
+      new Error(
+        "Firebase Admin / Firestore no están disponibles. El servidor no puede iniciar en producción."
+      );
+
+    error.code =
+      "PRODUCTION_FIRESTORE_REQUIRED";
+
+    throw error;
+  }
+
+
+  if (
+    ES_PRODUCCION &&
+    admin.apps.length === 0
+  ) {
+    const error =
+      new Error(
+        "Firebase Admin no está inicializado. El servidor no puede iniciar en producción."
+      );
+
+    error.code =
+      "PRODUCTION_FIREBASE_ADMIN_REQUIRED";
+
+    throw error;
+  }
+
+
+  console.log(
+    "Entorno de ejecución:",
+    NODE_ENV
+  );
+
+  console.log(
+    "Firestore disponible:",
+    Boolean(db)
+  );
+
+
   await inicializarCommunicationCenter();
+
 
   const workerHabilitado =
     String(
@@ -3140,20 +4188,22 @@ async function iniciarServidor() {
     ).toLowerCase() !==
     "false";
 
+
   if (workerHabilitado) {
     await communicationWorker
       .iniciar();
   }
 
+
   app.listen(
-  PORT,
-  "0.0.0.0",
-  () => {
-    console.log(
-      `Servidor escuchando en puerto ${PORT}`
-    );
-  }
-);
+    PORT,
+    "0.0.0.0",
+    () => {
+      console.log(
+        `Servidor escuchando en puerto ${PORT}`
+      );
+    }
+  );
 }
 
 function gradosARadianes(grados) {
@@ -4209,10 +5259,25 @@ const coordenadasBaseCiudad = {
 };
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+
   filename: (req, file, cb) => {
-    const safeName = file.originalname.replace(/\s+/g, "_");
-    cb(null, `${Date.now()}_${safeName}`);
+    const extension =
+      path
+        .extname(
+          String(file.originalname || "")
+        )
+        .toLowerCase();
+
+    const nombreInterno =
+      `${crypto.randomUUID()}${extension}`;
+
+    cb(
+      null,
+      nombreInterno
+    );
   }
 });
 
@@ -4236,14 +5301,123 @@ const upload = multer({
   limits: { fileSize: 8 * 1024 * 1024 }
 });
 
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+/* =========================================================
+   SEGURIDAD HTTP
+========================================================= */
 
-  if (req.method === "OPTIONS") return res.sendStatus(200);
-  next();
-});
+app.disable(
+  "x-powered-by"
+);
+
+
+/* =========================================================
+   CORS
+========================================================= */
+
+const CORS_ORIGINS =
+  String(
+    process.env.CORS_ORIGINS ||
+    "http://localhost:3000"
+  )
+    .split(",")
+    .map(
+      (origin) =>
+        origin.trim()
+    )
+    .filter(Boolean);
+
+
+app.use(
+  (req, res, next) => {
+
+    const origin =
+      String(
+        req.headers.origin ||
+        ""
+      ).trim();
+
+
+    /*
+     * Solicitudes sin Origin:
+     * navegador same-origin,
+     * health checks, servidor,
+     * PowerShell, etc.
+     */
+    if (!origin) {
+      return next();
+    }
+
+
+    const permitido =
+      CORS_ORIGINS.includes(
+        origin
+      );
+
+
+    if (!permitido) {
+
+      console.warn(
+        "Origen CORS rechazado:",
+        {
+          origin,
+          method:
+            req.method,
+          path:
+            req.originalUrl ||
+            req.path ||
+            ""
+        }
+      );
+
+
+      return res.status(403).json({
+        error:
+          "Origen no permitido.",
+
+        code:
+          "CORS_ORIGIN_DENIED"
+      });
+    }
+
+
+    res.header(
+      "Access-Control-Allow-Origin",
+      origin
+    );
+
+    res.vary(
+      "Origin"
+    );
+
+    res.header(
+      "Access-Control-Allow-Methods",
+      "GET, POST, PATCH, PUT, DELETE, OPTIONS"
+    );
+
+    res.header(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization"
+    );
+
+    res.header(
+      "Access-Control-Max-Age",
+      "600"
+    );
+
+
+    if (
+      req.method ===
+      "OPTIONS"
+    ) {
+      return res.sendStatus(
+        204
+      );
+    }
+
+
+    next();
+  }
+);
 
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true }));
@@ -4340,9 +5514,8 @@ const emailProvider =
       process.env.SMTP_PASS ||
       "",
 
-    guardarContenidoEnLog:
-      process.env.NODE_ENV ===
-      "development"
+       guardarContenidoEnLog:
+      false
   });
 
 /* =========================
@@ -4491,7 +5664,11 @@ const comunicacionesRouter =
     verifyAdmin:
       db
         ? verifyAdmin
-        : null
+        : null,
+
+    requirePermission,
+
+    requireRole
   });
 
 app.use(
@@ -4536,10 +5713,120 @@ async function inicializarCommunicationCenter() {
     throw error;
   }
 }
+
+/* =========================================================
+   ARCHIVOS ESTÁTICOS PÚBLICOS
+   LISTA BLANCA
+========================================================= */
+
+/*
+ * IMPORTANTE:
+ *
+ * Ya NO publicamos projectRoot completo.
+ *
+ * Quedan fuera automáticamente:
+ * - .env
+ * - server/
+ * - data/
+ * - uploads/
+ * - botgemini/
+ * - node_modules/
+ * - package.json
+ * - package-lock.json
+ * - archivos de diagnóstico
+ */
+
+
+/* =========================================================
+   IMÁGENES PÚBLICAS
+========================================================= */
+
 app.use(
-  express.static(projectRoot)
+  "/img",
+  express.static(
+    path.join(
+      projectRoot,
+      "img"
+    ),
+    {
+      dotfiles: "deny",
+      index: false,
+      fallthrough: false
+    }
+  )
 );
-app.use("/uploads", express.static(uploadsDir));
+
+
+/* =========================================================
+   FRONTEND ADMINISTRATIVO
+========================================================= */
+
+app.use(
+  "/dashboard",
+  express.static(
+    path.join(
+      projectRoot,
+      "dashboard"
+    ),
+    {
+      dotfiles: "deny",
+      index: false,
+      fallthrough: false
+    }
+  )
+);
+
+
+/* =========================================================
+   ARCHIVOS PÚBLICOS DEL SITIO PRINCIPAL
+========================================================= */
+
+const archivosPublicosRaiz =
+  new Set([
+    "styles.css",
+    "chatbot.js",
+    "dotted-surface.js",
+    "text-scramble.js",
+
+    "ubicaciones.css",
+    "ubicaciones.js",
+
+    "vacantes.js"
+  ]);
+
+
+app.get(
+  "/:archivo",
+  (req, res, next) => {
+
+    const archivo =
+      String(
+        req.params.archivo ||
+        ""
+      ).trim();
+
+
+    if (
+      !archivosPublicosRaiz.has(
+        archivo
+      )
+    ) {
+      return next();
+    }
+
+
+    const rutaArchivo =
+      path.join(
+        projectRoot,
+        archivo
+      );
+
+
+    return res.sendFile(
+      rutaArchivo
+    );
+  }
+);
 
 async function extraerTextoPdf(filePath) {
   try {
@@ -4754,12 +6041,23 @@ async function sugerirVacantesBasicas(texto = "", tipoVacante = "") {
 async function analizarCvConIA(cvTexto = "") {
   const textoLimpio = String(cvTexto || "").trim();
 
-  console.log("=== DIAGNÓSTICO ANÁLISIS CV ===");
-  console.log("Caracteres extraídos:", textoLimpio.length);
+  if (!ES_PRODUCCION) {
+  console.log(
+    "=== DIAGNÓSTICO ANÁLISIS CV ==="
+  );
+
+  console.log(
+    "Caracteres extraídos:",
+    textoLimpio.length
+  );
+
   console.log(
     "OpenAI configurado:",
-    Boolean(process.env.OPENAI_API_KEY)
+    Boolean(
+      process.env.OPENAI_API_KEY
+    )
   );
+}
 
   if (!textoLimpio) {
     throw new Error(
@@ -4852,7 +6150,26 @@ ${textoLimpio.slice(0, 12000)}
           : []
     };
   } catch (error) {
-    console.error("Error IA CV:", error);
+   console.error(
+  "Error IA CV:",
+  {
+    name:
+      error?.name ||
+      "Error",
+
+    message:
+      error?.message ||
+      "Error desconocido",
+
+    code:
+      error?.code ||
+      null,
+
+    status:
+      error?.status ||
+      null
+  }
+);
 
     throw new Error(
       error.message ||
@@ -4872,25 +6189,109 @@ app.get(
   }
 );
 
-app.get("/index.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
+app.get(
+  "/index.html",
+  (req, res) => {
+    res.sendFile(
+      path.join(
+        projectRoot,
+        "index.html"
+      )
+    );
+  }
+);
 
-app.get("/vacantes.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "vacantes.html"));
-});
 
-app.get("/login-admin.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "login-admin.html"));
-});
+app.get(
+  "/vacantes.html",
+  (req, res) => {
+    res.sendFile(
+      path.join(
+        projectRoot,
+        "vacantes.html"
+      )
+    );
+  }
+);
 
-app.get("/dashboard.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "dashboard.html"));
-});
 
-app.get("/vacantes-admin.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "vacantes-admin.html"));
-});
+app.get(
+  "/ubicaciones.html",
+  (req, res) => {
+    res.sendFile(
+      path.join(
+        projectRoot,
+        "ubicaciones.html"
+      )
+    );
+  }
+);
+
+
+/* =========================================================
+   REDIRECCIONES AL PANEL ADMINISTRATIVO
+========================================================= */
+
+app.get(
+  "/login-admin.html",
+  (req, res) => {
+    return res.redirect(
+      302,
+      "/dashboard/login-admin.html"
+    );
+  }
+);
+
+app.get(
+  "/dashboard.html",
+  (req, res) => {
+    return res.redirect(
+      302,
+      "/dashboard/dashboard.html"
+    );
+  }
+);
+
+app.get(
+  "/vacantes-admin.html",
+  (req, res) => {
+    return res.redirect(
+      302,
+      "/dashboard/vacantes-admin.html"
+    );
+  }
+);
+
+app.get(
+  "/entrevistas.html",
+  (req, res) => {
+    return res.redirect(
+      302,
+      "/dashboard/entrevistas.html"
+    );
+  }
+);
+
+app.get(
+  "/comunicaciones.html",
+  (req, res) => {
+    return res.redirect(
+      302,
+      "/dashboard/comunicaciones.html"
+    );
+  }
+);
+
+app.get(
+  "/usuarios-admin.html",
+  (req, res) => {
+    return res.redirect(
+      302,
+      "/dashboard/usuarios-admin.html"
+    );
+  }
+);
+
 /* =========================
    API DISPONIBILIDADES
    DE ENTREVISTA
@@ -4899,6 +6300,9 @@ app.get("/vacantes-admin.html", (req, res) => {
 app.get(
   "/api/disponibilidades-entrevista",
   verifyAdmin,
+  requirePermission(
+    "entrevistas.ver"
+  ),
   async (req, res) => {
     try {
       const disponibilidades =
@@ -4922,6 +6326,9 @@ app.get(
 app.get(
   "/api/disponibilidades-entrevista/:id",
   verifyAdmin,
+  requirePermission(
+    "entrevistas.ver"
+  ),
   async (req, res) => {
     try {
       const disponibilidad =
@@ -4954,6 +6361,9 @@ app.get(
 app.post(
   "/api/disponibilidades-entrevista",
   verifyAdmin,
+  requirePermission(
+    "entrevistas.crear"
+  ),
   async (req, res) => {
     try {
       const validacion =
@@ -5017,6 +6427,9 @@ app.post(
 app.put(
   "/api/disponibilidades-entrevista/:id",
   verifyAdmin,
+  requirePermission(
+    "entrevistas.editar"
+  ),
   async (req, res) => {
     try {
       const { id } = req.params;
@@ -5097,6 +6510,9 @@ app.put(
 app.patch(
   "/api/disponibilidades-entrevista/:id/estado",
   verifyAdmin,
+  requirePermission(
+    "entrevistas.editar"
+  ),
   async (req, res) => {
     try {
       const { id } = req.params;
@@ -5157,6 +6573,9 @@ app.patch(
 app.delete(
   "/api/disponibilidades-entrevista/:id",
   verifyAdmin,
+  requirePermission(
+    "entrevistas.cancelar"
+  ),
   async (req, res) => {
     try {
       const eliminado =
@@ -5191,36 +6610,80 @@ app.delete(
   }
 );
 
-app.get("/entrevistas.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "entrevistas.html"));
-});
 
-app.get("/health", async (req, res) => {
-  try {
-    let firestoreTest = false;
+/* =========================================================
+   HEALTH CHECK
+   Respuesta pública mínima y segura
+========================================================= */
 
-    if (db) {
-      await db.collection("_health").limit(1).get();
-      firestoreTest = true;
+app.get(
+  "/health",
+  async (req, res) => {
+    try {
+
+      /*
+       * En producción Firestore debe
+       * existir obligatoriamente.
+       */
+      if (!db) {
+        return res.status(503).json({
+          ok: false,
+          status:
+            "degraded",
+          timestamp:
+            new Date().toISOString()
+        });
+      }
+
+
+      /*
+       * Prueba liviana de conectividad.
+       */
+      await db
+        .collection("_health")
+        .limit(1)
+        .get();
+
+
+      return res.json({
+        ok: true,
+        status:
+          "healthy",
+        timestamp:
+          new Date().toISOString()
+      });
+
+    } catch (error) {
+
+      /*
+       * Los detalles se conservan
+       * únicamente en el servidor.
+       */
+      console.error(
+        "Health check fallido:",
+        {
+          message:
+            error?.message ||
+            "Error desconocido",
+
+          code:
+            error?.code ||
+            null
+        }
+      );
+
+
+      return res.status(503).json({
+        ok: false,
+        status:
+          "degraded",
+        timestamp:
+          new Date().toISOString()
+      });
     }
-
-    res.json({
-      ok: true,
-      firestore: Boolean(db),
-      firestoreTest,
-      projectId: admin.apps.length ? admin.app().options.projectId : null,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    res.status(500).json({
-      ok: false,
-      firestore: Boolean(db),
-      projectId: admin.apps.length ? admin.app().options.projectId : null,
-      code: error.code,
-      error: error.message
-    });
   }
-});
+);
+
 
 
 app.get("/api/ubicaciones", (req, res) => {
@@ -5313,6 +6776,156 @@ app.get("/api/vacantes", async (req, res) => {
   }
 });
 
+/* =========================================================
+   VACANTES ADMINISTRATIVAS
+   - Requiere autenticación
+   - Requiere permiso vacantes.ver
+   - Respeta el alcance del usuario administrativo
+========================================================= */
+
+app.get(
+  "/api/admin/vacantes",
+  verifyAdmin,
+  requirePermission("vacantes.ver"),
+  async (req, res) => {
+    try {
+      const tipoVacante =
+        req.query.tipoVacante
+          ? normalizarTexto(
+              req.query.tipoVacante
+            )
+          : "";
+
+      const pais =
+        req.query.pais
+          ? normalizarTexto(
+              resolverPais(req.query.pais)
+            )
+          : "";
+
+      const estado =
+        req.query.estado
+          ? normalizarTexto(
+              resolverEstado(req.query.estado)
+            )
+          : "";
+
+      const ciudad =
+        req.query.ciudad
+          ? normalizarTexto(
+              resolverCiudad(req.query.ciudad)
+            )
+          : "";
+
+      const grupo =
+        req.query.grupo
+          ? normalizarTexto(
+              resolverGrupo(req.query.grupo)
+            )
+          : "";
+
+      const vacantes =
+        await leerVacantes();
+
+      /*
+       * Primero enriquecemos las vacantes para que
+       * el sistema de alcance pueda trabajar con
+       * sucursalId, branchId, sucursal, país, etc.
+       */
+      const vacantesEnriquecidas =
+        vacantes.map(
+          enriquecerVacanteConSucursal
+        );
+
+       
+      /*
+       * SEGURIDAD:
+       * aplicar el alcance del usuario antes de
+       * devolver información al dashboard.
+       */
+      const vacantesPermitidas =
+        filtrarRecursosPorScope(
+          req.adminUser,
+          vacantesEnriquecidas
+        );
+
+      /*
+       * Después aplicamos los filtros seleccionados
+       * por el usuario en la interfaz administrativa.
+       */
+      const resultado =
+        vacantesPermitidas.filter(
+          (v) => {
+            const vTipo =
+              normalizarTexto(
+                v.tipoVacante
+              );
+
+            const vPais =
+              normalizarTexto(
+                v.pais
+              );
+
+            const vEstado =
+              normalizarTexto(
+                v.estado
+              );
+
+            const vCiudad =
+              normalizarTexto(
+                v.ciudad
+              );
+
+            const vGrupo =
+              normalizarTexto(
+                v.grupo
+              );
+
+            return (
+              (
+                !tipoVacante ||
+                vTipo === tipoVacante
+              ) &&
+              (
+                !pais ||
+                vPais.includes(pais) ||
+                pais.includes(vPais)
+              ) &&
+              (
+                !estado ||
+                vEstado.includes(estado) ||
+                estado.includes(vEstado)
+              ) &&
+              (
+                !ciudad ||
+                vCiudad.includes(ciudad) ||
+                ciudad.includes(vCiudad)
+              ) &&
+              (
+                !grupo ||
+                vGrupo.includes(grupo) ||
+                grupo.includes(vGrupo)
+              )
+            );
+          }
+        );
+
+      return res.json(resultado);
+
+    } catch (error) {
+      console.error(
+        "Error cargando vacantes administrativas:",
+        error
+      );
+
+      return res.status(500).json({
+        error:
+          "No fue posible cargar las vacantes administrativas."
+      });
+    }
+  }
+);
+
 app.get("/api/vacantes/qr/:slug", async (req, res) => {
   try {
     const slug =
@@ -5385,21 +6998,111 @@ app.get("/api/vacantes/qr/:slug", async (req, res) => {
   }
 });
 
-app.get("/api/postulacion/:id", async (req, res) => {
-  try {
-    const postulaciones = await leerPostulaciones();
-    const item = postulaciones.find((p) => p.id === req.params.id);
+/* =========================================================
+   CONSULTA PÚBLICA DE ESTATUS POR FOLIO
 
-    if (!item) {
-      return res.status(404).json({ error: "Postulacion no encontrada." });
+   SEGURIDAD:
+   Esta ruta es utilizada por el candidato
+   desde el chatbot.
+
+   NUNCA debe devolver la postulación completa
+   ni información personal/documental.
+========================================================= */
+
+app.get(
+  "/api/postulacion/:id",
+  async (req, res) => {
+    try {
+
+      const folio =
+        String(
+          req.params.id || ""
+        )
+          .trim();
+
+
+      if (!folio) {
+        return res.status(400).json({
+          error:
+            "El folio es obligatorio."
+        });
+      }
+
+
+      const postulaciones =
+        await leerPostulaciones();
+
+
+      const item =
+        postulaciones.find(
+          (postulacion) =>
+            String(
+              postulacion.id || ""
+            ) === folio
+        );
+
+
+      if (!item) {
+        return res.status(404).json({
+          error:
+            "Postulación no encontrada."
+        });
+      }
+
+
+      /*
+       * IMPORTANTE:
+       * Solo información mínima necesaria
+       * para que el candidato conozca
+       * el estado de su solicitud.
+       *
+       * NO enviar:
+       * - nombre
+       * - correo
+       * - teléfono
+       * - CV
+       * - INE
+       * - CURP
+       * - domicilio
+       * - respuestas
+       * - análisis IA
+       * - datos internos
+       */
+
+      return res.json({
+        ok: true,
+
+        folio:
+          item.id,
+
+        estadoSolicitud:
+          item.estadoSolicitud ||
+          "pendiente"
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Error consultando estatus público de postulación:",
+        {
+          message:
+            error?.message ||
+            "Error desconocido",
+
+          code:
+            error?.code ||
+            null
+        }
+      );
+
+
+      return res.status(500).json({
+        error:
+          "No fue posible consultar la postulación."
+      });
     }
-
-    res.json(item);
-  } catch (error) {
-    console.error("Error consultando postulacion:", error);
-    res.status(500).json({ error: "No fue posible consultar la postulacion." });
   }
-});
+);
 
 app.post(
   "/api/analizar-cv",
@@ -5504,7 +7207,26 @@ if (
       }
     });
   } catch (error) {
-    console.error("Error analizando CV:", error);
+    console.error(
+  "Error analizando CV:",
+  {
+    name:
+      error?.name ||
+      "Error",
+
+    message:
+      error?.message ||
+      "Error desconocido",
+
+    code:
+      error?.code ||
+      null,
+
+    status:
+      error?.status ||
+      null
+  }
+);
     res.status(500).json({ error: "No fue posible analizar el CV." });
   }
 });
@@ -5656,6 +7378,15 @@ const configuracion =
       const cvFile =
         req.files?.cvFile?.[0] || null;
 
+      const ineFile =
+        req.files?.ineFile?.[0] || null;
+
+      const curpFile =
+        req.files?.curpFile?.[0] || null;
+
+      const domicilioFile =
+        req.files?.domicilioFile?.[0] || null;
+
       if (
         configuracion.cv === "obligatorio" &&
         !cvFile
@@ -5739,12 +7470,23 @@ for (const pregunta of preguntasConfiguradas) {
       };
 
       let cvNombre = "";
-      let cvRuta = "";
+      let cvArchivo = "";
+
+      let ineNombre = "";
+      let ineArchivo = "";
+
+      let curpNombre = "";
+      let curpArchivo = "";
+
+      let domicilioNombre = "";
+      let domicilioArchivo = "";
 
       if (cvFile) {
-        cvNombre = cvFile.originalname;
-        cvRuta =
-          `/uploads/${cvFile.filename}`;
+        cvNombre =
+          cvFile.originalname || "";
+
+        cvArchivo =
+          cvFile.filename || "";
 
         const cvTexto =
           await extraerTextoPdf(
@@ -5758,6 +7500,32 @@ for (const pregunta of preguntasConfiguradas) {
             );
         }
       }
+
+      if (ineFile) {
+  ineNombre =
+    ineFile.originalname || "";
+
+  ineArchivo =
+    ineFile.filename || "";
+}
+
+
+if (curpFile) {
+  curpNombre =
+    curpFile.originalname || "";
+
+  curpArchivo =
+    curpFile.filename || "";
+}
+
+
+if (domicilioFile) {
+  domicilioNombre =
+    domicilioFile.originalname || "";
+
+  domicilioArchivo =
+    domicilioFile.filename || "";
+}
 
       /* =========================
    CÁLCULO DE UBICACIÓN
@@ -6301,15 +8069,18 @@ const resultadoCompatibilidad =
     compatibilidadTraslado
   });
 
-
 /* =========================================================
    CREAR POSTULACIÓN
 ========================================================= */
 
+const postulacionId =
+  Date.now().toString();
+
+
 const postulacion = {
 
   id:
-    Date.now().toString(),
+    postulacionId,
 
 
   /* =========================
@@ -6491,15 +8262,34 @@ const postulacion = {
 
 
   /* =========================
-     CV
+     DOCUMENTOS PRIVADOS
   ========================= */
 
   cvNombre,
+  cvArchivo,
 
-  cvRuta,
+  cvRuta:
+    cvArchivo
+      ? `/api/postulaciones/${postulacionId}/documentos/cv`
+      : "",
+
+  ineNombre,
+  ineArchivo,
+
+  curpNombre,
+  curpArchivo,
+
+  domicilioNombre,
+  domicilioArchivo,
+
+
+  /* =========================
+     ANÁLISIS DE IA
+  ========================= */
 
   resumenIA:
-    analisisIA.resumen || "",
+    analisisIA.resumen ||
+    "",
 
   habilidadesDetectadas:
     Array.isArray(
@@ -6525,6 +8315,273 @@ const postulacion = {
   fechaRegistro:
     new Date().toISOString()
 };
+
+
+/* =========================================================
+   DESCARGAR DOCUMENTO PRIVADO DE POSTULACIÓN
+========================================================= */
+
+app.get(
+  "/api/postulaciones/:id/documentos/:tipo",
+  verifyAdmin,
+  requirePermission(
+    "candidatos.ver"
+  ),
+  async (req, res) => {
+    try {
+
+      const { id, tipo } =
+        req.params;
+
+
+      const tiposPermitidos = {
+        cv: {
+          archivo:
+            "cvArchivo",
+          nombre:
+            "cvNombre"
+        },
+
+        ine: {
+          archivo:
+            "ineArchivo",
+          nombre:
+            "ineNombre"
+        },
+
+        curp: {
+          archivo:
+            "curpArchivo",
+          nombre:
+            "curpNombre"
+        },
+
+        domicilio: {
+          archivo:
+            "domicilioArchivo",
+          nombre:
+            "domicilioNombre"
+        }
+      };
+
+
+      const tipoNormalizado =
+        String(
+          tipo || ""
+        )
+          .trim()
+          .toLowerCase();
+
+
+      const configuracionDocumento =
+        tiposPermitidos[
+          tipoNormalizado
+        ];
+
+
+      if (!configuracionDocumento) {
+        return res.status(400).json({
+          error:
+            "Tipo de documento no válido."
+        });
+      }
+
+
+      /*
+       * Buscar la postulación real.
+       */
+      const postulaciones =
+        await leerPostulaciones();
+
+
+      const postulacion =
+        postulaciones.find(
+          (item) =>
+            item.id === id
+        );
+
+
+      if (!postulacion) {
+        return res.status(404).json({
+          error:
+            "Postulación no encontrada."
+        });
+      }
+
+
+      /*
+       * VALIDAR SCOPE
+       *
+       * Tener candidatos.ver no significa
+       * poder descargar documentos de
+       * cualquier sucursal.
+       */
+      if (
+        !adminTieneAccesoRecurso(
+          req.adminUser,
+          postulacion
+        )
+      ) {
+        return res.status(403).json({
+          error:
+            "No tienes acceso a este documento.",
+
+          code:
+            "SCOPE_DENIED"
+        });
+      }
+
+
+      /*
+       * Obtener archivo interno.
+       */
+      let archivo =
+        String(
+          postulacion[
+            configuracionDocumento
+              .archivo
+          ] ||
+          ""
+        ).trim();
+
+
+      /*
+       * COMPATIBILIDAD CON CV ANTIGUOS.
+       *
+       * Antes se guardaba:
+       * /uploads/nombre.pdf
+       */
+      if (
+        !archivo &&
+        tipoNormalizado === "cv" &&
+        postulacion.cvRuta
+      ) {
+        archivo =
+          path.basename(
+            String(
+              postulacion.cvRuta
+            )
+          );
+      }
+
+
+      if (!archivo) {
+        return res.status(404).json({
+          error:
+            "El documento no está disponible."
+        });
+      }
+
+
+      /*
+       * DEFENSA CONTRA PATH TRAVERSAL
+       */
+      const archivoSeguro =
+        path.basename(
+          archivo
+        );
+
+
+      const rutaArchivo =
+        path.join(
+          uploadsDir,
+          archivoSeguro
+        );
+
+
+      /*
+       * Verificación defensiva adicional.
+       */
+      const rutaResuelta =
+        path.resolve(
+          rutaArchivo
+        );
+
+      const uploadsResuelto =
+        path.resolve(
+          uploadsDir
+        );
+
+
+      if (
+        !rutaResuelta.startsWith(
+          uploadsResuelto +
+          path.sep
+        )
+      ) {
+        return res.status(400).json({
+          error:
+            "Ruta de documento no válida."
+        });
+      }
+
+
+      if (
+        !fs.existsSync(
+          rutaResuelta
+        )
+      ) {
+        return res.status(404).json({
+          error:
+            "El archivo no existe."
+        });
+      }
+
+
+      /*
+       * Nombre que verá el usuario.
+       * El nombre físico interno nunca
+       * se expone como parte de la URL.
+       */
+      const nombreOriginal =
+        String(
+          postulacion[
+            configuracionDocumento
+              .nombre
+          ] ||
+          archivoSeguro
+        )
+          .replace(
+            /[\r\n"]/g,
+            ""
+          )
+          .trim() ||
+        archivoSeguro;
+
+
+      res.setHeader(
+        "Content-Disposition",
+        `inline; filename="${nombreOriginal}"`
+      );
+
+
+      return res.sendFile(
+        rutaResuelta
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Error obteniendo documento privado:",
+        {
+          message:
+            error?.message ||
+            "Error desconocido",
+
+          code:
+            error?.code ||
+            null
+        }
+      );
+
+
+      return res.status(500).json({
+        error:
+          "No fue posible obtener el documento."
+      });
+    }
+  }
+);
 
 
 /* =========================================================
@@ -6721,32 +8778,2609 @@ app.post("/chat", async (req, res) => {
   }
 });
 
-app.get("/api/admin/me", verifyAdmin, (req, res) => {
-  res.json({
-    ok: true,
-    email: req.adminUser.email
+/* =========================================================
+   PERFIL DEL USUARIO ADMINISTRATIVO AUTENTICADO
+========================================================= */
+
+app.get(
+  "/api/admin/me",
+  verifyAdmin,
+  (req, res) => {
+
+    const user =
+      req.adminUser || {};
+
+
+    res.json({
+      ok: true,
+
+      user: {
+
+        uid:
+          user.uid || "",
+
+        nombre:
+          user.nombre || "",
+
+        email:
+          user.email || "",
+
+        role:
+          user.role || "",
+        
+        isPrimaryAdmin: Boolean(user.isPrimaryAdmin),
+
+        active:
+          user.active !== false,
+
+        globalAccess:
+          Boolean(
+            user.globalAccess
+          ),
+
+        allowedBrands:
+          Array.isArray(
+            user.allowedBrands
+          )
+            ? user.allowedBrands
+            : [],
+
+        allowedBranches:
+          Array.isArray(
+            user.allowedBranches
+          )
+            ? user.allowedBranches
+            : [],
+
+        allowedCountries:
+          Array.isArray(
+            user.allowedCountries
+          )
+            ? user.allowedCountries
+            : [],
+
+        permissions:
+          Array.isArray(
+            user.permissions
+          )
+            ? user.permissions
+            : []
+      }
+    });
+  }
+);
+/* =========================================================
+   LISTAR USUARIOS ADMINISTRATIVOS
+========================================================= */
+
+app.get(
+  "/api/admin/users",
+  verifyAdmin,
+  requirePermission(
+  "usuarios.gestionar_admins"
+),
+  async (req, res) => {
+
+    try {
+
+      if (!db) {
+        return res.status(500).json({
+          error:
+            "Firestore no está disponible."
+        });
+      }
+
+
+      const snapshot =
+        await db
+          .collection(
+            ADMIN_USERS_COLLECTION
+          )
+          .get();
+
+
+      const users =
+        await Promise.all(
+          snapshot.docs.map(
+            async (doc) => {
+
+              const uid =
+                String(
+                  doc.id || ""
+                ).trim();
+
+              const firestoreUser =
+                doc.data() || {};
+
+
+              let firebaseUser = null;
+
+
+              try {
+
+                firebaseUser =
+                  await admin
+                    .auth()
+                    .getUser(uid);
+
+              } catch (error) {
+
+                console.warn(
+                  "Usuario administrativo sin cuenta Firebase Auth:",
+                  {
+                    uid,
+                    error:
+                      error?.code ||
+                      error?.message ||
+                      "UNKNOWN_ERROR"
+                  }
+                );
+              }
+
+
+              const email =
+                String(
+                  firebaseUser?.email ||
+                  firestoreUser?.email ||
+                  ""
+                )
+                  .trim()
+                  .toLowerCase();
+
+
+              const normalizedUser =
+                normalizarAdminUser({
+
+                  uid,
+
+                  email,
+
+                  firebaseUser:
+                    firebaseUser || {},
+
+                  firestoreUser
+                });
+
+
+              return {
+
+                uid:
+                  normalizedUser.uid,
+
+                nombre:
+                  normalizedUser.nombre,
+
+                email:
+                  normalizedUser.email,
+
+                role:
+                  normalizedUser.role,
+
+                isPrimaryAdmin:
+                  Boolean(
+                    normalizedUser
+                      .isPrimaryAdmin
+                  ),
+
+                active:
+                  normalizedUser.active !== false,
+
+                firebaseDisabled:
+                  Boolean(
+                    firebaseUser?.disabled
+                  ),
+
+                globalAccess:
+                  Boolean(
+                    normalizedUser
+                      .globalAccess
+                  ),
+
+                allowedBrands:
+                  Array.isArray(
+                    normalizedUser
+                      .allowedBrands
+                  )
+                    ? normalizedUser
+                        .allowedBrands
+                    : [],
+
+                allowedBranches:
+                  Array.isArray(
+                    normalizedUser
+                      .allowedBranches
+                  )
+                    ? normalizedUser
+                        .allowedBranches
+                    : [],
+
+                allowedCountries:
+                  Array.isArray(
+                    normalizedUser
+                      .allowedCountries
+                  )
+                    ? normalizedUser
+                        .allowedCountries
+                    : [],
+
+                permissions:
+                  Array.isArray(
+                    normalizedUser
+                      .permissions
+                  )
+                    ? normalizedUser
+                        .permissions
+                    : [],
+
+                authExists:
+                  Boolean(
+                    firebaseUser
+                  )
+              };
+            }
+          )
+        );
+
+
+      users.sort(
+        (a, b) =>
+          String(
+            a.nombre ||
+            a.email ||
+            ""
+          ).localeCompare(
+            String(
+              b.nombre ||
+              b.email ||
+              ""
+            ),
+            "es",
+            {
+              sensitivity: "base"
+            }
+          )
+      );
+
+
+      return res.json({
+        ok: true,
+        users,
+        total:
+          users.length
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Error listando usuarios administrativos:",
+        error
+      );
+
+
+      return res.status(500).json({
+        error:
+          "No fue posible obtener los usuarios administrativos."
+      });
+    }
+  }
+);
+
+/* =========================================================
+   CREAR USUARIO ADMINISTRATIVO
+========================================================= */
+
+app.post(
+  "/api/admin/users",
+  verifyAdmin,
+  requirePermission(
+  "usuarios.gestionar_admins"
+),
+  async (req, res) => {
+
+    let createdAuthUser = null;
+
+    try {
+
+      if (!db) {
+        return res.status(500).json({
+          error:
+            "Firestore no está disponible."
+        });
+      }
+
+
+      const nombre =
+        String(
+          req.body?.nombre || ""
+        ).trim();
+
+
+      const email =
+        String(
+          req.body?.email || ""
+        )
+          .trim()
+          .toLowerCase();
+
+
+      const role =
+        String(
+          req.body?.role || ""
+        )
+          .trim()
+          .toLowerCase();
+
+          /* =====================================================
+   VALIDAR TIPOS DE DATOS DE ENTRADA
+===================================================== */
+
+if (
+  req.body?.globalAccess !== undefined &&
+  typeof req.body.globalAccess !== "boolean"
+) {
+  return res.status(400).json({
+    error:
+      "globalAccess debe ser un valor booleano.",
+    code:
+      "INVALID_GLOBAL_ACCESS"
   });
-});
+}
+
+
+const arrayFields = [
+  {
+    name: "allowedBrands",
+    value: req.body?.allowedBrands
+  },
+  {
+    name: "allowedBranches",
+    value: req.body?.allowedBranches
+  },
+  {
+    name: "allowedCountries",
+    value: req.body?.allowedCountries
+  },
+  {
+    name: "permissions",
+    value: req.body?.permissions
+  }
+];
+
+
+for (const field of arrayFields) {
+  if (
+    field.value !== undefined &&
+    !Array.isArray(field.value)
+  ) {
+    return res.status(400).json({
+      error:
+        `${field.name} debe ser un arreglo.`,
+      code:
+        "INVALID_ARRAY_FIELD",
+      field:
+        field.name
+    });
+  }
+}
+
+
+      const globalAccess =
+        req.body?.globalAccess === true;
+
+
+      const allowedBrands =
+        Array.isArray(
+          req.body?.allowedBrands
+        )
+          ? [
+              ...new Set(
+                req.body.allowedBrands
+                  .map((item) =>
+                    String(item || "").trim()
+                  )
+                  .filter(Boolean)
+              )
+            ]
+          : [];
+
+
+      const allowedBranches =
+        Array.isArray(
+          req.body?.allowedBranches
+        )
+          ? [
+              ...new Set(
+                req.body.allowedBranches
+                  .map((item) =>
+                    String(item || "").trim()
+                  )
+                  .filter(Boolean)
+              )
+            ]
+          : [];
+
+
+      const allowedCountries =
+        Array.isArray(
+          req.body?.allowedCountries
+        )
+          ? [
+              ...new Set(
+                req.body.allowedCountries
+                  .map((item) =>
+                    String(item || "").trim()
+                  )
+                  .filter(Boolean)
+              )
+            ]
+          : [];
+
+
+      const rawRequestedPermissions =
+  Array.isArray(req.body?.permissions)
+    ? req.body.permissions.map(
+        (item) =>
+          String(item || "").trim()
+      )
+    : [];
+
+
+const invalidRequestedPermissions =
+  rawRequestedPermissions.filter(
+    (permission) =>
+      !permission ||
+      !VALID_PERMISSIONS.has(permission)
+  );
+
+
+if (invalidRequestedPermissions.length > 0) {
+  return res.status(400).json({
+    error:
+      "La solicitud contiene permisos no válidos.",
+    code:
+      "INVALID_PERMISSION",
+    invalidPermissions:
+      [...new Set(invalidRequestedPermissions)]
+  });
+}
+
+
+const requestedPermissions =
+  [
+    ...new Set(
+      rawRequestedPermissions
+    )
+  ];
+
+
+      /* =====================================================
+         VALIDACIONES BÁSICAS
+      ===================================================== */
+
+      if (!nombre) {
+        return res.status(400).json({
+          error:
+            "El nombre del usuario es obligatorio.",
+          code:
+            "NAME_REQUIRED"
+        });
+      }
+
+
+      if (
+        !email ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+          email
+        )
+      ) {
+        return res.status(400).json({
+          error:
+            "Debes proporcionar un correo electrónico válido.",
+          code:
+            "INVALID_EMAIL"
+        });
+      }
+
+
+      const allowedRoles = [
+        "admin",
+        "reclutador",
+        "gerente"
+      ];
+
+
+      if (
+        !allowedRoles.includes(role)
+      ) {
+        return res.status(400).json({
+          error:
+            "El rol administrativo no es válido.",
+          code:
+            "INVALID_ROLE"
+        });
+      }
+
+
+      /* =====================================================
+         PROTECCIÓN PARA CREACIÓN DE ADMINISTRADORES
+      ===================================================== */
+
+      const actorPermissions =
+        Array.isArray(
+          req.adminUser?.permissions
+        )
+          ? req.adminUser.permissions
+          : [];
+
+
+      if (
+        role === "admin" &&
+        !actorPermissions.includes(
+          "usuarios.gestionar_admins"
+        )
+      ) {
+        return res.status(403).json({
+          error:
+            "No tienes permiso para crear administradores.",
+          code:
+            "MANAGE_ADMINS_REQUIRED"
+        });
+      }
+
+
+     /* =====================================================
+   PROTEGER PERMISO EXCLUSIVO DE ADMIN PRINCIPAL
+===================================================== */
+
+const targetWillBePrimaryAdmin =
+  role === "admin" &&
+  isPrimaryAdminEmail(email);
+
+if (
+  requestedPermissions.includes(
+    "usuarios.gestionar_admins"
+  ) &&
+  !targetWillBePrimaryAdmin
+) {
+  return res.status(403).json({
+    error:
+      "El permiso para gestionar administradores es exclusivo de los administradores principales.",
+    code:
+      "PRIMARY_ADMIN_PERMISSION_NOT_DELEGABLE"
+  });
+}
+
+      /*
+       * Por ahora no permitimos convertir otra cuenta
+       * en Administrador principal desde la API.
+       *
+       * isPrimaryAdmin se deriva exclusivamente de
+       * PRIMARY_ADMIN_EMAILS en el servidor.
+       */
+
+
+      /* =====================================================
+         VALIDAR ALCANCE
+      ===================================================== */
+
+      if (
+        !targetWillBePrimaryAdmin &&
+        !globalAccess &&
+        allowedBrands.length === 0 &&
+        allowedBranches.length === 0 &&
+        allowedCountries.length === 0
+      ) {
+        return res.status(400).json({
+          error:
+            "El usuario debe tener acceso global o al menos un alcance asignado.",
+          code:
+            "SCOPE_REQUIRED"
+        });
+      }
+
+
+      /*
+       * Solo quien puede gestionar administradores
+       * puede crear una cuenta con acceso global.
+       */
+
+      if (
+        globalAccess &&
+        !actorPermissions.includes(
+          "usuarios.gestionar_admins"
+        )
+      ) {
+        return res.status(403).json({
+          error:
+            "No tienes permiso para otorgar acceso global.",
+          code:
+            "GLOBAL_ACCESS_DENIED"
+        });
+      }
+
+
+      /* =====================================================
+         COMPROBAR SI EL CORREO YA EXISTE
+      ===================================================== */
+
+      try {
+
+        const existingUser =
+          await admin
+            .auth()
+            .getUserByEmail(email);
+
+
+        if (existingUser) {
+
+          return res.status(409).json({
+            error:
+              "Ya existe una cuenta con ese correo electrónico.",
+            code:
+              "EMAIL_ALREADY_EXISTS"
+          });
+        }
+
+      } catch (error) {
+
+        if (
+          error?.code !==
+          "auth/user-not-found"
+        ) {
+          throw error;
+        }
+      }
+
+
+      /* =====================================================
+         CREAR USUARIO EN FIREBASE AUTH
+      ===================================================== */
+
+      createdAuthUser =
+        await admin
+          .auth()
+          .createUser({
+
+            email,
+
+            displayName:
+              nombre,
+
+            emailVerified:
+              false,
+
+            disabled:
+              false
+          });
+
+
+      const uid =
+        createdAuthUser.uid;
+
+
+        /* =====================================================
+   GENERAR ENLACE PARA CONFIGURAR CONTRASEÑA
+===================================================== */
+
+let passwordSetupLink = "";
+
+try {
+
+  passwordSetupLink =
+    await admin
+      .auth()
+      .generatePasswordResetLink(
+        email
+      );
+
+} catch (passwordLinkError) {
+
+  console.error(
+    "No fue posible generar el enlace de contraseña:",
+    passwordLinkError
+  );
+
+}
+
+
+      /* =====================================================
+         CREAR PERFIL EN FIRESTORE
+      ===================================================== */
+
+      const firestoreProfile = {
+
+        nombre,
+
+        email,
+
+        role,
+
+        active:
+          true,
+
+       globalAccess:
+        targetWillBePrimaryAdmin
+          ? true
+          : globalAccess,
+
+      allowedBrands:
+        targetWillBePrimaryAdmin
+          ? []
+          : allowedBrands,
+
+      allowedBranches:
+        targetWillBePrimaryAdmin
+          ? []
+          : allowedBranches,
+
+      allowedCountries:
+        targetWillBePrimaryAdmin
+          ? []
+          : allowedCountries,
+
+        permissions:
+          requestedPermissions,
+
+        createdAt:
+          admin.firestore
+            .FieldValue
+            .serverTimestamp(),
+
+        createdByUid:
+          req.adminUser?.uid || "",
+
+        createdByEmail:
+          req.adminUser?.email || ""
+      };
+
+
+      await db
+        .collection(
+          ADMIN_USERS_COLLECTION
+        )
+        .doc(uid)
+        .set(
+          firestoreProfile
+        );
+
+
+              /* =====================================================
+         ENVIAR CORREO DE ACCESO
+         El enlace temporal nunca se devuelve al navegador
+         ni debe persistirse en el historial.
+      ===================================================== */
+
+      let accessEmailSent = false;
+      let accessCommunication = null;
+
+
+      if (passwordSetupLink) {
+
+        try {
+
+          const communicationResult =
+            await communicationsService
+              .enviarComunicacion(
+                {
+                  plantillaId:
+                    "acceso_usuario",
+
+                  tipo:
+                    "acceso_usuario",
+
+                  canal:
+                    "email",
+
+                  idioma:
+                    "es",
+
+                  destinatario: {
+                    nombre:
+                      nombre,
+
+                    correo:
+                      email
+                  },
+
+                  variables: {
+                    nombre:
+                      nombre,
+
+                    correo:
+                      email,
+
+                    accesoUrl:
+                      passwordSetupLink,
+
+                    empresa:
+                      "GA Hospitality"
+                  },
+
+                  /*
+                   * Comunicación sensible:
+                   * el enlace solamente existe en memoria
+                   * durante el envío inmediato.
+                   */
+                  sensible:
+                    true,
+
+                  metadata: {
+                    tipoOperacion:
+                      "creacion_usuario",
+
+                    targetUid:
+                      uid,
+
+                    targetRole:
+                      role
+                  }
+                },
+                {
+                  usuario:
+                    req.adminUser?.email ||
+                    req.adminUser?.uid ||
+                    "sistema"
+                }
+              );
+
+
+          accessEmailSent =
+            Boolean(
+              communicationResult
+            );
+
+
+          accessCommunication = {
+            id:
+              communicationResult?.id ||
+              communicationResult
+                ?.communicationId ||
+              "",
+
+            estado:
+              communicationResult?.estado ||
+              communicationResult?.status ||
+              ""
+          };
+
+
+        } catch (communicationError) {
+
+          /*
+           * La cuenta YA fue creada correctamente.
+           *
+           * Un fallo de correo no debe eliminar
+           * la cuenta. El administrador podrá
+           * usar "Reenviar acceso".
+           *
+           * Tampoco registramos el objeto completo
+           * del error porque esta operación maneja
+           * un enlace temporal sensible.
+           */
+          console.error(
+            "No fue posible enviar el correo de acceso del nuevo usuario:",
+            {
+              code:
+                communicationError?.code ||
+                "COMMUNICATION_ERROR",
+
+              message:
+                communicationError?.message ||
+                "Error enviando correo de acceso"
+            }
+          );
+
+        }
+
+      } else {
+
+        console.warn(
+          "Usuario creado sin correo de acceso: no fue posible generar el enlace temporal.",
+          {
+            uid,
+            email
+          }
+        );
+
+      }
+
+
+      /* =====================================================
+         NORMALIZAR RESPUESTA
+      ===================================================== */
+
+      const normalizedUser =
+        normalizarAdminUser({
+
+          uid,
+
+          email,
+
+          firebaseUser:
+            createdAuthUser,
+
+          firestoreUser:
+            firestoreProfile
+        });
+
+
+      return res.status(201).json({
+
+        ok: true,
+
+        message:
+          "Usuario administrativo creado correctamente.",
+
+        passwordSetup: {
+          required: true,
+
+          linkGenerated:
+            Boolean(passwordSetupLink),
+
+          emailSent:
+            accessEmailSent
+        },
+
+        communication:
+          accessCommunication,
+
+        user: {
+
+          uid:
+            normalizedUser.uid,
+
+          nombre:
+            normalizedUser.nombre,
+
+          email:
+            normalizedUser.email,
+
+          role:
+            normalizedUser.role,
+
+          isPrimaryAdmin:
+            Boolean(
+              normalizedUser
+                .isPrimaryAdmin
+            ),
+
+          active:
+            normalizedUser.active !== false,
+
+          globalAccess:
+            Boolean(
+              normalizedUser
+                .globalAccess
+            ),
+
+          allowedBrands:
+            normalizedUser
+              .allowedBrands || [],
+
+          allowedBranches:
+            normalizedUser
+              .allowedBranches || [],
+
+          allowedCountries:
+            normalizedUser
+              .allowedCountries || [],
+
+          permissions:
+            normalizedUser
+              .permissions || []
+        }
+      });
+
+
+    } catch (error) {
+
+      console.error(
+        "Error creando usuario administrativo:",
+        error
+      );
+
+
+      /* =====================================================
+         ROLLBACK
+         Si Auth se creó pero Firestore falló,
+         eliminamos la cuenta incompleta.
+      ===================================================== */
+
+      if (
+        createdAuthUser?.uid
+      ) {
+
+        try {
+
+          await admin
+            .auth()
+            .deleteUser(
+              createdAuthUser.uid
+            );
+
+          console.warn(
+            "Rollback realizado para usuario administrativo:",
+            createdAuthUser.uid
+          );
+
+        } catch (rollbackError) {
+
+          console.error(
+            "No fue posible realizar rollback de Firebase Auth:",
+            rollbackError
+          );
+        }
+      }
+
+
+      if (
+        error?.code ===
+        "auth/email-already-exists"
+      ) {
+        return res.status(409).json({
+          error:
+            "Ya existe una cuenta con ese correo electrónico.",
+          code:
+            "EMAIL_ALREADY_EXISTS"
+        });
+      }
+
+
+      if (
+        error?.code ===
+        "auth/invalid-email"
+      ) {
+        return res.status(400).json({
+          error:
+            "El correo electrónico no es válido.",
+          code:
+            "INVALID_EMAIL"
+        });
+      }
+
+
+      return res.status(500).json({
+        error:
+          "No fue posible crear el usuario administrativo.",
+        code:
+          "ADMIN_USER_CREATE_FAILED"
+      });
+    }
+  }
+);
+
+
+app.patch(
+  "/api/admin/users/:uid",
+  verifyAdmin,
+  requirePermission(
+  "usuarios.gestionar_admins"
+),
+  async (req, res) => {
+    const targetUid = String(req.params.uid || "").trim();
+
+    if (!targetUid) {
+      return res.status(400).json({
+        error: "UID de usuario requerido.",
+        code: "UID_REQUIRED"
+      });
+    }
+
+    if (!db) {
+      return res.status(503).json({
+        error: "Firestore no está disponible.",
+        code: "FIRESTORE_UNAVAILABLE"
+      });
+    }
+
+    try {
+      const userRef = db.collection(ADMIN_USERS_COLLECTION).doc(targetUid);
+      const userSnap = await userRef.get();
+
+      if (!userSnap.exists) {
+        return res.status(404).json({
+          error: "Usuario administrativo no encontrado.",
+          code: "ADMIN_USER_NOT_FOUND"
+        });
+      }
+
+      const currentData = userSnap.data() || {};
+      const currentUser = normalizarAdminUser({
+        uid: targetUid,
+        email: currentData.email || "",
+        firestoreUser: currentData
+      });
+
+      const actor = req.adminUser;
+
+      const {
+        nombre,
+        role,
+        globalAccess,
+        allowedBrands,
+        allowedBranches,
+        allowedCountries,
+        permissions
+      } = req.body || {};
+      if (
+        globalAccess !== undefined &&
+        typeof globalAccess !== "boolean"
+      ) {
+        return res.status(400).json({
+          error:
+            "globalAccess debe ser un valor booleano.",
+          code:
+            "INVALID_GLOBAL_ACCESS"
+        });
+      }
+
+      const validRoles = ["admin", "reclutador", "gerente"];
+
+      const nextRole =
+        role !== undefined
+          ? String(role || "").trim().toLowerCase()
+          : currentUser.role;
+
+      if (!validRoles.includes(nextRole)) {
+        return res.status(400).json({
+          error: "Rol administrativo no válido.",
+          code: "INVALID_ROLE"
+        });
+      }
+
+      const nextNombre =
+        nombre !== undefined
+          ? String(nombre || "").trim()
+          : currentUser.nombre;
+
+      if (!nextNombre) {
+        return res.status(400).json({
+          error: "El nombre del usuario es obligatorio.",
+          code: "NAME_REQUIRED"
+        });
+      }
+
+      const arrayFields = [
+  {
+    name: "allowedBrands",
+    value: allowedBrands
+  },
+  {
+    name: "allowedBranches",
+    value: allowedBranches
+  },
+  {
+    name: "allowedCountries",
+    value: allowedCountries
+  },
+  {
+    name: "permissions",
+    value: permissions
+  }
+];
+
+for (const field of arrayFields) {
+  if (
+    field.value !== undefined &&
+    !Array.isArray(field.value)
+  ) {
+    return res.status(400).json({
+      error:
+        `${field.name} debe ser un arreglo.`,
+      code:
+        "INVALID_ARRAY_FIELD",
+      field:
+        field.name
+    });
+  }
+}
+
+if (permissions !== undefined) {
+  const invalidPermissions =
+    permissions
+      .map((permission) =>
+        String(permission || "").trim()
+      )
+      .filter(
+        (permission) =>
+          !permission ||
+          !VALID_PERMISSIONS.has(permission)
+      );
+
+  if (invalidPermissions.length > 0) {
+    return res.status(400).json({
+      error:
+        "La solicitud contiene permisos no válidos.",
+      code:
+        "INVALID_PERMISSION",
+      invalidPermissions:
+        [...new Set(invalidPermissions)]
+    });
+  }
+}
+
+      const normalizeArray = (value, fallback = []) => {
+        if (value === undefined) {
+          return Array.isArray(fallback) ? [...fallback] : [];
+        }
+
+        if (!Array.isArray(value)) {
+          return [];
+        }
+
+        return [
+          ...new Set(
+            value
+              .map((item) => String(item || "").trim())
+              .filter(Boolean)
+          )
+        ];
+      };
+
+   const nextAllowedBrands = normalizeArray(
+    allowedBrands,
+    currentData.allowedBrands ||
+      currentData.marcasPermitidas ||
+      []
+  );
+
+  const nextAllowedBranches = normalizeArray(
+    allowedBranches,
+    currentData.allowedBranches ||
+      currentData.sucursalesPermitidas ||
+      []
+  );
+
+  const nextAllowedCountries = normalizeArray(
+    allowedCountries,
+    currentData.allowedCountries ||
+      currentData.paisesPermitidos ||
+      []
+  );
+
+  const roleChanged =
+  nextRole !== currentUser.role;
+
+
+const nextPermissions =
+  permissions !== undefined
+    ? normalizeArray(
+        permissions,
+        []
+      )
+    : roleChanged
+      ? [
+          ...(
+            ROLE_PERMISSIONS[nextRole] ||
+            []
+          )
+        ]
+      : normalizeArray(
+          undefined,
+          currentData.permissions ||
+            currentData.permisos ||
+            []
+        );
+      let nextGlobalAccess =
+        globalAccess !== undefined
+          ? globalAccess
+          : (
+              currentData.globalAccess === true ||
+              currentData.accesoGlobal === true
+            );
+
+      const actorCanManageAdmins =
+        Array.isArray(actor.permissions) &&
+        actor.permissions.includes("usuarios.gestionar_admins");
+
+      const targetHasManageAdmins =
+        Array.isArray(currentUser.permissions) &&
+        currentUser.permissions.includes("usuarios.gestionar_admins");
+
+      const nextHasManageAdmins =
+        nextPermissions.includes("usuarios.gestionar_admins");
+
+        if (
+  nextHasManageAdmins &&
+  !currentUser.isPrimaryAdmin
+) {
+  return res.status(403).json({
+    error:
+      "El permiso para gestionar administradores es exclusivo de los administradores principales.",
+    code:
+      "PRIMARY_ADMIN_PERMISSION_NOT_DELEGABLE"
+  });
+}
+
+        const currentPermissions =
+  Array.isArray(currentUser.permissions)
+    ? [...new Set(currentUser.permissions)]
+    : [];
+
+const permissionsChanged =
+  permissions !== undefined &&
+  (
+    nextPermissions.length !== currentPermissions.length ||
+    nextPermissions.some(
+      (permission) =>
+        !currentPermissions.includes(permission)
+    )
+  );
+
+
+
+      // ---------------------------------------------------------
+      // PROTECCIÓN DEL ADMINISTRADOR PRINCIPAL
+      // ---------------------------------------------------------
+
+      if (currentUser.isPrimaryAdmin) {
+
+        if (permissionsChanged) {
+  return res.status(403).json({
+    error:
+      "No se pueden modificar los permisos de un administrador principal.",
+    code:
+      "PRIMARY_ADMIN_PERMISSIONS_PROTECTED"
+  });
+}
+        if (nextRole !== "admin") {
+          return res.status(403).json({
+            error:
+              "No se puede cambiar el rol de un administrador principal.",
+            code: "PRIMARY_ADMIN_PROTECTED"
+          });
+        }
+
+        if (!nextGlobalAccess) {
+          return res.status(403).json({
+            error:
+              "Un administrador principal debe conservar acceso global.",
+            code: "PRIMARY_ADMIN_PROTECTED"
+          });
+        }
+      }
+
+      // ---------------------------------------------------------
+      // OPERACIONES DE ALTO PRIVILEGIO
+      // ---------------------------------------------------------
+
+      const isAdminOperation =
+        currentUser.role === "admin" ||
+        nextRole === "admin" ||
+        targetHasManageAdmins ||
+        nextHasManageAdmins ||
+        nextGlobalAccess;
+
+      if (isAdminOperation && !actorCanManageAdmins) {
+        return res.status(403).json({
+          error:
+            "No tienes permiso para administrar cuentas con privilegios elevados.",
+          code: "ADMIN_MANAGEMENT_PERMISSION_REQUIRED"
+        });
+      }
+
+      // ---------------------------------------------------------
+      // EVITAR AUTO-BLOQUEO
+      // ---------------------------------------------------------
+
+      if (targetUid === actor.uid) {
+        if (nextRole !== actor.role) {
+          return res.status(403).json({
+            error: "No puedes cambiar tu propio rol.",
+            code: "SELF_ROLE_CHANGE_DENIED"
+          });
+        }
+
+        if (
+          actorCanManageAdmins &&
+          !nextPermissions.includes("usuarios.gestionar_admins") &&
+          !currentUser.isPrimaryAdmin
+        ) {
+          return res.status(403).json({
+            error:
+              "No puedes quitarte tu propio permiso para gestionar administradores.",
+            code: "SELF_PERMISSION_REMOVAL_DENIED"
+          });
+        }
+      }
+
+      // ---------------------------------------------------------
+      // REGLAS DE ALCANCE
+      // ---------------------------------------------------------
+
+      const targetWillBePrimaryAdmin =
+        nextRole === "admin" &&
+        isPrimaryAdminEmail(
+          currentUser.email
+        );
+
+      if (targetWillBePrimaryAdmin) {
+        nextGlobalAccess = true;
+      }
+
+      if (
+        !nextGlobalAccess &&
+        nextAllowedBrands.length === 0 &&
+        nextAllowedBranches.length === 0 &&
+        nextAllowedCountries.length === 0
+      ) {
+        return res.status(400).json({
+          error:
+            "Un usuario sin acceso global debe tener al menos una marca, sucursal o país autorizado.",
+          code: "SCOPE_REQUIRED"
+        });
+      }
+
+      // ---------------------------------------------------------
+      // ACTUALIZAR FIREBASE AUTH
+      // ---------------------------------------------------------
+
+      let firebaseUser;
+
+      try {
+
+  firebaseUser =
+    await admin
+      .auth()
+      .getUser(targetUid);
+
+} catch (authError) {
+
+  if (
+    authError?.code ===
+    "auth/user-not-found"
+  ) {
+
+    const firestoreEmail =
+      String(
+        currentUser.email || ""
+      )
+        .trim()
+        .toLowerCase();
+
+
+    if (!firestoreEmail) {
+      return res.status(409).json({
+        error:
+          "El usuario existe en Firestore, pero no tiene un correo válido para reconstruir su acceso en Firebase Authentication.",
+        code:
+          "AUTH_REPAIR_EMAIL_REQUIRED"
+      });
+    }
+
+
+    /*
+     * Antes de crear con el UID de Firestore,
+     * comprobamos que el correo no pertenezca
+     * a otra cuenta de Firebase Authentication.
+     */
+    try {
+
+      const authUserByEmail =
+        await admin
+          .auth()
+          .getUserByEmail(
+            firestoreEmail
+          );
+
+
+      /*
+       * Existe una cuenta con ese correo,
+       * pero tiene otro UID.
+       *
+       * No debemos fusionarla automáticamente.
+       */
+      if (
+        authUserByEmail.uid !==
+        targetUid
+      ) {
+        return res.status(409).json({
+          error:
+            "El correo del usuario ya pertenece a otra cuenta de Firebase Authentication. Se requiere una reconciliación manual.",
+          code:
+            "AUTH_UID_CONFLICT"
+        });
+      }
+
+
+      firebaseUser =
+        authUserByEmail;
+
+    } catch (emailLookupError) {
+
+      if (
+        emailLookupError?.code !==
+        "auth/user-not-found"
+      ) {
+        throw emailLookupError;
+      }
+
+
+      /*
+       * No existe ni el UID ni el correo en Auth:
+       * podemos reconstruir de forma segura
+       * la cuenta utilizando el mismo UID
+       * que ya existe en Firestore.
+       */
+      firebaseUser =
+        await admin
+          .auth()
+          .createUser({
+            uid:
+              targetUid,
+
+            email:
+              firestoreEmail,
+
+            displayName:
+              nextNombre ||
+              currentUser.nombre ||
+              firestoreEmail,
+
+            disabled:
+              currentUser.active === false
+          });
+
+
+      console.log(
+        "Cuenta de Firebase Authentication reconstruida:",
+        {
+          uid:
+            firebaseUser.uid,
+
+          email:
+            firebaseUser.email
+        }
+      );
+
+    }
+
+  } else {
+
+    throw authError;
+
+  }
+
+}
+
+      /* =====================================================
+   ACTUALIZAR DISPLAY NAME EN FIREBASE AUTH
+   CON POSIBILIDAD DE ROLLBACK
+===================================================== */
+
+const originalDisplayName =
+  firebaseUser.displayName || "";
+
+
+const displayNameChanged =
+  originalDisplayName !== nextNombre;
+
+
+if (displayNameChanged) {
+  firebaseUser =
+    await admin.auth().updateUser(
+      targetUid,
+      {
+        displayName: nextNombre
+      }
+    );
+}
+
+      // ---------------------------------------------------------
+      // ACTUALIZAR FIRESTORE
+      // ---------------------------------------------------------
+
+      const updateData = {
+        nombre: nextNombre,
+        role: nextRole,
+        globalAccess: nextGlobalAccess,
+
+        allowedBrands:
+          targetWillBePrimaryAdmin
+            ? []
+            : nextAllowedBrands,
+
+        allowedBranches:
+          targetWillBePrimaryAdmin
+            ? []
+            : nextAllowedBranches,
+
+        allowedCountries:
+          targetWillBePrimaryAdmin
+            ? []
+            : nextAllowedCountries,
+
+        permissions: nextPermissions,
+
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedBy: actor.uid
+      };
+
+      try {
+
+  await userRef.update(updateData);
+
+} catch (firestoreUpdateError) {
+
+  /*
+   * Firebase Auth ya pudo haber sido modificado.
+   * Si Firestore falla, intentamos restaurar
+   * el displayName anterior para mantener
+   * ambos sistemas sincronizados.
+   */
+  if (displayNameChanged) {
+
+    try {
+
+      firebaseUser =
+        await admin.auth().updateUser(
+          targetUid,
+          {
+            displayName:
+              originalDisplayName
+          }
+        );
+
+      console.warn(
+        "Rollback de displayName aplicado correctamente:",
+        {
+          uid: targetUid
+        }
+      );
+
+    } catch (rollbackError) {
+
+      console.error(
+        "Error crítico: no fue posible restaurar el displayName en Firebase Authentication:",
+        {
+          uid: targetUid,
+          code:
+            rollbackError?.code ||
+            "UNKNOWN_ROLLBACK_ERROR"
+        }
+      );
+
+    }
+
+  }
+
+
+  throw firestoreUpdateError;
+}
+
+      const updatedSnap = await userRef.get();
+      const updatedData = updatedSnap.data() || {};
+
+      const normalizedUser = normalizarAdminUser({
+        uid: targetUid,
+        email:
+          firebaseUser.email ||
+          updatedData.email ||
+          currentUser.email ||
+          "",
+        firebaseUser,
+        firestoreUser: updatedData
+      });
+
+      return res.json({
+        ok: true,
+        message: "Usuario administrativo actualizado correctamente.",
+        user: {
+          uid: normalizedUser.uid,
+          nombre: normalizedUser.nombre,
+          email: normalizedUser.email,
+          role: normalizedUser.role,
+          isPrimaryAdmin: Boolean(normalizedUser.isPrimaryAdmin),
+          active: normalizedUser.active !== false,
+          globalAccess: Boolean(normalizedUser.globalAccess),
+
+          allowedBrands: Array.isArray(normalizedUser.allowedBrands)
+            ? normalizedUser.allowedBrands
+            : [],
+
+          allowedBranches: Array.isArray(normalizedUser.allowedBranches)
+            ? normalizedUser.allowedBranches
+            : [],
+
+          allowedCountries: Array.isArray(normalizedUser.allowedCountries)
+            ? normalizedUser.allowedCountries
+            : [],
+
+          permissions: Array.isArray(normalizedUser.permissions)
+            ? normalizedUser.permissions
+            : []
+        }
+      });
+    } catch (error) {
+      console.error(
+        "Error actualizando usuario administrativo:",
+        error
+      );
+
+      return res.status(500).json({
+        error: "No fue posible actualizar el usuario administrativo.",
+        code: "ADMIN_USER_UPDATE_FAILED"
+      });
+    }
+  }
+);
+
+
+
+/* =========================================================
+   GENERAR ENLACE DE CONTRASEÑA PARA USUARIO ADMINISTRATIVO
+========================================================= */
+
+app.post(
+  "/api/admin/users/:uid/password-link",
+  verifyAdmin,
+  requirePermission(
+  "usuarios.gestionar_admins"
+),
+  async (req, res) => {
+
+    const targetUid =
+      String(req.params.uid || "").trim();
+
+    try {
+
+      /* =====================================================
+         VALIDACIONES BÁSICAS
+      ===================================================== */
+
+      if (!targetUid) {
+        return res.status(400).json({
+          error:
+            "UID de usuario requerido.",
+          code:
+            "UID_REQUIRED"
+        });
+      }
+
+
+      if (!db) {
+        return res.status(503).json({
+          error:
+            "Firestore no está disponible.",
+          code:
+            "FIRESTORE_UNAVAILABLE"
+        });
+      }
+
+
+      /* =====================================================
+         BUSCAR PERFIL ADMINISTRATIVO
+      ===================================================== */
+
+      const userRef =
+        db
+          .collection(
+            ADMIN_USERS_COLLECTION
+          )
+          .doc(targetUid);
+
+
+      const userSnapshot =
+        await userRef.get();
+
+
+      if (!userSnapshot.exists) {
+        return res.status(404).json({
+          error:
+            "El usuario administrativo no existe.",
+          code:
+            "ADMIN_USER_NOT_FOUND"
+        });
+      }
+
+
+      const firestoreUser =
+        userSnapshot.data() || {};
+
+
+      /* =====================================================
+         BUSCAR CUENTA EN FIREBASE AUTHENTICATION
+      ===================================================== */
+
+      let firebaseUser;
+
+      try {
+
+        firebaseUser =
+          await admin
+            .auth()
+            .getUser(targetUid);
+
+      } catch (authError) {
+
+        if (
+          authError?.code ===
+          "auth/user-not-found"
+        ) {
+          return res.status(409).json({
+            error:
+              "El usuario existe en Firestore pero no en Firebase Authentication.",
+            code:
+              "AUTH_USER_NOT_FOUND"
+          });
+        }
+
+        throw authError;
+      }
+
+
+      /* =====================================================
+         NORMALIZAR USUARIO
+      ===================================================== */
+
+      const targetUser =
+        normalizarAdminUser({
+          uid:
+            targetUid,
+
+          email:
+            firebaseUser.email ||
+            firestoreUser.email ||
+            "",
+
+          firebaseUser,
+
+          firestoreUser
+        });
+
+
+      /* =====================================================
+         VALIDAR ESTADO DE LA CUENTA
+      ===================================================== */
+
+      if (
+        targetUser.active === false ||
+        firebaseUser.disabled === true
+      ) {
+        return res.status(409).json({
+          error:
+            "No se puede generar un enlace para una cuenta desactivada.",
+          code:
+            "ADMIN_USER_INACTIVE"
+        });
+      }
+
+
+      if (!targetUser.email) {
+        return res.status(400).json({
+          error:
+            "El usuario no tiene un correo electrónico válido.",
+          code:
+            "USER_EMAIL_REQUIRED"
+        });
+      }
+
+
+      /* =====================================================
+         PROTECCIÓN DE CUENTAS ADMINISTRATIVAS
+      ===================================================== */
+
+      const actorPermissions =
+        Array.isArray(
+          req.adminUser?.permissions
+        )
+          ? req.adminUser.permissions
+          : [];
+
+
+      const targetPermissions =
+        Array.isArray(
+          targetUser.permissions
+        )
+          ? targetUser.permissions
+          : [];
+
+
+      const targetHasHighPrivileges =
+        targetUser.role === "admin" ||
+        targetUser.isPrimaryAdmin === true ||
+        targetPermissions.includes(
+          "usuarios.gestionar_admins"
+        );
+
+
+      if (
+        targetHasHighPrivileges &&
+        !actorPermissions.includes(
+          "usuarios.gestionar_admins"
+        )
+      ) {
+        return res.status(403).json({
+          error:
+            "No tienes permiso para administrar el acceso de este usuario.",
+          code:
+            "ADMIN_ACCESS_DENIED"
+        });
+      }
+
+         /* =====================================================
+         GENERAR ENLACE SEGURO
+      ===================================================== */
+
+      const passwordSetupLink =
+        await admin
+          .auth()
+          .generatePasswordResetLink(
+            targetUser.email
+          );
+
+
+      /* =====================================================
+         ENVIAR ACCESO POR COMMUNICATION CENTER
+      ===================================================== */
+
+      const communicationResult =
+        await communicationsService
+          .enviarComunicacion(
+            {
+              plantillaId:
+                "acceso_usuario",
+
+              tipo:
+                "acceso_usuario",
+
+              canal:
+                "email",
+
+              destinatario: {
+                nombre:
+                  targetUser.nombre ||
+                  "Usuario",
+
+                correo:
+                  targetUser.email
+              },
+
+              variables: {
+                nombre:
+                  targetUser.nombre ||
+                  "Usuario",
+
+                correo:
+                  targetUser.email,
+
+                accesoUrl:
+                  passwordSetupLink,
+
+                empresa:
+                  "GA Hospitality"
+              },
+
+              /*
+               * IMPORTANTE:
+               * el enlace de Firebase es un secreto
+               * temporal y nunca debe persistirse
+               * en el historial de comunicaciones.
+               */
+              sensible:
+                true,
+
+              metadata: {
+                tipoOperacion:
+                  "acceso_usuario",
+
+                targetUid:
+                  targetUser.uid,
+
+                targetRole:
+                  targetUser.role
+              }
+            },
+            {
+              usuario:
+                req.adminUser?.email ||
+                req.adminUser?.uid ||
+                "sistema"
+            }
+          );
+
+      return res.status(200).json({
+
+        ok: true,
+
+        message:
+          "El correo de acceso fue enviado correctamente.",
+
+        passwordSetup: {
+          required:
+            true,
+
+          linkGenerated:
+            true,
+
+          emailSent:
+            true
+        },
+
+        communication: {
+          id:
+            communicationResult?.id ||
+            communicationResult?.communicationId ||
+            null,
+
+          estado:
+            communicationResult?.estado ||
+            communicationResult?.status ||
+            "enviado"
+        },
+
+        user: {
+          uid:
+            targetUser.uid,
+
+          nombre:
+            targetUser.nombre,
+
+          email:
+            targetUser.email,
+
+          role:
+            targetUser.role
+        }
+
+      });
+      
+
+
+    } catch (error) {
+
+      console.error(
+  "Error enviando acceso administrativo:",
+  {
+    code:
+      error?.code ||
+      "UNKNOWN_ERROR",
+
+    message:
+      error?.message ||
+      "Error desconocido"
+  }
+);
+
+
+      if (
+        error?.code ===
+        "auth/invalid-email"
+      ) {
+        return res.status(400).json({
+          error:
+            "El correo electrónico del usuario no es válido.",
+          code:
+            "INVALID_EMAIL"
+        });
+      }
+
+
+      if (
+        error?.code ===
+        "auth/user-not-found"
+      ) {
+        return res.status(404).json({
+          error:
+            "La cuenta no existe en Firebase Authentication.",
+          code:
+            "AUTH_USER_NOT_FOUND"
+        });
+      }
+
+
+      return res.status(500).json({
+        error:
+          "No fue posible generar el enlace de contraseña.",
+        code:
+          "PASSWORD_LINK_FAILED"
+      });
+
+    }
+  }
+);
+/* =========================================================
+   ACTIVAR / DESACTIVAR USUARIO ADMINISTRATIVO
+========================================================= */
+
+
+
+app.patch(
+  "/api/admin/users/:uid/status",
+  verifyAdmin,
+  requirePermission(
+  "usuarios.gestionar_admins"
+),
+  async (req, res) => {
+
+    try {
+
+      if (!db) {
+        return res.status(500).json({
+          error:
+            "Firestore no está disponible."
+        });
+      }
+
+
+      const targetUid =
+        String(
+          req.params?.uid || ""
+        ).trim();
+
+
+      const active =
+        req.body?.active;
+
+
+      /* =====================================================
+         VALIDACIONES BÁSICAS
+      ===================================================== */
+
+      if (!targetUid) {
+        return res.status(400).json({
+          error:
+            "El UID del usuario es obligatorio.",
+          code:
+            "USER_UID_REQUIRED"
+        });
+      }
+
+
+      if (
+        typeof active !== "boolean"
+      ) {
+        return res.status(400).json({
+          error:
+            "El estado active debe ser verdadero o falso.",
+          code:
+            "INVALID_ACTIVE_STATUS"
+        });
+      }
+
+
+      /* =====================================================
+         IMPEDIR AUTO-DESACTIVACIÓN
+      ===================================================== */
+
+      if (
+        active === false &&
+        targetUid ===
+          req.adminUser?.uid
+      ) {
+        return res.status(403).json({
+          error:
+            "No puedes desactivar tu propia cuenta.",
+          code:
+            "SELF_DEACTIVATION_DENIED"
+        });
+      }
+
+
+      /* =====================================================
+         OBTENER USUARIO OBJETIVO
+      ===================================================== */
+
+      const userRef =
+        db
+          .collection(
+            ADMIN_USERS_COLLECTION
+          )
+          .doc(targetUid);
+
+
+      const userSnapshot =
+        await userRef.get();
+
+
+      if (!userSnapshot.exists) {
+        return res.status(404).json({
+          error:
+            "El usuario administrativo no existe.",
+          code:
+            "ADMIN_USER_NOT_FOUND"
+        });
+      }
+
+
+      const firestoreUser =
+        userSnapshot.data() || {};
+
+
+      let firebaseUser = null;
+
+
+      try {
+
+        firebaseUser =
+          await admin
+            .auth()
+            .getUser(targetUid);
+
+      } catch (error) {
+
+        if (
+          error?.code ===
+          "auth/user-not-found"
+        ) {
+          return res.status(409).json({
+            error:
+              "El perfil administrativo existe, pero no se encontró su cuenta en Firebase Authentication.",
+            code:
+              "AUTH_USER_NOT_FOUND"
+          });
+        }
+
+        throw error;
+      }
+
+
+      const targetEmail =
+        String(
+          firebaseUser?.email ||
+          firestoreUser?.email ||
+          ""
+        )
+          .trim()
+          .toLowerCase();
+
+
+      const targetUser =
+        normalizarAdminUser({
+          uid:
+            targetUid,
+
+          email:
+            targetEmail,
+
+          firebaseUser,
+
+          firestoreUser
+        });
+
+
+      /* =====================================================
+         PROTEGER AL ADMINISTRADOR PRINCIPAL
+      ===================================================== */
+
+      if (
+        targetUser.isPrimaryAdmin &&
+        active === false
+      ) {
+        return res.status(403).json({
+          error:
+            "El Administrador principal no puede ser desactivado.",
+          code:
+            "PRIMARY_ADMIN_PROTECTED"
+        });
+      }
+
+
+      /* =====================================================
+         PROTEGER ADMINISTRADORES
+      ===================================================== */
+
+      const actorPermissions =
+        Array.isArray(
+          req.adminUser?.permissions
+        )
+          ? req.adminUser.permissions
+          : [];
+
+
+      const targetCanManageAdmins =
+        Array.isArray(
+          targetUser.permissions
+        ) &&
+        targetUser.permissions.includes(
+          "usuarios.gestionar_admins"
+        );
+
+
+      const requiresAdminManagement =
+        targetUser.role === "admin" ||
+        targetCanManageAdmins;
+
+
+      if (
+        requiresAdminManagement &&
+        !actorPermissions.includes(
+          "usuarios.gestionar_admins"
+        )
+      ) {
+        return res.status(403).json({
+          error:
+            "No tienes permiso para cambiar el estado de este administrador.",
+          code:
+            "MANAGE_ADMINS_REQUIRED"
+        });
+      }
+
+
+      /* =====================================================
+         EVITAR OPERACIÓN INNECESARIA
+      ===================================================== */
+
+      const firestoreActive =
+        targetUser.active !== false;
+
+
+      const authActive =
+        firebaseUser.disabled !== true;
+
+
+      if (
+        firestoreActive === active &&
+        authActive === active
+      ) {
+        return res.json({
+          ok: true,
+
+          changed: false,
+
+          message:
+            active
+              ? "El usuario ya se encuentra activo."
+              : "El usuario ya se encuentra desactivado.",
+
+          user: {
+            uid:
+              targetUser.uid,
+
+            nombre:
+              targetUser.nombre,
+
+            email:
+              targetUser.email,
+
+            role:
+              targetUser.role,
+
+            isPrimaryAdmin:
+              Boolean(
+                targetUser.isPrimaryAdmin
+              ),
+
+            active,
+
+            firebaseDisabled:
+              !active
+          }
+        });
+      }
+
+
+      /* =====================================================
+         SINCRONIZAR FIREBASE AUTH
+      ===================================================== */
+
+      await admin
+        .auth()
+        .updateUser(
+          targetUid,
+          {
+            disabled:
+              !active
+          }
+        );
+
+
+      /* =====================================================
+         SINCRONIZAR FIRESTORE
+      ===================================================== */
+
+      try {
+
+        await userRef.update({
+
+          active,
+
+          updatedAt:
+            admin.firestore
+              .FieldValue
+              .serverTimestamp(),
+
+          updatedByUid:
+            req.adminUser?.uid || "",
+
+          updatedByEmail:
+            req.adminUser?.email || "",
+
+          statusUpdatedAt:
+            admin.firestore
+              .FieldValue
+              .serverTimestamp()
+        });
+
+      } catch (firestoreError) {
+
+        /*
+         * Si Firestore falla después de cambiar Auth,
+         * intentamos regresar Firebase Auth a su
+         * estado anterior para no dejar ambas fuentes
+         * desincronizadas.
+         */
+
+        try {
+
+          await admin
+            .auth()
+            .updateUser(
+              targetUid,
+              {
+                disabled:
+                  firebaseUser.disabled === true
+              }
+            );
+
+          console.warn(
+            "Rollback de estado realizado en Firebase Auth:",
+            targetUid
+          );
+
+        } catch (rollbackError) {
+
+          console.error(
+            "No fue posible realizar rollback del estado en Firebase Auth:",
+            rollbackError
+          );
+        }
+
+
+        throw firestoreError;
+      }
+
+
+      /* =====================================================
+         RESPUESTA
+      ===================================================== */
+
+      return res.json({
+
+        ok: true,
+
+        changed: true,
+
+        message:
+          active
+            ? "Usuario administrativo reactivado correctamente."
+            : "Usuario administrativo desactivado correctamente.",
+
+        user: {
+
+          uid:
+            targetUser.uid,
+
+          nombre:
+            targetUser.nombre,
+
+          email:
+            targetUser.email,
+
+          role:
+            targetUser.role,
+
+          isPrimaryAdmin:
+            Boolean(
+              targetUser.isPrimaryAdmin
+            ),
+
+          active,
+
+          firebaseDisabled:
+            !active
+        }
+      });
+
+
+    } catch (error) {
+
+      console.error(
+        "Error actualizando estado de usuario administrativo:",
+        error
+      );
+
+
+      return res.status(500).json({
+        error:
+          "No fue posible actualizar el estado del usuario administrativo.",
+        code:
+          "ADMIN_USER_STATUS_UPDATE_FAILED"
+      });
+    }
+  }
+);
+
+
 
 app.get(
   "/api/postulaciones",
   verifyAdmin,
+  requirePermission(
+    "candidatos.ver"
+  ),
   async (req, res) => {
     try {
-      const requestedLimit = Number(req.query.limit);
-      const limit = Number.isFinite(requestedLimit)
-        ? Math.min(Math.max(requestedLimit, 1), 100)
-        : 50;
 
-      const postulaciones =
-        await leerPostulaciones(limit);
+      const requestedLimit =
+        Number(
+          req.query.limit
+        );
 
-      res.json(postulaciones);
+
+      const limit =
+        Number.isFinite(
+          requestedLimit
+        )
+          ? Math.min(
+              Math.max(
+                requestedLimit,
+                1
+              ),
+              100
+            )
+          : 50;
+
+
+      /*
+       * Usuario con acceso global:
+       * conservamos la lectura optimizada
+       * que ya utilizaba el sistema.
+       */
+      if (
+        req.adminUser
+          ?.globalAccess === true
+      ) {
+
+        const postulaciones =
+          await leerPostulaciones(
+            limit
+          );
+
+        return res.json(
+          postulaciones
+        );
+      }
+
+
+      /*
+       * Usuario con alcance limitado:
+       * necesitamos obtener el conjunto
+       * antes de aplicar el límite final,
+       * para evitar que candidatos válidos
+       * queden fuera por pertenecer a otra
+       * sucursal dentro de los primeros
+       * registros.
+       */
+      const todasPostulaciones =
+        await leerPostulaciones();
+
+
+      const postulacionesPermitidas =
+        filtrarRecursosPorScope(
+          req.adminUser,
+          todasPostulaciones
+        );
+
+
+      const resultado =
+        postulacionesPermitidas.slice(
+          0,
+          limit
+        );
+
+
+      return res.json(
+        resultado
+      );
+
     } catch (error) {
+
       console.error(
         "Error cargando postulaciones:",
         error
       );
+
 
       res.status(500).json({
         error:
@@ -6757,44 +11391,227 @@ app.get(
   }
 );
 
-app.patch("/api/postulaciones/:id/estado", verifyAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { estado } = req.body;
-    const estadosValidos = ["pendiente", "aprobado", "rechazado", "entrevista_agendada"];
+
+/* =========================================================
+   ACTUALIZAR ESTADO DE POSTULACIÓN
+   CON CONTROL DE PERMISOS
+========================================================= */
+
+app.patch(
+  "/api/postulaciones/:id/estado",
+  verifyAdmin,
+  async (req, res) => {
+
+    try {
+
+      const { id } = req.params;
+
+      const estado =
+        String(
+          req.body?.estado || ""
+        )
+          .trim()
+          .toLowerCase();
 
 
-    if (!estadosValidos.includes(estado)) {
-      return res.status(400).json({ error: "Estado no valido." });
-    }
+      const estadosValidos = [
+        "pendiente",
+        "aprobado",
+        "rechazado",
+        "entrevista_agendada"
+      ];
 
-    const postulaciones = await leerPostulaciones();
-    const postulacion = postulaciones.find((p) => p.id === id);
 
-    if (!postulacion) {
-      return res.status(404).json({ error: "Postulacion no encontrada." });
-    }
+      if (
+        !estadosValidos.includes(
+          estado
+        )
+      ) {
 
-    const data = {
-      estadoSolicitud: estado,
-      fechaActualizacion: new Date().toISOString()
-    };
-
-    await actualizarPostulacion(id, data);
-
-    res.json({
-      ok: true,
-      message: "Estado actualizado correctamente.",
-      postulacion: {
-        ...postulacion,
-        ...data
+        return res.status(400).json({
+          error:
+            "Estado no válido."
+        });
       }
-    });
-  } catch (error) {
-    console.error("Error actualizando postulacion:", error);
-    res.status(500).json({ error: "No fue posible actualizar la postulacion." });
+
+
+      /* ===============================================
+         DETERMINAR PERMISO SEGÚN LA ACCIÓN
+      =============================================== */
+
+      const permisoPorEstado = {
+
+        pendiente:
+          "candidatos.editar",
+
+        aprobado:
+          "candidatos.aprobar",
+
+        rechazado:
+          "candidatos.rechazar",
+
+        entrevista_agendada:
+          "entrevistas.crear"
+      };
+
+
+      const permisoRequerido =
+        permisoPorEstado[estado];
+
+
+      const permissions =
+        Array.isArray(
+          req.adminUser?.permissions
+        )
+          ? req.adminUser.permissions
+          : [];
+
+
+      if (
+        !permissions.includes(
+          permisoRequerido
+        )
+      ) {
+
+        console.warn(
+          "Cambio de estado denegado:",
+          {
+            email:
+              req.adminUser?.email || "",
+
+            candidatoId:
+              id,
+
+            estadoSolicitado:
+              estado,
+
+            permisoRequerido
+          }
+        );
+
+
+        return res.status(403).json({
+          error:
+            "No tienes permiso para realizar esta acción.",
+
+          code:
+            "PERMISSION_DENIED"
+        });
+      }
+
+
+      const postulaciones =
+        await leerPostulaciones();
+
+
+      const postulacion =
+        postulaciones.find(
+          (p) => p.id === id
+        );
+
+
+      if (!postulacion) {
+        return res.status(404).json({
+          error:
+            "Postulación no encontrada."
+        });
+      }
+
+            /*
+       * VALIDAR ALCANCE ADMINISTRATIVO
+       *
+       * Tener permiso para cambiar el estado
+       * no significa tener acceso a candidatos
+       * de cualquier sucursal.
+       */
+      if (
+        !adminTieneAccesoRecurso(
+          req.adminUser,
+          postulacion
+        )
+      ) {
+
+        console.warn(
+          "Acceso a postulación denegado por scope:",
+          {
+            email:
+              req.adminUser?.email || "",
+
+            candidatoId:
+              id,
+
+            sucursalId:
+              postulacion.sucursalId || "",
+
+            sucursal:
+              postulacion.sucursal || "",
+
+            marca:
+              postulacion.marca ||
+              postulacion.grupo ||
+              "",
+
+            pais:
+              postulacion.pais || ""
+          }
+        );
+
+
+        return res.status(403).json({
+          error:
+            "No tienes acceso a esta postulación.",
+
+          code:
+            "SCOPE_DENIED"
+        });
+      }
+
+
+
+      const data = {
+
+        estadoSolicitud:
+          estado,
+
+        fechaActualizacion:
+          new Date().toISOString()
+      };
+
+
+      await actualizarPostulacion(
+        id,
+        data
+      );
+
+
+      res.json({
+
+        ok: true,
+
+        message:
+          "Estado actualizado correctamente.",
+
+        postulacion: {
+          ...postulacion,
+          ...data
+        }
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Error actualizando postulación:",
+        error
+      );
+
+
+      res.status(500).json({
+        error:
+          "No fue posible actualizar la postulación."
+      });
+    }
   }
-});
+);
 
 /* =========================================================
    ELIMINAR POSTULACIÓN
@@ -6803,6 +11620,9 @@ app.patch("/api/postulaciones/:id/estado", verifyAdmin, async (req, res) => {
 app.delete(
   "/api/postulaciones/:id",
   verifyAdmin,
+  requirePermission(
+    "candidatos.eliminar"
+  ),
   async (req, res) => {
     try {
       const { id } =
@@ -6814,6 +11634,76 @@ app.delete(
             "El identificador de la postulación es obligatorio."
         });
       }
+
+            /*
+       * BUSCAR LA POSTULACIÓN ANTES DE ELIMINARLA
+       * PARA PODER VALIDAR SU ALCANCE
+       */
+      const postulaciones =
+        await leerPostulaciones();
+
+
+      const postulacion =
+        postulaciones.find(
+          (p) => p.id === id
+        );
+
+
+      if (!postulacion) {
+
+        return res.status(404).json({
+          error:
+            "Postulación no encontrada."
+        });
+      }
+
+
+      /*
+       * VALIDAR ALCANCE ADMINISTRATIVO
+       */
+      if (
+        !adminTieneAccesoRecurso(
+          req.adminUser,
+          postulacion
+        )
+      ) {
+
+        console.warn(
+          "Eliminación de postulación denegada por scope:",
+          {
+            email:
+              req.adminUser?.email || "",
+
+            candidatoId:
+              id,
+
+            sucursalId:
+              postulacion.sucursalId || "",
+
+            sucursal:
+              postulacion.sucursal || "",
+
+            marca:
+              postulacion.marca ||
+              postulacion.grupo ||
+              "",
+
+            pais:
+              postulacion.pais || ""
+          }
+        );
+
+
+        return res.status(403).json({
+          error:
+            "No tienes acceso a esta postulación.",
+
+          code:
+            "SCOPE_DENIED"
+        });
+      }
+
+
 
       const eliminada =
         await eliminarPostulacion(
@@ -7260,83 +12150,317 @@ app.post(
   }
 );
 
-app.get("/api/entrevistas", verifyAdmin, async (req, res) => {
-  try {
-    const entrevistas = await leerEntrevistas();
-    res.json(entrevistas);
-  } catch (error) {
-    console.error("Error cargando entrevistas:", error);
-    res.status(500).json({ error: "No fue posible cargar entrevistas." });
-  }
-});
 
-app.post("/api/entrevistas", verifyAdmin, async (req, res) => {
-  try {
-    const {
-  candidatoId,
-  candidatoNombre,
-  correo,
-  telefono,
-  puesto,
-  marca,
-  sucursal,
-  ciudad,
-  fecha,
-  hora,
-  reclutador,
-  tipo,
-  comentarios
-} = req.body;
+/* =========================================================
+   LISTAR ENTREVISTAS
+   - Requiere permiso entrevistas.ver
+   - Respeta scope administrativo
+========================================================= */
 
-    if (!candidatoId || !candidatoNombre || !fecha || !hora) {
-      return res.status(400).json({ error: "Faltan datos obligatorios para agendar la entrevista." });
+app.get(
+  "/api/entrevistas",
+  verifyAdmin,
+  requirePermission(
+    "entrevistas.ver"
+  ),
+  async (req, res) => {
+    try {
+      const entrevistas =
+        await leerEntrevistas();
+
+      const entrevistasPermitidas =
+        filtrarRecursosPorScope(
+          req.adminUser,
+          entrevistas
+        );
+
+      return res.json(
+        entrevistasPermitidas
+      );
+
+    } catch (error) {
+      console.error(
+        "Error cargando entrevistas:",
+        error
+      );
+
+      return res.status(500).json({
+        error:
+          "No fue posible cargar entrevistas."
+      });
     }
-
-    const entrevista = {
-  id: `ent-${Date.now()}`,
-  candidatoId,
-  candidatoNombre,
-  correo: correo || "",
-  telefono: telefono || "",
-  puesto: puesto || "",
-  marca: marca || "GA Hospitality",
-  sucursal: sucursal || "",
-  ciudad: ciudad || "",
-  fecha,
-  hora,
-  reclutador: reclutador || "",
-  tipo: tipo || "presencial",
-  comentarios: comentarios || "",
-  estado: "agendada",
-  creadaPor: req.adminUser.email,
-  creadaEn: new Date().toISOString(),
-  fechaActualizacion: new Date().toISOString()
-};
-
-    await guardarEntrevista(entrevista);
-
-    await actualizarPostulacion(candidatoId, {
-      estadoSolicitud: "entrevista_agendada",
-      entrevistaId: entrevista.id,
-      fechaEntrevista: fecha,
-      horaEntrevista: hora,
-      fechaActualizacion: new Date().toISOString()
-    });
-
-    res.json({
-      ok: true,
-      message: "Entrevista agendada correctamente.",
-      entrevista
-    });
-  } catch (error) {
-    console.error("Error creando entrevista:", error);
-    res.status(500).json({ error: "No fue posible agendar la entrevista." });
   }
-});
+);
+
+
+/* =========================================================
+   CREAR ENTREVISTA
+   - Requiere permiso entrevistas.crear
+   - El candidato debe existir
+   - El candidato debe pertenecer al scope del usuario
+   - Los datos de alcance se obtienen del servidor
+========================================================= */
+
+app.post(
+  "/api/entrevistas",
+  verifyAdmin,
+  requirePermission(
+    "entrevistas.crear"
+  ),
+  async (req, res) => {
+    try {
+      const {
+        candidatoId,
+        candidatoNombre,
+        correo,
+        telefono,
+        puesto,
+        fecha,
+        hora,
+        reclutador,
+        tipo,
+        comentarios
+      } = req.body || {};
+
+      if (
+        !candidatoId ||
+        !candidatoNombre ||
+        !fecha ||
+        !hora
+      ) {
+        return res.status(400).json({
+          error:
+            "Faltan datos obligatorios para agendar la entrevista."
+        });
+      }
+
+
+      /*
+       * SEGURIDAD:
+       * localizar la postulación real.
+       *
+       * No confiamos en marca, sucursal,
+       * sucursalId o país enviados por
+       * el navegador.
+       */
+      const postulaciones =
+        await leerPostulaciones();
+
+      const postulacion =
+        postulaciones.find(
+          (item) =>
+            item.id === candidatoId
+        );
+
+      if (!postulacion) {
+        return res.status(404).json({
+          error:
+            "Postulación no encontrada."
+        });
+      }
+
+
+      /*
+       * VALIDAR SCOPE DEL CANDIDATO
+       */
+      if (
+        !adminTieneAccesoRecurso(
+          req.adminUser,
+          postulacion
+        )
+      ) {
+        return res.status(403).json({
+          error:
+            "No tienes acceso a este candidato.",
+          code:
+            "SCOPE_DENIED"
+        });
+      }
+
+
+      /*
+       * Los datos administrativos se
+       * obtienen de la postulación real.
+       */
+      const marcaFinal =
+        postulacion.grupo ||
+        postulacion.grupoSeleccionado ||
+        postulacion.marca ||
+        "";
+
+      const sucursalFinal =
+        postulacion.sucursal ||
+        "";
+
+      const sucursalIdFinal =
+        postulacion.sucursalId ||
+        postulacion.branchId ||
+        "";
+
+      const paisFinal =
+        postulacion.pais ||
+        "";
+
+      const ciudadFinal =
+        postulacion.ciudad ||
+        "";
+
+
+      const entrevista = {
+        id:
+          `ent-${Date.now()}`,
+
+        candidatoId,
+
+        candidatoNombre:
+          candidatoNombre ||
+          postulacion.nombre ||
+          "",
+
+        correo:
+          correo ||
+          postulacion.correo ||
+          "",
+
+        telefono:
+          telefono ||
+          postulacion.telefono ||
+          "",
+
+        puesto:
+          puesto ||
+          postulacion.vacanteTitulo ||
+          postulacion.puestoInteres ||
+          "",
+
+        marca:
+          marcaFinal,
+
+        grupo:
+          marcaFinal,
+
+        sucursal:
+          sucursalFinal,
+
+        sucursalId:
+          sucursalIdFinal,
+
+        branchId:
+          sucursalIdFinal,
+
+        pais:
+          paisFinal,
+
+        ciudad:
+          ciudadFinal,
+
+        vacanteId:
+          postulacion.vacanteId ||
+          "",
+
+        fecha,
+
+        hora,
+
+        reclutador:
+          reclutador || "",
+
+        tipo:
+          tipo || "presencial",
+
+        comentarios:
+          comentarios || "",
+
+        estado:
+          "agendada",
+
+        creadaPor:
+          req.adminUser?.email || "",
+
+        creadaEn:
+          new Date().toISOString(),
+
+        fechaActualizacion:
+          new Date().toISOString()
+      };
+
+
+      /*
+       * VALIDACIÓN DEFENSIVA FINAL
+       *
+       * La entrevista resultante también
+       * debe pertenecer al scope.
+       */
+      if (
+        !adminTieneAccesoRecurso(
+          req.adminUser,
+          entrevista
+        )
+      ) {
+        return res.status(403).json({
+          error:
+            "No tienes acceso para crear esta entrevista.",
+          code:
+            "SCOPE_DENIED"
+        });
+      }
+
+
+      await guardarEntrevista(
+        entrevista
+      );
+
+
+      await actualizarPostulacion(
+        candidatoId,
+        {
+          estadoSolicitud:
+            "entrevista_agendada",
+
+          entrevistaId:
+            entrevista.id,
+
+          fechaEntrevista:
+            fecha,
+
+          horaEntrevista:
+            hora,
+
+          fechaActualizacion:
+            new Date().toISOString()
+        }
+      );
+
+
+      return res.json({
+        ok: true,
+
+        message:
+          "Entrevista agendada correctamente.",
+
+        entrevista
+      });
+
+    } catch (error) {
+      console.error(
+        "Error creando entrevista:",
+        error
+      );
+
+      return res.status(500).json({
+        error:
+          "No fue posible agendar la entrevista."
+      });
+    }
+  }
+);
 
 app.patch(
   "/api/entrevistas/:id",
   verifyAdmin,
+  requirePermission(
+    "entrevistas.editar"
+  ),
   async (req, res) => {
     try {
       const { id } = req.params;
@@ -7357,19 +12481,40 @@ app.patch(
         });
       }
 
+
+      /* =====================================================
+         VALIDAR SCOPE DE LA ENTREVISTA ACTUAL
+      ===================================================== */
+
+      if (
+        !adminTieneAccesoRecurso(
+          req.adminUser,
+          entrevistaActual
+        )
+      ) {
+        return res.status(403).json({
+          error:
+            "No tienes acceso para editar esta entrevista.",
+          code:
+            "SCOPE_DENIED"
+        });
+      }
+
+
       const nuevaFecha =
         String(
-          req.body.fecha ||
+          req.body?.fecha ||
           entrevistaActual.fecha ||
           ""
         ).trim();
 
       const nuevaHora =
         String(
-          req.body.hora ||
+          req.body?.hora ||
           entrevistaActual.hora ||
           ""
         ).trim();
+
 
       const cambioDeHorario =
         nuevaFecha !==
@@ -7377,11 +12522,19 @@ app.patch(
         nuevaHora !==
           entrevistaActual.hora;
 
+
       let entrevistaActualizada;
 
+
+      /* =====================================================
+         REAGENDAR ENTREVISTA
+      ===================================================== */
+
       if (cambioDeHorario) {
+
         entrevistaActualizada =
           await reagendarEntrevistaAtomica({
+
             entrevistaActual,
 
             nuevaFecha,
@@ -7396,9 +12549,18 @@ app.patch(
 
             actualizadoPor:
               req.adminUser?.email ||
-              ""
+              "",
+
+            adminUser:
+              req.adminUser
           });
+
       } else {
+
+        /* ===================================================
+           EDICIÓN SIN CAMBIO DE HORARIO
+        =================================================== */
+
         const data = {
           ...req.body,
 
@@ -7410,21 +12572,53 @@ app.patch(
             ""
         };
 
+
+        /*
+         * Construimos primero el resultado
+         * para validar el scope ANTES
+         * de escribir en la base de datos.
+         */
+        const entrevistaPropuesta = {
+          ...entrevistaActual,
+          ...data,
+          id
+        };
+
+
+        if (
+          !adminTieneAccesoRecurso(
+            req.adminUser,
+            entrevistaPropuesta
+          )
+        ) {
+          return res.status(403).json({
+            error:
+              "No tienes acceso para modificar esta entrevista hacia ese alcance.",
+            code:
+              "SCOPE_DENIED"
+          });
+        }
+
+
         await actualizarEntrevista(
           id,
           data
         );
 
-        entrevistaActualizada = {
-          ...entrevistaActual,
-          ...data,
-          id
-        };
+
+        entrevistaActualizada =
+          entrevistaPropuesta;
       }
+
+
+      /* =====================================================
+         SINCRONIZAR POSTULACIÓN RELACIONADA
+      ===================================================== */
 
       if (
         entrevistaActual.candidatoId
       ) {
+
         await actualizarPostulacion(
           entrevistaActual.candidatoId,
           {
@@ -7462,7 +12656,8 @@ app.patch(
         );
       }
 
-      res.json({
+
+      return res.json({
         ok: true,
 
         message:
@@ -7473,14 +12668,40 @@ app.patch(
         entrevista:
           entrevistaActualizada
       });
+
     } catch (error) {
+
       console.error(
         "Error actualizando entrevista:",
         error
       );
 
+
+      /* =====================================================
+         ERRORES DE SCOPE
+      ===================================================== */
+
       if (
-        error.code ===
+        error?.code ===
+        "SCOPE_DENIED"
+      ) {
+        return res.status(403).json({
+          error:
+            error.message ||
+            "No tienes acceso para modificar esta entrevista.",
+
+          code:
+            "SCOPE_DENIED"
+        });
+      }
+
+
+      /* =====================================================
+         HORARIO OCUPADO
+      ===================================================== */
+
+      if (
+        error?.code ===
         "HORARIO_OCUPADO"
       ) {
         return res.status(409).json({
@@ -7489,8 +12710,13 @@ app.patch(
         });
       }
 
+
+      /* =====================================================
+         HORARIO INVÁLIDO
+      ===================================================== */
+
       if (
-        error.code ===
+        error?.code ===
         "HORARIO_INVALIDO"
       ) {
         return res.status(400).json({
@@ -7499,11 +12725,16 @@ app.patch(
         });
       }
 
+
+      /* =====================================================
+         DISPONIBILIDAD
+      ===================================================== */
+
       if (
-        error.code ===
-        "SIN_DISPONIBILIDAD" ||
-        error.code ===
-        "DISPONIBILIDAD_INACTIVA"
+        error?.code ===
+          "SIN_DISPONIBILIDAD" ||
+        error?.code ===
+          "DISPONIBILIDAD_INACTIVA"
       ) {
         return res.status(400).json({
           error:
@@ -7511,8 +12742,13 @@ app.patch(
         });
       }
 
+
+      /* =====================================================
+         ENTREVISTA NO ENCONTRADA
+      ===================================================== */
+
       if (
-        error.code ===
+        error?.code ===
         "ENTREVISTA_NO_ENCONTRADA"
       ) {
         return res.status(404).json({
@@ -7521,20 +12757,81 @@ app.patch(
         });
       }
 
-      res.status(500).json({
+
+      /* =====================================================
+         ERROR GENERAL
+      ===================================================== */
+
+      return res.status(500).json({
         error:
           "No fue posible actualizar la entrevista."
       });
     }
   }
 );
+
 app.patch(
   "/api/entrevistas/:id/estado",
   verifyAdmin,
   async (req, res) => {
     try {
       const { id } = req.params;
-      const { estado } = req.body;
+      const estado =
+  String(
+    req.body?.estado || ""
+  )
+    .trim()
+    .toLowerCase();
+
+      /* ===============================================
+   PERMISO SEGÚN CAMBIO DE ESTADO
+=============================================== */
+
+const permisoRequerido =
+  estado === "cancelada"
+    ? "entrevistas.cancelar"
+    : "entrevistas.editar";
+
+
+const permissions =
+  Array.isArray(
+    req.adminUser?.permissions
+  )
+    ? req.adminUser.permissions
+    : [];
+
+
+if (
+  !permissions.includes(
+    permisoRequerido
+  )
+) {
+
+  console.warn(
+    "Cambio de estado de entrevista denegado:",
+    {
+      email:
+        req.adminUser?.email || "",
+
+      entrevistaId:
+        id,
+
+      estadoSolicitado:
+        estado,
+
+      permisoRequerido
+    }
+  );
+
+
+  return res.status(403).json({
+    error:
+      "No tienes permiso para realizar esta acción.",
+
+    code:
+      "PERMISSION_DENIED"
+  });
+}
 
 
       const estadosValidos = [
@@ -7570,6 +12867,20 @@ app.patch(
           error: "Entrevista no encontrada."
         });
       }
+
+      if (
+  !adminTieneAccesoRecurso(
+    req.adminUser,
+    entrevista
+  )
+) {
+  return res.status(403).json({
+    error:
+      "No tienes acceso para modificar el estado de esta entrevista.",
+    code:
+      "SCOPE_DENIED"
+  });
+}
 
      const fechaActual =
   new Date().toISOString();
@@ -7651,6 +12962,9 @@ app.patch(
 app.delete(
   "/api/entrevistas/:id",
   verifyAdmin,
+  requirePermission(
+    "entrevistas.cancelar"
+  ),
   async (req, res) => {
     try {
       const { id } = req.params;
@@ -7672,6 +12986,20 @@ app.delete(
           error: "Entrevista no encontrada."
         });
       }
+
+      if (
+  !adminTieneAccesoRecurso(
+    req.adminUser,
+    entrevista
+  )
+) {
+  return res.status(403).json({
+    error:
+      "No tienes acceso para eliminar esta entrevista.",
+    code:
+      "SCOPE_DENIED"
+  });
+}
 
       await liberarBloqueoEntrevista({
         entrevista,
@@ -7938,6 +13266,9 @@ function validarPreguntasServidor(preguntas = []) {
 app.post(
   "/api/vacantes",
   verifyAdmin,
+  requirePermission(
+    "vacantes.crear"
+  ),
   async (req, res) => {
     try {
       const {
@@ -8179,6 +13510,20 @@ app.post(
           req.adminUser?.email || ""
       };
 
+      if (
+  !adminTieneAccesoRecurso(
+    req.adminUser,
+    nuevaVacante
+  )
+) {
+  return res.status(403).json({
+    error:
+      "No tienes acceso para crear vacantes en esta marca, sucursal o ubicación.",
+    code:
+      "VACANCY_SCOPE_FORBIDDEN"
+  });
+}
+
       await guardarVacante(nuevaVacante);
 
       res.status(201).json({
@@ -8205,6 +13550,9 @@ app.post(
 app.put(
   "/api/vacantes/:id",
   verifyAdmin,
+  requirePermission(
+    "vacantes.editar"
+  ),
   async (req, res) => {
     try {
       const vacantes =
@@ -8221,6 +13569,19 @@ app.put(
           error: "Vacante no encontrada."
         });
       }
+      if (
+  !adminTieneAccesoRecurso(
+    req.adminUser,
+    enriquecerVacanteConSucursal(actual)
+  )
+) {
+  return res.status(403).json({
+    error:
+      "No tienes acceso para editar esta vacante.",
+    code:
+      "VACANCY_SCOPE_FORBIDDEN"
+  });
+}
 
       const body = req.body || {};
 
@@ -8390,10 +13751,24 @@ app.put(
           req.adminUser?.email || ""
       };
 
-      await actualizarVacante(
-        id,
-        vacanteActualizada
-      );
+      if (
+  !adminTieneAccesoRecurso(
+    req.adminUser,
+    vacanteActualizada
+  )
+) {
+  return res.status(403).json({
+    error:
+      "No tienes acceso para mover o modificar esta vacante hacia esa marca, sucursal o ubicación.",
+    code:
+      "VACANCY_SCOPE_FORBIDDEN"
+  });
+}
+
+await actualizarVacante(
+  id,
+  vacanteActualizada
+);
 
       res.json({
         ok: true,
@@ -8420,6 +13795,9 @@ app.put(
 app.post(
   "/api/vacantes/migrar-qr",
   verifyAdmin,
+  requireRole(
+    "admin"
+  ),
   async (req, res) => {
     try {
       const vacantes =
@@ -8517,7 +13895,13 @@ app.post(
   }
 );
 
-app.delete("/api/vacantes/:id", verifyAdmin, async (req, res) => {
+app.delete(
+  "/api/vacantes/:id",
+  verifyAdmin,
+  requirePermission(
+    "vacantes.eliminar"
+  ),
+  async (req, res) => {
   try {
     const vacantes = await leerVacantes();
     const { id } = req.params;
@@ -8526,6 +13910,22 @@ app.delete("/api/vacantes/:id", verifyAdmin, async (req, res) => {
     if (!eliminada) {
       return res.status(404).json({ error: "Vacante no encontrada." });
     }
+
+    if (
+  !adminTieneAccesoRecurso(
+    req.adminUser,
+    enriquecerVacanteConSucursal(eliminada)
+  )
+) {
+
+
+  return res.status(403).json({
+    error:
+      "No tienes acceso para eliminar esta vacante.",
+    code:
+      "VACANCY_SCOPE_FORBIDDEN"
+  });
+}
 
     await eliminarVacanteFirestore(id);
 

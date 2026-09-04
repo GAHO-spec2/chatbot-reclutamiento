@@ -1,9 +1,8 @@
-/* =========================
+﻿/* =========================
    CONFIG API
 ========================= */
-
-const API_URL = "https://chatbot-reclutamiento-dcqb.onrender.com";
-
+const API_URL =
+  window.location.origin;
 /* =========================
    ELEMENTOS
 ========================= */
@@ -686,4 +685,5 @@ async function init() {
 }
 
 init();
+
 

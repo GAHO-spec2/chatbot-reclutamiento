@@ -1,11 +1,11 @@
-"use strict";
+﻿"use strict";
 
 /* =========================================================
    CONFIGURACIÓN
 ========================================================= */
 
 const API_URL =
-  "https://chatbot-reclutamiento-dcqb.onrender.com";
+  window.location.origin;
 
 const firebaseConfig = {
   apiKey: "AIzaSyD6t7kfGjBllkzuDVarL7oaECryUa2-fx4",
@@ -47,6 +47,9 @@ const auth =
 let adminToken = "";
 let plantillas = [];
 let comunicaciones = [];
+let currentAdminUser = null;
+
+
 
 let activeEditorField = null;
 let plantillaSeleccionada = null;
@@ -525,6 +528,253 @@ Ubicación:
     activo: true
   }
 ];
+
+
+
+async function cargarUsuarioAdministrativo() {
+  const response = await fetch(
+    `${API_URL}/api/admin/me`,
+    {
+      method: "GET",
+      headers: authHeaders(),
+      cache: "no-store"
+    }
+  );
+
+  let data = null;
+
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    const message =
+      data?.error ||
+      "No fue posible validar tu acceso administrativo.";
+
+    throw new Error(message);
+  }
+
+  if (
+    !data?.user ||
+    !data.user.uid ||
+    !data.user.email
+  ) {
+    throw new Error(
+      "El servidor no devolvió un perfil administrativo válido."
+    );
+  }
+
+  currentAdminUser = data.user;
+
+
+  /* ===============================================
+     INFORMACIÓN DEL USUARIO EN LA SIDEBAR
+  =============================================== */
+
+  const sidebarName =
+    document.getElementById(
+      "dashboardSidebarName"
+    );
+
+  const sidebarRole =
+    document.getElementById(
+      "dashboardSidebarRole"
+    );
+
+  const sidebarAvatar =
+    document.getElementById(
+      "dashboardSidebarAvatar"
+    );
+
+  const usuariosAdminNavLink =
+    document.getElementById(
+      "usuariosAdminNavLink"
+    );
+
+
+  if (sidebarName) {
+    sidebarName.textContent =
+      currentAdminUser.nombre ||
+      currentAdminUser.email ||
+      "Administrador";
+  }
+
+
+  if (sidebarRole) {
+    let roleLabel =
+      "Usuario administrativo";
+
+    if (currentAdminUser.isPrimaryAdmin) {
+      roleLabel =
+        "Administrador principal";
+    } else if (
+      currentAdminUser.role === "admin"
+    ) {
+      roleLabel =
+        "Administrador";
+    } else if (
+      currentAdminUser.role === "reclutador"
+    ) {
+      roleLabel =
+        "Reclutador";
+    } else if (
+      currentAdminUser.role === "gerente"
+    ) {
+      roleLabel =
+        "Gerente";
+    }
+
+    sidebarRole.textContent =
+      roleLabel;
+  }
+
+
+  if (sidebarAvatar) {
+    const nombre =
+      currentAdminUser.nombre ||
+      currentAdminUser.email ||
+      "A";
+
+    sidebarAvatar.textContent =
+      nombre.charAt(0).toUpperCase();
+  }
+
+
+  /* ===============================================
+     USUARIOS Y ACCESOS
+  =============================================== */
+
+  const permissions =
+    Array.isArray(
+      currentAdminUser.permissions
+    )
+      ? currentAdminUser.permissions
+      : [];
+
+  if (
+    usuariosAdminNavLink &&
+    permissions.includes(
+      "usuarios.gestionar_admins"
+    )
+  ) {
+    usuariosAdminNavLink.classList.remove(
+      "hidden"
+    );
+  } else if (usuariosAdminNavLink) {
+    usuariosAdminNavLink.classList.add(
+      "hidden"
+    );
+  }
+
+
+  console.log(
+    "Usuario administrativo en Comunicaciones:",
+    {
+      nombre:
+        currentAdminUser.nombre,
+
+      email:
+        currentAdminUser.email,
+
+      role:
+        currentAdminUser.role,
+
+      isPrimaryAdmin:
+        currentAdminUser.isPrimaryAdmin,
+
+      globalAccess:
+        currentAdminUser.globalAccess,
+
+      permissions:
+        currentAdminUser.permissions
+    }
+  );
+
+
+  return currentAdminUser;
+}
+
+function hasPermission(permission) {
+  if (
+    !currentAdminUser ||
+    !permission
+  ) {
+    return false;
+  }
+
+  const permissions =
+    Array.isArray(
+      currentAdminUser.permissions
+    )
+      ? currentAdminUser.permissions
+      : [];
+
+  return permissions.includes(
+    permission
+  );
+}
+
+
+function configurarNavegacionPorPermisos() {
+
+  const reglasNavegacion = [
+    {
+      selector:
+        'a[href="dashboard.html"]',
+      permiso:
+        "candidatos.ver"
+    },
+    {
+      selector:
+        'a[href="vacantes-admin.html"]',
+      permiso:
+        "vacantes.ver"
+    },
+    {
+      selector:
+        'a[href="entrevistas.html"]',
+      permiso:
+        "entrevistas.ver"
+    },
+    {
+      selector:
+        'a[href="comunicaciones.html"]',
+      permiso:
+        "comunicaciones.ver"
+    },
+    {
+      selector:
+        'a[href="usuarios-admin.html"]',
+      permiso:
+        "usuarios.gestionar_admins"
+    }
+  ];
+
+  reglasNavegacion.forEach(
+    ({ selector, permiso }) => {
+
+      const elementos =
+        document.querySelectorAll(
+          selector
+        );
+
+      elementos.forEach(
+        (elemento) => {
+
+          elemento.classList.toggle(
+            "hidden",
+            !hasPermission(
+              permiso
+            )
+          );
+        }
+      );
+    }
+  );
+}
 
 /* =========================================================
    SEGURIDAD Y ENCABEZADOS
@@ -2226,28 +2476,70 @@ async function iniciarCommunicationCenter() {
           return;
         }
 
-        adminToken =
-          await obtenerAdminToken();
+      adminToken =
+      await obtenerAdminToken();
 
-        await Promise.all([
-          cargarPlantillas(),
-          cargarComunicaciones()
-        ]);
+    await cargarUsuarioAdministrativo();
+    configurarNavegacionPorPermisos();
+
+  if (
+  !hasPermission(
+    "comunicaciones.ver"
+  )
+) {
+  console.warn(
+    "Acceso denegado al módulo de Comunicaciones:",
+    {
+      email:
+        currentAdminUser?.email ||
+        "",
+
+      permisoRequerido:
+        "comunicaciones.ver"
+    }
+  );
+
+  window.location.href =
+    "dashboard.html";
+
+  return;
+}
+
+    await Promise.all([
+      cargarPlantillas(),
+      cargarComunicaciones()
+    ]);
       }
     );
 
     return;
   }
 
-  /*
-   * Modo de desarrollo mientras se
-   * conecta la autenticación.
-   */
-  await Promise.all([
-    cargarPlantillas(),
-    cargarComunicaciones()
-  ]);
+ /*
+ * SEGURIDAD:
+ * El Communication Center requiere
+ * Firebase Auth para inicializarse.
+ *
+ * Si Auth no está disponible, no
+ * intentamos cargar datos ni continuar
+ * en modo abierto.
+ */
+console.error(
+  "Firebase Auth no está disponible. El módulo de Comunicaciones no puede iniciarse."
+);
+
+mostrarToast?.(
+  "No fue posible iniciar el módulo de Comunicaciones.",
+  "error"
+);
+
+return;
 }
+
+
+/* =========================================================
+   INICIALIZACIÓN
+========================================================= */
 
 document.addEventListener(
   "DOMContentLoaded",

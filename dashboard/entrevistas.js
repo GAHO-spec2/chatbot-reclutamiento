@@ -1,5 +1,6 @@
-const API_URL = "https://chatbot-reclutamiento-dcqb.onrender.com";
-
+﻿
+const API_URL =
+  window.location.origin;
 /* =========================
    FIREBASE AUTH
    Después se conectará aquí con Firestore o con tu API protegida.
@@ -20,6 +21,7 @@ if (typeof firebase !== "undefined" && !firebase.apps.length) {
 
 const auth = typeof firebase !== "undefined" ? firebase.auth() : null;
 let adminToken = "";
+let currentAdminUser = null;
 
 /* =========================
    DATOS DEMO TEMPORALES
@@ -277,7 +279,149 @@ const availabilityActive =
     "availabilityActive"
   );
 
+const themeToggleBtn =
+  document.getElementById(
+    "themeToggleBtn"
+  );
+
+const themeToggleIcon =
+  document.getElementById(
+    "themeToggleIcon"
+  );
+
+const themeMenu =
+  document.getElementById(
+    "themeMenu"
+  );
+
+const themeOptions =
+  document.querySelectorAll(
+    ".theme-option"
+  );
+
 let interviewToDelete = null;
+
+
+
+/* =========================================================
+   APARIENCIA
+========================================================= */
+
+const THEME_STORAGE_KEY =
+  "gah-dashboard-theme";
+
+
+function getSystemTheme() {
+  return window.matchMedia(
+    "(prefers-color-scheme: dark)"
+  ).matches
+    ? "dark"
+    : "light";
+}
+
+
+function getSavedTheme() {
+  const saved =
+    localStorage.getItem(
+      THEME_STORAGE_KEY
+    );
+
+  if (
+    saved === "dark" ||
+    saved === "light" ||
+    saved === "system"
+  ) {
+    return saved;
+  }
+
+  return "system";
+}
+
+
+function applyTheme(theme = "system") {
+
+  const resolvedTheme =
+    theme === "system"
+      ? getSystemTheme()
+      : theme;
+
+  document.documentElement.dataset.theme =
+    resolvedTheme;
+
+  document.documentElement.dataset.themePreference =
+    theme;
+
+  themeOptions.forEach((option) => {
+
+    option.classList.toggle(
+      "is-active",
+      option.dataset.themeValue === theme
+    );
+  });
+
+  if (themeToggleIcon) {
+
+    themeToggleIcon.textContent =
+      theme === "light"
+        ? "☀️"
+        : theme === "dark"
+          ? "🌙"
+          : "◐";
+  }
+}
+
+
+function saveTheme(theme) {
+
+  localStorage.setItem(
+    THEME_STORAGE_KEY,
+    theme
+  );
+
+  applyTheme(theme);
+}
+
+
+function closeThemeMenu() {
+
+  themeMenu?.classList.add(
+    "hidden"
+  );
+
+  themeToggleBtn?.setAttribute(
+    "aria-expanded",
+    "false"
+  );
+}
+
+
+function toggleThemeMenu() {
+
+  if (!themeMenu) {
+    return;
+  }
+
+  const hidden =
+    themeMenu.classList.contains(
+      "hidden"
+    );
+
+  if (hidden) {
+
+    themeMenu.classList.remove(
+      "hidden"
+    );
+
+    themeToggleBtn?.setAttribute(
+      "aria-expanded",
+      "true"
+    );
+
+  } else {
+
+    closeThemeMenu();
+  }
+}
 
 /* =========================
    HELPERS
@@ -287,6 +431,235 @@ function setStatus(message, show = true) {
   statusBox.textContent = message;
   statusBox.classList.toggle("hidden", !show);
 }
+
+async function cargarUsuarioAdministrativo() {
+  const response = await fetch(
+    `${API_URL}/api/admin/me`,
+    {
+      method: "GET",
+      headers: authHeaders(),
+      cache: "no-store"
+    }
+  );
+
+  let data = null;
+
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    const message =
+      data?.error ||
+      "No fue posible validar tu acceso administrativo.";
+
+    throw new Error(message);
+  }
+
+  if (
+    !data?.user ||
+    !data.user.uid ||
+    !data.user.email
+  ) {
+    throw new Error(
+      "El servidor no devolvió un perfil administrativo válido."
+    );
+  }
+
+  currentAdminUser = data.user;
+
+
+  /* ===============================================
+     INFORMACIÓN DEL USUARIO EN LA SIDEBAR
+  =============================================== */
+
+  const sidebarName =
+    document.getElementById(
+      "dashboardSidebarName"
+    );
+
+  const sidebarRole =
+    document.getElementById(
+      "dashboardSidebarRole"
+    );
+
+  const sidebarAvatar =
+    document.getElementById(
+      "dashboardSidebarAvatar"
+    );
+
+  const usuariosAdminNavLink =
+    document.getElementById(
+      "usuariosAdminNavLink"
+    );
+
+
+  if (sidebarName) {
+    sidebarName.textContent =
+      currentAdminUser.nombre ||
+      currentAdminUser.email ||
+      "Administrador";
+  }
+
+
+  if (sidebarRole) {
+    let roleLabel = "Usuario administrativo";
+
+    if (currentAdminUser.isPrimaryAdmin) {
+      roleLabel = "Administrador principal";
+    } else if (currentAdminUser.role === "admin") {
+      roleLabel = "Administrador";
+    } else if (
+      currentAdminUser.role === "reclutador"
+    ) {
+      roleLabel = "Reclutador";
+    } else if (
+      currentAdminUser.role === "gerente"
+    ) {
+      roleLabel = "Gerente";
+    }
+
+    sidebarRole.textContent = roleLabel;
+  }
+
+
+  if (sidebarAvatar) {
+    const nombre =
+      currentAdminUser.nombre ||
+      currentAdminUser.email ||
+      "A";
+
+    sidebarAvatar.textContent =
+      nombre.charAt(0).toUpperCase();
+  }
+
+
+  /* ===============================================
+     USUARIOS Y ACCESOS
+     Solo se muestra con permiso administrativo
+  =============================================== */
+
+  const permissions =
+    Array.isArray(currentAdminUser.permissions)
+      ? currentAdminUser.permissions
+      : [];
+
+  if (
+    usuariosAdminNavLink &&
+    permissions.includes(
+      "usuarios.gestionar_admins"
+    )
+  ) {
+    usuariosAdminNavLink.classList.remove(
+      "hidden"
+    );
+  } else if (usuariosAdminNavLink) {
+    usuariosAdminNavLink.classList.add(
+      "hidden"
+    );
+  }
+
+
+  console.log(
+    "Usuario administrativo en Entrevistas:",
+    {
+      nombre: currentAdminUser.nombre,
+      email: currentAdminUser.email,
+      role: currentAdminUser.role,
+      isPrimaryAdmin:
+        currentAdminUser.isPrimaryAdmin,
+      globalAccess:
+        currentAdminUser.globalAccess,
+      permissions:
+        currentAdminUser.permissions
+    }
+  );
+
+
+  return currentAdminUser;
+}
+
+function hasPermission(permission) {
+  if (
+    !currentAdminUser ||
+    !permission
+  ) {
+    return false;
+  }
+
+  const permissions =
+    Array.isArray(
+      currentAdminUser.permissions
+    )
+      ? currentAdminUser.permissions
+      : [];
+
+  return permissions.includes(
+    permission
+  );
+}
+
+
+function configurarNavegacionPorPermisos() {
+
+  const reglasNavegacion = [
+    {
+      selector:
+        'a[href="dashboard.html"]',
+      permiso:
+        "candidatos.ver"
+    },
+    {
+      selector:
+        'a[href="vacantes-admin.html"]',
+      permiso:
+        "vacantes.ver"
+    },
+    {
+      selector:
+        'a[href="entrevistas.html"]',
+      permiso:
+        "entrevistas.ver"
+    },
+    {
+      selector:
+        'a[href="comunicaciones.html"]',
+      permiso:
+        "comunicaciones.ver"
+    },
+    {
+      selector:
+        'a[href="usuarios-admin.html"]',
+      permiso:
+        "usuarios.gestionar_admins"
+    }
+  ];
+
+  reglasNavegacion.forEach(
+    ({ selector, permiso }) => {
+
+      const elementos =
+        document.querySelectorAll(
+          selector
+        );
+
+      elementos.forEach(
+        (elemento) => {
+
+          elemento.classList.toggle(
+            "hidden",
+            !hasPermission(
+              permiso
+            )
+          );
+        }
+      );
+    }
+  );
+}
+
 
 function authHeaders(extra = {}) {
   return {
@@ -2356,13 +2729,57 @@ document.addEventListener("keydown", (event) => {
    INIT
 ========================= */
 async function init() {
+  async function init() {
+
+  /* =========================================================
+     CARGAR PERFIL ADMINISTRATIVO
+  ========================================================= */
+
+  await cargarUsuarioAdministrativo();
+  configurarNavegacionPorPermisos();
+
+
+  /* =========================================================
+     CONTROL DE ACCESO AL MÓDULO DE ENTREVISTAS
+  ========================================================= */
+if (
+  !hasPermission(
+    "entrevistas.ver"
+  )
+) {
+ 
+    console.warn(
+      "Acceso denegado al módulo de Entrevistas:",
+      {
+        email:
+          currentAdminUser?.email ||
+          "",
+
+        permisoRequerido:
+          "entrevistas.ver"
+      }
+    );
+
+    window.location.href =
+      "dashboard.html";
+
+    return;
+  }
+
+
+  /* =========================================================
+     CARGAR INFORMACIÓN DEL MÓDULO
+  ========================================================= */
+
   await Promise.all([
-  cargarEntrevistas(),
-  cargarDisponibilidades(),
-  cargarVacantesDisponibilidad()
-]);
+    cargarEntrevistas(),
+    cargarDisponibilidades(),
+    cargarVacantesDisponibilidad()
+  ]);
 }
 
+
+}
 if (auth) {
   auth.onAuthStateChanged(async (user) => {
     if (!user) {
@@ -2505,3 +2922,81 @@ function renderCalendar() {
     });
   });
 }
+
+themeToggleBtn?.addEventListener(
+  "click",
+  (event) => {
+
+    event.stopPropagation();
+
+    toggleThemeMenu();
+  }
+);
+
+
+themeOptions.forEach((option) => {
+
+  option.addEventListener(
+    "click",
+    () => {
+
+      saveTheme(
+        option.dataset.themeValue
+      );
+
+      closeThemeMenu();
+    }
+  );
+});
+
+
+document.addEventListener(
+  "click",
+  (event) => {
+
+    if (
+      themeMenu?.classList.contains(
+        "hidden"
+      )
+    ) {
+      return;
+    }
+
+    if (
+      themeMenu?.contains(
+        event.target
+      ) ||
+      themeToggleBtn?.contains(
+        event.target
+      )
+    ) {
+      return;
+    }
+
+    closeThemeMenu();
+  }
+);
+
+
+const systemThemeMedia =
+  window.matchMedia(
+    "(prefers-color-scheme: dark)"
+  );
+
+
+systemThemeMedia.addEventListener(
+  "change",
+  () => {
+
+    if (
+      getSavedTheme() === "system"
+    ) {
+      applyTheme("system");
+    }
+  }
+);
+
+
+applyTheme(
+  getSavedTheme()
+);

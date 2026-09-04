@@ -1,4 +1,6 @@
-const API_URL ="https://chatbot-reclutamiento-dcqb.onrender.com";
+﻿const API_URL =
+  window.location.origin;
+
 const DASHBOARD_CACHE_KEY = "rh_postulaciones_cache";
 const DASHBOARD_CACHE_TIME = 2 * 60 * 1000;
 /* =========================
@@ -20,6 +22,7 @@ if (!firebase.apps.length) {
 
 const auth = firebase.auth();
 let adminToken = "";
+let currentAdminUser = null;
 
 /* =========================
    ELEMENTOS
@@ -232,6 +235,217 @@ const modalCompatibilityAlerts =
     "modalCompatibilityAlerts"
   );
 
+/* =========================================================
+   APARIENCIA
+========================================================= */
+
+const THEME_STORAGE_KEY =
+  "gah-dashboard-theme";
+
+const themeToggleBtn =
+  document.getElementById("themeToggleBtn");
+
+const themeToggleIcon =
+  document.getElementById("themeToggleIcon");
+
+const themeMenu =
+  document.getElementById("themeMenu");
+
+const themeOptions =
+  document.querySelectorAll(".theme-option");
+
+
+function getSystemTheme() {
+  return window.matchMedia(
+    "(prefers-color-scheme: dark)"
+  ).matches
+    ? "dark"
+    : "light";
+}
+
+
+function getSavedTheme() {
+  const saved =
+    localStorage.getItem(
+      THEME_STORAGE_KEY
+    );
+
+  if (
+    saved === "dark" ||
+    saved === "light" ||
+    saved === "system"
+  ) {
+    return saved;
+  }
+
+  return "system";
+}
+
+
+function applyTheme(theme = "system") {
+
+  const resolvedTheme =
+    theme === "system"
+      ? getSystemTheme()
+      : theme;
+
+  document.documentElement.dataset.theme =
+    resolvedTheme;
+
+  document.documentElement.dataset.themePreference =
+    theme;
+
+  themeOptions.forEach((option) => {
+
+    option.classList.toggle(
+      "is-active",
+      option.dataset.themeValue === theme
+    );
+
+  });
+
+  if (themeToggleIcon) {
+
+    themeToggleIcon.textContent =
+      theme === "light"
+        ? "☀️"
+        : theme === "dark"
+          ? "🌙"
+          : "◐";
+  }
+}
+
+
+function saveTheme(theme) {
+
+  localStorage.setItem(
+    THEME_STORAGE_KEY,
+    theme
+  );
+
+  applyTheme(theme);
+}
+
+
+function closeThemeMenu() {
+
+  themeMenu?.classList.add("hidden");
+
+  themeToggleBtn?.setAttribute(
+    "aria-expanded",
+    "false"
+  );
+}
+
+
+function toggleThemeMenu() {
+
+  if (!themeMenu) {
+    return;
+  }
+
+  const hidden =
+    themeMenu.classList.contains(
+      "hidden"
+    );
+
+  if (hidden) {
+
+    themeMenu.classList.remove(
+      "hidden"
+    );
+
+    themeToggleBtn?.setAttribute(
+      "aria-expanded",
+      "true"
+    );
+
+  } else {
+
+    closeThemeMenu();
+  }
+}
+
+
+/* =========================================================
+   EVENTOS DE APARIENCIA
+========================================================= */
+
+themeToggleBtn?.addEventListener(
+  "click",
+  (event) => {
+
+    event.stopPropagation();
+
+    toggleThemeMenu();
+  }
+);
+
+
+themeOptions.forEach((option) => {
+
+  option.addEventListener(
+    "click",
+    () => {
+
+      saveTheme(
+        option.dataset.themeValue
+      );
+
+      closeThemeMenu();
+    }
+  );
+
+});
+
+
+document.addEventListener(
+  "click",
+  (event) => {
+
+    if (
+      themeMenu?.classList.contains(
+        "hidden"
+      )
+    ) {
+      return;
+    }
+
+    if (
+      themeMenu?.contains(event.target) ||
+      themeToggleBtn?.contains(event.target)
+    ) {
+      return;
+    }
+
+    closeThemeMenu();
+  }
+);
+
+
+const systemThemeMedia =
+  window.matchMedia(
+    "(prefers-color-scheme: dark)"
+  );
+
+
+systemThemeMedia.addEventListener(
+  "change",
+  () => {
+
+    if (
+      getSavedTheme() === "system"
+    ) {
+      applyTheme("system");
+    }
+  }
+);
+
+
+/* Aplicar tema al cargar */
+applyTheme(
+  getSavedTheme()
+);
 /* =========================
    HELPERS
 ========================= */
@@ -275,6 +489,175 @@ function authHeaders(extra = {}) {
     ...extra,
     Authorization: `Bearer ${adminToken}`
   };
+}
+
+/* =========================================================
+   ABRIR DOCUMENTO PRIVADO DE POSTULACIÓN
+========================================================= */
+
+async function abrirDocumentoPrivado(
+  candidatoId,
+  tipo
+) {
+
+  if (!candidatoId) {
+    setStatus(
+      "⚠️ No fue posible identificar al candidato."
+    );
+    return;
+  }
+
+  if (!adminToken) {
+    setStatus(
+      "⚠️ Tu sesión administrativa no está disponible."
+    );
+    return;
+  }
+
+  const tiposPermitidos =
+    new Set([
+      "cv",
+      "ine",
+      "curp",
+      "domicilio"
+    ]);
+
+  if (!tiposPermitidos.has(tipo)) {
+    setStatus(
+      "⚠️ Tipo de documento no válido."
+    );
+    return;
+  }
+
+  let objectUrl = null;
+
+  try {
+
+    const response =
+      await fetch(
+        `${API_URL}/api/postulaciones/${encodeURIComponent(
+          candidatoId
+        )}/documentos/${encodeURIComponent(
+          tipo
+        )}`,
+        {
+          method: "GET",
+
+          headers:
+            authHeaders(),
+
+          cache:
+            "no-store"
+        }
+      );
+
+
+    if (!response.ok) {
+
+      let mensaje =
+        "No fue posible abrir el documento.";
+
+      try {
+        const data =
+          await response.json();
+
+        mensaje =
+          data.error ||
+          mensaje;
+
+      } catch {
+        // La respuesta no contiene JSON.
+      }
+
+      throw new Error(
+        mensaje
+      );
+    }
+
+
+    const blob =
+      await response.blob();
+
+
+    if (
+      !blob ||
+      blob.size === 0
+    ) {
+      throw new Error(
+        "El documento recibido está vacío."
+      );
+    }
+
+
+    objectUrl =
+      URL.createObjectURL(
+        blob
+      );
+
+
+    const nuevaVentana =
+      window.open(
+        objectUrl,
+        "_blank",
+        "noopener,noreferrer"
+      );
+
+
+    if (!nuevaVentana) {
+
+      URL.revokeObjectURL(
+        objectUrl
+      );
+
+      objectUrl = null;
+
+      throw new Error(
+        "El navegador bloqueó la apertura del documento. Permite ventanas emergentes para este sitio."
+      );
+    }
+
+
+    /*
+     * Dejamos tiempo suficiente para que
+     * la nueva pestaña termine de consumir
+     * el Blob antes de liberar la URL.
+     */
+
+    window.setTimeout(
+      () => {
+
+        if (objectUrl) {
+          URL.revokeObjectURL(
+            objectUrl
+          );
+        }
+
+      },
+      60000
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "Error abriendo documento privado:",
+      {
+        message:
+          error?.message ||
+          "Error desconocido",
+
+        tipo
+      }
+    );
+
+
+    setStatus(
+      `⚠️ ${
+        error?.message ||
+        "No fue posible abrir el documento."
+      }`
+    );
+  }
 }
 
 function setMapLink(element, url) {
@@ -1707,31 +2090,41 @@ if (modalCompatibilidadAlert) {
     
   }
 
-  /* CV */
+ /* =========================================================
+   CV PRIVADO
+========================================================= */
 
-  if (candidate.cvRuta) {
-    if (
-      candidate.cvRuta.startsWith(
-        "http"
-      )
-    ) {
-      modalCvLink.href =
-        candidate.cvRuta;
-    } else {
-      modalCvLink.href =
-        `${API_URL}${candidate.cvRuta}`;
-    }
+if (
+  candidate.cvArchivo ||
+  candidate.cvRuta
+) {
+  /*
+   * Ya no exponemos directamente /uploads/.
+   *
+   * El documento se solicitará al backend
+   * mediante el endpoint privado cuando
+   * el usuario haga clic.
+   */
 
-    modalCvLink.classList.remove(
-      "hidden"
-    );
-  } else {
-    modalCvLink.href = "#";
+  modalCvLink.href = "#";
 
-    modalCvLink.classList.add(
-      "hidden"
-    );
-  }
+  modalCvLink.dataset.candidateId =
+    candidate.id || "";
+
+  modalCvLink.classList.remove(
+    "hidden"
+  );
+
+} else {
+
+  modalCvLink.href = "#";
+
+  delete modalCvLink.dataset.candidateId;
+
+  modalCvLink.classList.add(
+    "hidden"
+  );
+}
 
   /* Mapas */
 
@@ -1986,6 +2379,13 @@ async function cerrarSesion() {
   }
 }
 
+
+
+
+
+
+
+
 /* =========================
    EVENTOS SELECCIÓN CANDIDATOS
 ========================= */
@@ -2032,6 +2432,39 @@ if (refreshBtn) {
 
 if (logoutBtn) {
   logoutBtn.addEventListener("click", cerrarSesion);
+}
+
+/* =========================================================
+   DOCUMENTOS PRIVADOS
+========================================================= */
+
+if (modalCvLink) {
+
+  modalCvLink.addEventListener(
+    "click",
+    async (event) => {
+
+      event.preventDefault();
+
+      const candidatoId =
+        modalCvLink.dataset
+          .candidateId ||
+        selectedCandidate?.id ||
+        "";
+
+      if (!candidatoId) {
+        setStatus(
+          "⚠️ No fue posible identificar al candidato."
+        );
+        return;
+      }
+
+      await abrirDocumentoPrivado(
+        candidatoId,
+        "cv"
+      );
+    }
+  );
 }
 
 if (closeModalBtn) {
@@ -2145,24 +2578,534 @@ if (clearCandidateFiltersBtn) {
   );
 }
 
-/* =========================
-   INIT
-========================= */
-async function init() {
-  await cargarPostulaciones();
+
+/* =========================================================
+   USUARIO ADMINISTRATIVO / ROLES / PERMISOS
+========================================================= */
+
+async function cargarUsuarioAdministrativo() {
+
+  const response =
+    await fetch(
+      `${API_URL}/api/admin/me`,
+      {
+        method: "GET",
+
+        headers: authHeaders(),
+
+        cache: "no-store"
+      }
+    );
+
+
+  let data = null;
+
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+
+  if (!response.ok) {
+
+    const message =
+      data?.error ||
+      "No fue posible validar tu acceso administrativo.";
+
+    throw new Error(message);
+  }
+
+
+  if (
+    !data?.user ||
+    !data.user.uid ||
+    !data.user.email
+  ) {
+
+    throw new Error(
+      "El servidor no devolvió un perfil administrativo válido."
+    );
+  }
+
+
+  currentAdminUser =
+    data.user;
+
+  const dashboardSidebarName =
+  document.getElementById(
+    "dashboardSidebarName"
+  );
+
+const dashboardSidebarRole =
+  document.getElementById(
+    "dashboardSidebarRole"
+  );
+
+const dashboardSidebarAvatar =
+  document.getElementById(
+    "dashboardSidebarAvatar"
+  );
+
+const usuariosAdminNavLink =
+  document.getElementById(
+    "usuariosAdminNavLink"
+  );
+
+
+if (dashboardSidebarName) {
+  dashboardSidebarName.textContent =
+    currentAdminUser.nombre ||
+    currentAdminUser.email ||
+    "Administrador";
 }
 
-auth.onAuthStateChanged(async (user) => {
-  if (!user) {
-    window.location.href = "login-admin.html";
+
+if (dashboardSidebarRole) {
+  const roleLabels = {
+    admin: "Administrador",
+    reclutador: "Reclutador",
+    gerente: "Gerente"
+  };
+
+  dashboardSidebarRole.textContent =
+    currentAdminUser.isPrimaryAdmin
+      ? "Administrador principal"
+      : (
+          roleLabels[
+            currentAdminUser.role
+          ] ||
+          currentAdminUser.role ||
+          "Usuario"
+        );
+}
+
+
+if (dashboardSidebarAvatar) {
+  const value =
+    currentAdminUser.nombre ||
+    currentAdminUser.email ||
+    "A";
+
+  dashboardSidebarAvatar.textContent =
+    String(value)
+      .trim()
+      .charAt(0)
+      .toUpperCase();
+}
+
+
+if (usuariosAdminNavLink) {
+  const permissions =
+    Array.isArray(
+      currentAdminUser.permissions
+    )
+      ? currentAdminUser.permissions
+      : [];
+
+  if (
+    permissions.includes(
+      "usuarios.gestionar_admins"
+    )
+  ) {
+    usuariosAdminNavLink.classList.remove(
+      "hidden"
+    );
+  } else {
+    usuariosAdminNavLink.classList.add(
+      "hidden"
+    );
+  }
+}
+
+
+  console.log(
+    "Usuario administrativo:",
+    {
+      nombre:
+        currentAdminUser.nombre,
+
+      email:
+        currentAdminUser.email,
+
+      role:
+        currentAdminUser.role,
+
+      globalAccess:
+        currentAdminUser.globalAccess,
+
+      permissions:
+        currentAdminUser.permissions
+    }
+  );
+
+
+  return currentAdminUser;
+}
+
+
+/* =========================================================
+   COMPROBAR PERMISOS
+========================================================= */
+
+function hasPermission(permission) {
+
+  if (
+    !currentAdminUser ||
+    !permission
+  ) {
+    return false;
+  }
+
+
+  const permissions =
+    Array.isArray(
+      currentAdminUser.permissions
+    )
+      ? currentAdminUser.permissions
+      : [];
+
+
+  return permissions.includes(
+    permission
+  );
+}
+/* =========================================================
+   NAVEGACIÓN SEGÚN PERMISOS
+========================================================= */
+
+function configurarNavegacionPorPermisos() {
+
+  const reglasNavegacion = [
+    {
+      selector:
+        'a[href="dashboard.html"]',
+      permiso:
+        "candidatos.ver"
+    },
+    {
+      selector:
+        'a[href="vacantes-admin.html"]',
+      permiso:
+        "vacantes.ver"
+    },
+    {
+      selector:
+        'a[href="entrevistas.html"]',
+      permiso:
+        "entrevistas.ver"
+    },
+    {
+      selector:
+        'a[href="comunicaciones.html"]',
+      permiso:
+        "comunicaciones.ver"
+    },
+    {
+      selector:
+        'a[href="usuarios-admin.html"]',
+      permiso:
+        "usuarios.gestionar_admins"
+    }
+  ];
+
+
+  reglasNavegacion.forEach(
+    ({
+      selector,
+      permiso
+    }) => {
+
+      const elementos =
+        document.querySelectorAll(
+          selector
+        );
+
+
+      elementos.forEach(
+        (elemento) => {
+
+          const permitido =
+            hasPermission(
+              permiso
+            );
+
+
+          elemento.classList.toggle(
+            "hidden",
+            !permitido
+          );
+        }
+      );
+    }
+  );
+}
+
+function redirigirPrimerModuloPermitido() {
+
+  if (
+    hasPermission(
+      "candidatos.ver"
+    )
+  ) {
+    window.location.href =
+      "dashboard.html";
+
     return;
   }
 
-  try {
-    adminToken = await user.getIdToken(true);
-    await init();
-  } catch (error) {
-    console.error("Error obteniendo token:", error);
-    window.location.href = "login-admin.html";
+
+  if (
+    hasPermission(
+      "vacantes.ver"
+    )
+  ) {
+    window.location.href =
+      "vacantes-admin.html";
+
+    return;
   }
-});
+
+
+  if (
+    hasPermission(
+      "entrevistas.ver"
+    )
+  ) {
+    window.location.href =
+      "entrevistas.html";
+
+    return;
+  }
+
+
+  if (
+    hasPermission(
+      "comunicaciones.ver"
+    )
+  ) {
+    window.location.href =
+      "comunicaciones.html";
+
+    return;
+  }
+
+
+  if (
+    hasPermission(
+      "usuarios.gestionar_admins"
+    )
+  ) {
+    window.location.href =
+      "usuarios-admin.html";
+
+    return;
+  }
+
+
+  console.warn(
+    "El usuario administrativo no tiene acceso a ningún módulo visible.",
+    {
+      email:
+        currentAdminUser?.email ||
+        "",
+
+      permissions:
+        currentAdminUser
+          ?.permissions ||
+        []
+    }
+  );
+
+
+  /*
+   * No redirigimos a otro módulo
+   * para evitar ciclos.
+   */
+}
+
+/* =========================================================
+   COMPROBAR ROL
+========================================================= */
+
+function hasRole(...roles) {
+
+  if (!currentAdminUser) {
+    return false;
+  }
+
+
+  return roles
+    .map((role) =>
+      String(role)
+        .trim()
+        .toLowerCase()
+    )
+    .includes(
+      String(
+        currentAdminUser.role || ""
+      )
+        .trim()
+        .toLowerCase()
+    );
+}
+
+
+/* =========================================================
+   ACCESO GLOBAL
+========================================================= */
+
+function hasGlobalAccess() {
+
+  /*
+   * El acceso global depende únicamente
+   * del alcance autorizado por el backend.
+   *
+   * Tener role === "admin" NO significa
+   * automáticamente tener acceso global.
+   *
+   * Esto permite administradores limitados
+   * por marca, país o sucursal.
+   */
+  return (
+    currentAdminUser?.globalAccess === true
+  );
+}
+
+
+/* =========================================================
+   SUCURSAL PERMITIDA
+========================================================= */
+
+function hasBranchAccess(
+  branch
+) {
+
+  if (hasGlobalAccess()) {
+    return true;
+  }
+
+
+  const branchValue =
+    String(branch || "")
+      .trim()
+      .toLowerCase();
+
+
+  if (!branchValue) {
+    return false;
+  }
+
+
+  const allowedBranches =
+    Array.isArray(
+      currentAdminUser
+        ?.allowedBranches
+    )
+      ? currentAdminUser
+          .allowedBranches
+      : [];
+
+
+  return allowedBranches.some(
+    (item) =>
+      String(item || "")
+        .trim()
+        .toLowerCase() ===
+      branchValue
+  );
+}
+
+
+/* =========================
+   INIT
+========================= */
+/* =========================
+   INIT
+========================= */
+
+async function init() {
+
+  await cargarUsuarioAdministrativo();
+
+  configurarNavegacionPorPermisos();
+
+
+  if (
+    !hasPermission(
+      "candidatos.ver"
+    )
+  ) {
+
+    console.warn(
+      "Acceso denegado al Dashboard:",
+      {
+        email:
+          currentAdminUser?.email ||
+          "",
+
+        permisoRequerido:
+          "candidatos.ver"
+      }
+    );
+
+    redirigirPrimerModuloPermitido();
+
+    return;
+  }
+
+
+  await cargarPostulaciones();
+}
+
+auth.onAuthStateChanged(
+  async (user) => {
+
+    if (!user) {
+
+      window.location.href =
+        "login-admin.html";
+
+      return;
+    }
+
+
+    try {
+
+      adminToken =
+        await user.getIdToken(true);
+
+
+      await init();
+
+    } catch (error) {
+
+      console.error(
+        "Error inicializando dashboard:",
+        error
+      );
+
+
+      /*
+       * Si Firebase tiene sesión pero el backend
+       * rechaza el acceso administrativo,
+       * cerramos la sesión para evitar un ciclo
+       * entre login y dashboard.
+       */
+
+      try {
+        await auth.signOut();
+      } catch (logoutError) {
+
+        console.error(
+          "Error cerrando sesión:",
+          logoutError
+        );
+      }
+
+
+      window.location.href =
+        "login-admin.html";
+    }
+  }
+);

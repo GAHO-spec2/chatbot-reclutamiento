@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>Usuarios y accesos | GA Hospitality</title>
+
+  <link
+    rel="stylesheet"
+    href="usuarios-admin.css?v=1"
+  />
+</head>
+
+<body>
+
+  <!-- =======================================================
+       PANTALLA DE CARGA
+  ======================================================== -->
+  <div id="loadingScreen" class="loading-screen">
+    <div class="loading-card">
+      <div class="loading-spinner"></div>
+      <h2>Usuarios y accesos</h2>
+      <p>Validando permisos administrativos...</p>
+    </div>
+  </div>
+
+
+  <!-- =======================================================
+       ACCESO DENEGADO
+  ======================================================== -->
+  <section
+    id="accessDenied"
+    class="access-denied hidden"
+  >
+    <div class="access-denied-card">
+
+      <div class="access-denied-icon">
+        🔒
+      </div>
+
+      <h1>Acceso restringido</h1>
+
+      <p>
+        Tu cuenta no tiene permisos para administrar
+        usuarios y accesos del sistema.
+      </p>
+
+      <a
+        href="dashboard.html"
+        class="btn btn-primary"
+      >
+        Regresar al dashboard
+      </a>
+
+    </div>
+  </section>
+
+
+  <!-- =======================================================
+       APLICACIÓN
+  ======================================================== -->
+  <div
+    id="usuariosApp"
+    class="app-shell hidden"
+  >
+
+    <!-- =====================================================
+         SIDEBAR
+    ====================================================== -->
+    <aside class="sidebar">
+
+      <div class="brand">
+        <div class="brand-mark">
+          GA
+        </div>
+
+        <div class="brand-copy">
+          <strong>GA Hospitality</strong>
+          <span>Recruitment Center</span>
+        </div>
+      </div>
+
+
+      <nav class="sidebar-nav">
+
+        <a
+          href="dashboard.html"
+          class="nav-item"
+        >
+          <span class="nav-icon">⌂</span>
+          <span>Dashboard</span>
+        </a>
+
+        <a
+          href="vacantes-admin.html"
+          class="nav-item"
+        >
+          <span class="nav-icon">▣</span>
+          <span>Vacantes</span>
+        </a>
+
+        <a
+          href="entrevistas.html"
+          class="nav-item"
+        >
+          <span class="nav-icon">◷</span>
+          <span>Entrevistas</span>
+        </a>
+
+        <a
+          href="comunicaciones.html"
+          class="nav-item"
+        >
+          <span class="nav-icon">✉</span>
+          <span>Comunicaciones</span>
+        </a>
+
+        <a
+          href="usuarios-admin.html"
+          class="nav-item active"
+        >
+          <span class="nav-icon">♙</span>
+          <span>Usuarios y accesos</span>
+        </a>
+
+      </nav>
+
+
+      <div class="sidebar-user">
+
+        <div
+          id="sidebarAvatar"
+          class="user-avatar"
+        >
+          A
+        </div>
+
+        <div class="sidebar-user-info">
+          <strong id="sidebarUserName">
+            Administrador
+          </strong>
+
+          <span id="sidebarUserRole">
+            Cargando...
+          </span>
+        </div>
+
+      </div>
+
+    </aside>
+
+
+    <!-- =====================================================
+         CONTENIDO PRINCIPAL
+    ====================================================== -->
+    <main class="main-content">
+
+      <!-- ===================================================
+           HEADER
+      ==================================================== -->
+      <header class="page-header">
+
+        <div>
+          <div class="eyebrow">
+            Administración
+          </div>
+
+          <h1>Usuarios y accesos</h1>
+
+          <p>
+            Administra quién puede ingresar al sistema,
+            sus roles, alcances y permisos.
+          </p>
+        </div>
+
+
+        <button
+          id="btnNuevoUsuario"
+          type="button"
+          class="btn btn-primary"
+        >
+          <span>＋</span>
+          Nuevo usuario
+        </button>
+
+      </header>
+
+
+      <!-- ===================================================
+           RESUMEN
+      ==================================================== -->
+      <section class="stats-grid">
+
+        <article class="stat-card">
+          <span class="stat-label">
+            Usuarios
+          </span>
+
+          <strong
+            id="statTotal"
+            class="stat-value"
+          >
+            0
+          </strong>
+
+          <span class="stat-description">
+            Registrados en el sistema
+          </span>
+        </article>
+
+
+        <article class="stat-card">
+          <span class="stat-label">
+            Activos
+          </span>
+
+          <strong
+            id="statActivos"
+            class="stat-value"
+          >
+            0
+          </strong>
+
+          <span class="stat-description">
+            Con acceso habilitado
+          </span>
+        </article>
+
+
+        <article class="stat-card">
+          <span class="stat-label">
+            Administradores
+          </span>
+
+          <strong
+            id="statAdmins"
+            class="stat-value"
+          >
+            0
+          </strong>
+
+          <span class="stat-description">
+            Cuentas administrativas
+          </span>
+        </article>
+
+
+        <article class="stat-card">
+          <span class="stat-label">
+            Acceso limitado
+          </span>
+
+          <strong
+            id="statLimitados"
+            class="stat-value"
+          >
+            0
+          </strong>
+
+          <span class="stat-description">
+            Restringidos por alcance
+          </span>
+        </article>
+
+      </section>
+
+
+      <!-- ===================================================
+           PANEL DE USUARIOS
+      ==================================================== -->
+      <section class="users-panel">
+
+        <div class="panel-toolbar">
+
+          <div class="search-box">
+            <span>⌕</span>
+
+            <input
+              id="buscarUsuario"
+              type="search"
+              placeholder="Buscar por nombre o correo..."
+              autocomplete="off"
+            />
+          </div>
+
+
+          <select
+            id="filtroRol"
+            class="filter-control"
+          >
+            <option value="">
+              Todos los roles
+            </option>
+
+            <option value="admin">
+              Administradores
+            </option>
+
+            <option value="reclutador">
+              Reclutadores
+            </option>
+
+            <option value="gerente">
+              Gerentes
+            </option>
+          </select>
+
+
+          <select
+            id="filtroEstado"
+            class="filter-control"
+          >
+            <option value="">
+              Todos los estados
+            </option>
+
+            <option value="active">
+              Activos
+            </option>
+
+            <option value="inactive">
+              Desactivados
+            </option>
+          </select>
+
+        </div>
+
+
+        <!-- ===============================================
+             ESTADO CARGANDO
+        ================================================ -->
+        <div
+          id="usersLoading"
+          class="users-loading hidden"
+        >
+          <div class="loading-spinner small"></div>
+          <span>Cargando usuarios...</span>
+        </div>
+
+
+        <!-- ===============================================
+             LISTADO
+        ================================================ -->
+        <div
+          id="usersList"
+          class="users-list"
+        ></div>
+
+
+        <!-- ===============================================
+             SIN RESULTADOS
+        ================================================ -->
+        <div
+          id="emptyState"
+          class="empty-state hidden"
+        >
+          <div class="empty-icon">
+            ♙
+          </div>
+
+          <h3>No encontramos usuarios</h3>
+
+          <p>
+            Ajusta los filtros o registra un nuevo
+            usuario administrativo.
+          </p>
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+
+  <!-- =======================================================
+       MODAL CREAR / EDITAR USUARIO
+  ======================================================== -->
+  <div
+    id="userModal"
+    class="modal-backdrop hidden"
+    aria-hidden="true"
+  >
+
+    <div
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="userModalTitle"
+    >
+
+      <div class="modal-header">
+
+        <div>
+          <span
+            id="userModalEyebrow"
+            class="modal-eyebrow"
+          >
+            Nuevo acceso
+          </span>
+
+          <h2 id="userModalTitle">
+            Crear usuario
+          </h2>
+
+          <p id="userModalDescription">
+            Configura el acceso administrativo del usuario.
+          </p>
+        </div>
+
+
+        <button
+          id="btnCerrarModal"
+          type="button"
+          class="icon-button"
+          aria-label="Cerrar"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <form id="userForm">
+
+        <input
+          id="usuarioUid"
+          type="hidden"
+        />
+
+
+        <!-- ===============================================
+             DATOS DEL USUARIO
+        ================================================ -->
+        <section class="form-section">
+
+          <div class="section-heading">
+            <span class="section-number">1</span>
+
+            <div>
+              <h3>Datos del usuario</h3>
+              <p>
+                Información utilizada para identificar
+                la cuenta.
+              </p>
+            </div>
+          </div>
+
+
+          <div class="form-grid two-columns">
+
+            <label class="form-field">
+              <span>Nombre completo</span>
+
+              <input
+                id="usuarioNombre"
+                type="text"
+                maxlength="120"
+                required
+                placeholder="Ej. María López"
+              />
+            </label>
+
+
+            <label class="form-field">
+              <span>Correo electrónico</span>
+
+              <input
+                id="usuarioEmail"
+                type="email"
+                maxlength="180"
+                required
+                placeholder="usuario@empresa.com"
+              />
+
+              <small id="emailHelp">
+                El correo será utilizado para iniciar sesión.
+              </small>
+            </label>
+
+          </div>
+
+        </section>
+
+
+        <!-- ===============================================
+             ROL
+        ================================================ -->
+        <section class="form-section">
+
+          <div class="section-heading">
+            <span class="section-number">2</span>
+
+            <div>
+              <h3>Rol administrativo</h3>
+              <p>
+                Define el nivel base de acceso del usuario.
+              </p>
+            </div>
+          </div>
+
+
+          <div
+            id="roleSelector"
+            class="role-selector"
+          >
+
+            <label class="role-card">
+
+              <input
+                type="radio"
+                name="usuarioRole"
+                value="reclutador"
+                checked
+              />
+
+              <span class="role-card-content">
+                <strong>Reclutador</strong>
+
+                <small>
+                  Gestiona vacantes, candidatos,
+                  entrevistas y comunicaciones.
+                </small>
+              </span>
+
+            </label>
+
+
+            <label class="role-card">
+
+              <input
+                type="radio"
+                name="usuarioRole"
+                value="gerente"
+              />
+
+              <span class="role-card-content">
+                <strong>Gerente</strong>
+
+                <small>
+                  Consulta y administra candidatos
+                  dentro de su alcance.
+                </small>
+              </span>
+
+            </label>
+
+
+            <label class="role-card">
+
+              <input
+                type="radio"
+                name="usuarioRole"
+                value="admin"
+              />
+
+              <span class="role-card-content">
+                <strong>Administrador</strong>
+
+                <small>
+                  Acceso administrativo de alto nivel.
+                </small>
+              </span>
+
+            </label>
+
+          </div>
+
+        </section>
+
+
+        <!-- ===============================================
+             ALCANCE
+        ================================================ -->
+        <section class="form-section">
+
+          <div class="section-heading">
+            <span class="section-number">3</span>
+
+            <div>
+              <h3>Alcance de acceso</h3>
+
+              <p>
+                Define en qué parte de la organización
+                podrá trabajar.
+              </p>
+            </div>
+          </div>
+
+
+          <label class="switch-row">
+
+            <span>
+              <strong>Acceso global</strong>
+
+              <small>
+                Puede consultar información de toda
+                la organización.
+              </small>
+            </span>
+
+
+            <span class="switch">
+              <input
+                id="usuarioGlobalAccess"
+                type="checkbox"
+              />
+
+              <span class="switch-slider"></span>
+            </span>
+
+          </label>
+
+
+          <div
+            id="limitedScopeFields"
+            class="scope-fields"
+          >
+
+            <label class="form-field">
+              <span>Marcas autorizadas</span>
+
+              <input
+                id="usuarioMarcas"
+                type="text"
+                placeholder="Ej. wendys, applebees"
+              />
+
+              <small>
+                Separa múltiples valores con comas.
+              </small>
+            </label>
+
+
+            <label class="form-field">
+              <span>Sucursales autorizadas</span>
+
+              <input
+                id="usuarioSucursales"
+                type="text"
+                placeholder="Ej. wendys-las-misiones-ciudad-juarez"
+              />
+
+              <small>
+                Separa múltiples valores con comas.
+              </small>
+            </label>
+
+
+            <label class="form-field">
+              <span>Países autorizados</span>
+
+              <input
+                id="usuarioPaises"
+                type="text"
+                placeholder="Ej. México"
+              />
+
+              <small>
+                Separa múltiples valores con comas.
+              </small>
+            </label>
+
+          </div>
+
+        </section>
+
+
+        <!-- ===============================================
+             PERMISOS
+        ================================================ -->
+        <section class="form-section">
+
+          <div class="section-heading">
+            <span class="section-number">4</span>
+
+            <div>
+              <h3>Permisos</h3>
+
+              <p>
+                Personaliza las acciones que podrá
+                realizar dentro del sistema.
+              </p>
+            </div>
+          </div>
+
+
+          <div class="permissions-toolbar">
+
+            <button
+              id="btnPermisosRol"
+              type="button"
+              class="btn btn-secondary btn-small"
+            >
+              Restablecer permisos del rol
+            </button>
+
+          </div>
+
+
+          <div
+            id="permissionsGrid"
+            class="permissions-grid"
+          ></div>
+
+        </section>
+
+
+        <!-- ===============================================
+             PROTECCIÓN ADMIN PRINCIPAL
+        ================================================ -->
+        <div
+          id="primaryAdminNotice"
+          class="primary-admin-notice hidden"
+        >
+          <strong>
+            Cuenta protegida
+          </strong>
+
+          <p>
+            Este usuario es un administrador principal.
+            Sus privilegios críticos están protegidos
+            por la configuración del servidor.
+          </p>
+        </div>
+
+
+        <!-- ===============================================
+             ERROR DEL FORMULARIO
+        ================================================ -->
+        <div
+          id="formError"
+          class="form-error hidden"
+          role="alert"
+        ></div>
+
+
+        <!-- ===============================================
+             ACCIONES
+        ================================================ -->
+        <div class="modal-actions">
+
+          <button
+            id="btnCancelarUsuario"
+            type="button"
+            class="btn btn-secondary"
+          >
+            Cancelar
+          </button>
+
+
+          <button
+            id="btnGuardarUsuario"
+            type="submit"
+            class="btn btn-primary"
+          >
+            Guardar usuario
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+
+  <!-- =======================================================
+       MODAL CONFIRMACIÓN ACTIVAR / DESACTIVAR
+  ======================================================== -->
+  <div
+    id="confirmModal"
+    class="modal-backdrop hidden"
+    aria-hidden="true"
+  >
+
+    <div
+      class="modal modal-small"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirmTitle"
+    >
+
+      <div class="confirmation-icon">
+        !
+      </div>
+
+      <h2 id="confirmTitle">
+        Confirmar acción
+      </h2>
+
+      <p id="confirmMessage">
+        ¿Deseas continuar?
+      </p>
+
+
+      <div class="modal-actions centered">
+
+        <button
+          id="btnConfirmCancel"
+          type="button"
+          class="btn btn-secondary"
+        >
+          Cancelar
+        </button>
+
+        <button
+          id="btnConfirmAction"
+          type="button"
+          class="btn btn-danger"
+        >
+          Confirmar
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =======================================================
+       TOAST
+  ======================================================== -->
+  <div
+    id="toastContainer"
+    class="toast-container"
+    aria-live="polite"
+  ></div>
+
+
+  <!-- =======================================================
+       FIREBASE
+  ======================================================== -->
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+  <script src="usuarios-admin.js?v=1"></script>
+
+</body>
+</html>
