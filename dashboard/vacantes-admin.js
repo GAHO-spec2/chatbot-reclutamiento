@@ -2046,49 +2046,7 @@ function openVacanteModal(vacante = null) {
     vacanteLng.value =
       vacante.lng ?? "";
   }
- /* =========================
-   EVENTOS QR
-========================= */
 
-if (closeVacanteQrModalBtn) {
-  closeVacanteQrModalBtn
-    .addEventListener(
-      "click",
-      closeVacanteQrModal
-    );
-}
-
-if (closeVacanteQrBackdrop) {
-  closeVacanteQrBackdrop
-    .addEventListener(
-      "click",
-      closeVacanteQrModal
-    );
-}
-
-if (copyQrVacanteUrlBtn) {
-  copyQrVacanteUrlBtn
-    .addEventListener(
-      "click",
-      copiarEnlaceQr
-    );
-}
-
-if (openQrVacanteUrlBtn) {
-  openQrVacanteUrlBtn
-    .addEventListener(
-      "click",
-      abrirEnlaceQr
-    );
-}
-
-if (downloadQrPngBtn) {
-  downloadQrPngBtn
-    .addEventListener(
-      "click",
-      descargarQrPng
-    );
-}
 
   vacanteRequisitos.value =
     Array.isArray(vacante.requisitos)
