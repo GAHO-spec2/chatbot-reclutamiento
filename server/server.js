@@ -5313,19 +5313,19 @@ app.disable(
 /* =========================================================
    CORS
 ========================================================= */
+const CORS_ORIGINS = [
+  "http://localhost:3000",
+  "https://chatbot-reclutamiento-dcqb.onrender.com",
 
-const CORS_ORIGINS =
-  String(
-    process.env.CORS_ORIGINS ||
-    "http://localhost:3000"
+  ...String(
+    process.env.CORS_ORIGINS || ""
+  ).split(",")
+]
+  .map(
+    (origin) =>
+      origin.trim().replace(/\/+$/, "")
   )
-    .split(",")
-    .map(
-      (origin) =>
-        origin.trim()
-    )
-    .filter(Boolean);
-
+  .filter(Boolean);
 
 app.use(
   (req, res, next) => {

@@ -991,11 +991,11 @@ const esEdicion =
         usuarioPaises?.value
       ),
 
-    /*
-     * Arreglo vacío = usar permisos
-     * predeterminados del rol.
-     */
-    permissions: []
+    allowedCountries:
+  convertirTextoALista(
+    usuarioPaises?.value
+  )
+
   };
 
 
@@ -1858,7 +1858,8 @@ function abrirModalCambioEstado(
 
 
   const estaActivo =
-    usuario.active !== false;
+  usuario.active !== false &&
+  usuario.firebaseDisabled !== true;
 
 
   pendingStatusChange = {
@@ -1994,9 +1995,14 @@ btnConfirmAction?.addEventListener(
 
         usuarios[usuarioIndex] = {
           ...usuarios[usuarioIndex],
+
           active:
             data?.user?.active ??
-            active
+            active,
+
+          firebaseDisabled:
+            data?.user?.firebaseDisabled ??
+            !active
         };
 
       }
