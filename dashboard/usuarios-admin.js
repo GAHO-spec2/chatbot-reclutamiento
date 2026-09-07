@@ -987,14 +987,9 @@ const esEdicion =
       ),
 
     allowedCountries:
-      convertirTextoALista(
-        usuarioPaises?.value
-      ),
-
-    allowedCountries:
-  convertirTextoALista(
-    usuarioPaises?.value
-  )
+    convertirTextoALista(
+      usuarioPaises?.value
+    )
 
   };
 
