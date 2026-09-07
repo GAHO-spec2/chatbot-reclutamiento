@@ -1159,7 +1159,6 @@ async function copiarEnlaceQr() {
   }
 }
 
-
 function abrirEnlaceQr() {
   const url =
     qrVacanteUrl?.value?.trim() || "";
