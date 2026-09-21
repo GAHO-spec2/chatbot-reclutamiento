@@ -8,6 +8,10 @@ server/data/postulaciones.json
 server/data/entrevistas.json
 server/data/recordatorios-comunicacion.json
 server/data/disponibilidades-entrevista.json
+# Datos locales del ATS
+data/postulaciones.json
+data/entrevistas.json
+data/disponibilidades-entrevista.json
 
 # Variables de entorno adicionales
 .env.*
