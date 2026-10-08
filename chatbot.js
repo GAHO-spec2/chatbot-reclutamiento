@@ -9,6 +9,8 @@ const form = document.getElementById("chatbot-form");
 const input = document.getElementById("chatbot-input");
 const attachCvBtn = document.getElementById("attachCvBtn");
 const chatCvFile = document.getElementById("chatCvFile");
+const CV_ACCEPT = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
+if (chatCvFile) chatCvFile.setAttribute("accept", CV_ACCEPT);
 const startApplicationBtn = document.getElementById("startApplicationBtn");
 const consultarStatusBtn = document.getElementById("consultarStatusBtn");
 const folioConsulta = document.getElementById("folioConsulta");
@@ -381,7 +383,7 @@ function handleFaqResponse(text = "") {
     t.includes("png")
   ) {
     addAssistantText(
-      "📎 Adjunta tu CV en PDF para analizar tu experiencia, habilidades y perfil profesional."
+      "📎 Adjunta tu CV en PDF o imagen JPG/PNG para analizar tu experiencia, habilidades y perfil profesional."
     );
 
     addOptions("¿Deseas cargar tu CV ahora?", [
@@ -1386,7 +1388,7 @@ function startCvAnalysisFlow() {
   }
 
   if (chatCvFile) {
-    chatCvFile.setAttribute("accept", ".pdf,.jpg,.jpeg,.png,application/pdf,image/*");
+    chatCvFile.setAttribute("accept", CV_ACCEPT);
   }
 
   if (attachCvBtn) {
@@ -3259,17 +3261,29 @@ if (attachCvBtn && chatCvFile) {
     if (!file) return;
 
     const name = file.name.toLowerCase();
-    const isValidFile = file.type === "application/pdf" || 
-                       file.type.startsWith("image/") ||
-                       name.endsWith(".pdf") || 
-                       name.endsWith(".jpg") || 
-                       name.endsWith(".jpeg") || 
-                       name.endsWith(".png");
-
-    if (!isValidFile) {
-      addAssistantText("❌ Solo se permiten archivos PDF o imágenes JPG/PNG.");
+    const extension = name.split(".").pop();
+    const mimeByExtension = {
+      pdf: "application/pdf",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png"
+    };
+    const expectedMime = mimeByExtension[extension];
+    const isValidFile = expectedMime && (
+      !file.type || file.type === "application/octet-stream" || file.type === expectedMime
+    );
+    if (!isValidFile || !file.size) {
+      addAssistantText("❌ Selecciona un archivo PDF, JPG o PNG válido y no vacío.");
+      chatCvFile.value = "";
       return;
     }
+    if (file.size > 8 * 1024 * 1024) {
+      addAssistantText("❌ El CV no debe superar los 8 MB.");
+      chatCvFile.value = "";
+      return;
+    }
+    // Permitir volver a seleccionar el mismo archivo después de un reintento.
+    chatCvFile.value = "";
 
     const fileSize = (file.size / 1024 / 1024).toFixed(2);
     addAssistantText(`✅ CV cargado correctamente!\n📄 ${file.name} (${fileSize} MB)`);

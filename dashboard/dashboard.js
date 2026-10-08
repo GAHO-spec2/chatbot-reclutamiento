@@ -495,168 +495,71 @@ function authHeaders(extra = {}) {
    ABRIR DOCUMENTO PRIVADO DE POSTULACIÓN
 ========================================================= */
 
-async function abrirDocumentoPrivado(
-  candidatoId,
-  tipo
-) {
-
+async function abrirDocumentoPrivado(candidatoId, tipo) {
   if (!candidatoId) {
-    setStatus(
-      "⚠️ No fue posible identificar al candidato."
-    );
+    setStatus("⚠️ No fue posible identificar al candidato.");
     return;
   }
-
   if (!adminToken) {
-    setStatus(
-      "⚠️ Tu sesión administrativa no está disponible."
-    );
+    setStatus("⚠️ Tu sesión administrativa no está disponible.");
+    return;
+  }
+  if (!new Set(["cv", "ine", "curp", "domicilio"]).has(tipo)) {
+    setStatus("⚠️ Tipo de documento no válido.");
     return;
   }
 
-  const tiposPermitidos =
-    new Set([
-      "cv",
-      "ine",
-      "curp",
-      "domicilio"
-    ]);
-
-  if (!tiposPermitidos.has(tipo)) {
-    setStatus(
-      "⚠️ Tipo de documento no válido."
-    );
+  // Abrir durante el clic, antes de cualquier await, para evitar bloqueos.
+  const nuevaVentana = window.open("about:blank", "_blank");
+  if (!nuevaVentana) {
+    setStatus("⚠️ Permite ventanas emergentes para este sitio y vuelve a abrir el documento.");
     return;
   }
+  nuevaVentana.opener = null;
+  nuevaVentana.document.title = "Cargando documento";
+  nuevaVentana.document.body.textContent = "Cargando documento…";
 
   let objectUrl = null;
-
   try {
-
-    const response =
-      await fetch(
-        `${API_URL}/api/postulaciones/${encodeURIComponent(
-          candidatoId
-        )}/documentos/${encodeURIComponent(
-          tipo
-        )}`,
-        {
-          method: "GET",
-
-          headers:
-            authHeaders(),
-
-          cache:
-            "no-store"
-        }
-      );
-
-
+    const response = await fetch(
+      `${API_URL}/api/postulaciones/${encodeURIComponent(candidatoId)}/documentos/${encodeURIComponent(tipo)}`,
+      { method: "GET", headers: authHeaders(), cache: "no-store" }
+    );
     if (!response.ok) {
-
-      let mensaje =
-        "No fue posible abrir el documento.";
-
+      let mensaje = `No fue posible abrir el documento (HTTP ${response.status}).`;
       try {
-        const data =
-          await response.json();
-
-        mensaje =
-          data.error ||
-          mensaje;
-
-      } catch {
-        // La respuesta no contiene JSON.
-      }
-
-      throw new Error(
-        mensaje
-      );
+        const data = await response.json();
+        mensaje = data.error || mensaje;
+      } catch { /* Conservar el estado HTTP si la respuesta no es JSON. */ }
+      throw new Error(mensaje);
     }
 
+    const blob = await response.blob();
+    if (!blob.size) throw new Error("El documento recibido está vacío.");
 
-    const blob =
-      await response.blob();
-
-
-    if (
-      !blob ||
-      blob.size === 0
-    ) {
-      throw new Error(
-        "El documento recibido está vacío."
-      );
+    // Reconocer el contenido también cuando el servidor entrega octet-stream.
+    const bytes = new Uint8Array(await blob.slice(0, 8).arrayBuffer());
+    let mime = "";
+    if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46 && bytes[4] === 0x2d) {
+      mime = "application/pdf";
+    } else if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+      mime = "image/jpeg";
+    } else if ([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every((value, index) => bytes[index] === value)) {
+      mime = "image/png";
     }
-
-
-    objectUrl =
-      URL.createObjectURL(
-        blob
-      );
-
-
-    const nuevaVentana =
-      window.open(
-        objectUrl,
-        "_blank",
-        "noopener,noreferrer"
-      );
-
-
-    if (!nuevaVentana) {
-
-      URL.revokeObjectURL(
-        objectUrl
-      );
-
-      objectUrl = null;
-
-      throw new Error(
-        "El navegador bloqueó la apertura del documento. Permite ventanas emergentes para este sitio."
-      );
+    if (!mime) {
+      throw new Error("El servidor no devolvió un PDF, JPG o PNG válido. Revisa la ruta del documento en el backend.");
     }
-
-
-    /*
-     * Dejamos tiempo suficiente para que
-     * la nueva pestaña termine de consumir
-     * el Blob antes de liberar la URL.
-     */
-
-    window.setTimeout(
-      () => {
-
-        if (objectUrl) {
-          URL.revokeObjectURL(
-            objectUrl
-          );
-        }
-
-      },
-      60000
-    );
-
-
+    if (nuevaVentana.closed) return;
+    objectUrl = URL.createObjectURL(new Blob([blob], { type: mime }));
+    nuevaVentana.location.replace(objectUrl);
+    const urlToRevoke = objectUrl;
+    window.setTimeout(() => URL.revokeObjectURL(urlToRevoke), 60000);
   } catch (error) {
-
-    console.error(
-      "Error abriendo documento privado:",
-      {
-        message:
-          error?.message ||
-          "Error desconocido",
-
-        tipo
-      }
-    );
-
-
-    setStatus(
-      `⚠️ ${
-        error?.message ||
-        "No fue posible abrir el documento."
-      }`
-    );
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    if (!nuevaVentana.closed) nuevaVentana.close();
+    console.error("Error abriendo documento privado:", { message: error?.message, tipo });
+    setStatus(`⚠️ ${error?.message || "No fue posible abrir el documento."}`);
   }
 }
 
