@@ -2267,11 +2267,13 @@ function saveDynamicAnswer(
   ========================================================= */
 
   applicationFlow.answers[
-    question.id
+    question.id || question.key
   ] = {
 
     preguntaId:
-      question.id,
+      question.id || question.key,
+
+    campo: question.custom ? "" : question.key,
 
     pregunta:
       question.label,
@@ -2283,6 +2285,10 @@ function saveDynamicAnswer(
       value
   };
 
+
+  if (!question.custom && question.key) {
+    applicationFlow.data[question.key] = value;
+  }
 
   /* =========================================================
      DETECTAR DATOS IMPORTANTES SI RH LOS CONFIGURÓ

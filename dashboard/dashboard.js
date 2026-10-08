@@ -1,4 +1,48 @@
-﻿const API_URL =
+﻿const CAMPOS_PERFIL = ['nombre','correo','telefono','codigoPostal','escolaridad','experiencia','disponibilidad','medioTransporte','vehiculoPropio','tiempoMaximoTraslado'];
+function campoDePregunta(item = {}) {
+  const explicit = item.campo || item.key;
+  if (CAMPOS_PERFIL.includes(explicit)) return explicit;
+  const q = String(item.pregunta || item.texto || item.label || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const rules = [
+    ['tiempoMaximoTraslado', /(?:tiempo|maximo|minutos|horas).*(?:traslad|trayecto|transport|llegar|commut)|(?:traslad|commut).*(?:tiempo|minutos|horas)/],
+    ['vehiculoPropio', /(?:vehiculo|automovil|auto|carro).*(?:propio|cuentas|tienes)|(?:cuentas|tienes).*(?:vehiculo|automovil|carro)|own (?:car|vehicle)/],
+    ['codigoPostal', /codigo postal|\bcp\b|zip|postal code/],
+    ['escolaridad', /escolaridad|nivel.*(?:estudio|academico)|(?:que|cuales|tus).*estudios|education/],
+    ['disponibilidad', /disponibilidad|horario disponible|que.*(?:horario|turno).*trabaj|availability/],
+    ['medioTransporte', /medio.*transport|como.*(?:transportas|trasladas|llegas)|transportation/],
+    ['experiencia', /experiencia|work experience/],
+    ['correo', /correo|email|e-mail/],
+    ['telefono', /telefono|celular|phone|mobile number/],
+    ['nombre', /nombre.*(?:completo|candidato)|cual.*nombre|full name|^nombre$/]
+  ];
+  const matches = rules.filter(([,pattern])=>pattern.test(q));
+  // Preguntas que mezclan dimensiones se conservan para la revisión de IA.
+  return matches.length === 1 ? matches[0][0] : '';
+}
+function resolverDatosPerfil(datos = {}, respuestas = {}, preguntas = []) {
+  const resolved = {}, sources = {};
+  for (const field of CAMPOS_PERFIL) {
+    if (datos[field] !== undefined && datos[field] !== null && String(datos[field]).trim()) {
+      resolved[field] = String(datos[field]).trim();
+      sources[field] = { fuente: 'Formulario', evidencia: resolved[field] };
+    }
+  }
+  const entries = Object.entries(respuestas || {}).map(([id,item]) => {
+    const configured = preguntas.find(q=>String(q.id)===String(id));
+    const record = item && typeof item==='object' ? item : {respuesta:item};
+    return { id, ...record, pregunta: configured?.texto || record.pregunta || id };
+  });
+  for (const entry of entries) {
+    const field = campoDePregunta(entry), value = String(entry.respuesta ?? '').trim();
+    if (field && value && !resolved[field]) {
+      resolved[field] = value;
+      sources[field] = { fuente: 'Respuesta del candidato', preguntaId: entry.id, pregunta: entry.pregunta, evidencia: value };
+    }
+  }
+  return { datos: resolved, fuentes: sources, respuestas: entries };
+}
+
+const API_URL =
   window.location.origin;
 
 const DASHBOARD_CACHE_KEY = "rh_postulaciones_cache";
@@ -577,6 +621,7 @@ function setMapLink(element, url) {
 }
 
 function getGoogleMapsUrl(candidate) {
+
   const direccion = candidate.direccion || candidate.sucursalDireccion || "";
   const ciudad = candidate.ciudad || "";
   const sucursal = candidate.sucursal || candidate.sucursalNombre || "";
@@ -603,6 +648,7 @@ function getAppleMapsUrl(candidate) {
 ========================= */
 
 function formatDistance(distance) {
+  if (distance === null || distance === undefined || String(distance).trim() === "") return "No disponible";
   const value = Number(distance);
 
   if (!Number.isFinite(value)) {
@@ -613,6 +659,7 @@ function formatDistance(distance) {
 }
 
 function formatTravelTime(minutes) {
+  if (minutes === null || minutes === undefined || String(minutes).trim() === "") return "No disponible";
   const value = Number(minutes);
 
   if (!Number.isFinite(value)) {
@@ -1771,6 +1818,9 @@ checkbox?.addEventListener(
 ========================= */
 
 function openCandidateModal(candidate) {
+  const recovered = resolverDatosPerfil(candidate, candidate.respuestasPersonalizadas || {});
+  candidate = { ...candidate, ...candidate.informePerfil?.datos, ...recovered.datos };
+  renderInformePerfil(candidate, recovered);
   selectedCandidate = candidate;
 
   modalNombre.textContent =
@@ -1798,7 +1848,7 @@ function openCandidateModal(candidate) {
 
   modalEscolaridad.textContent =
     candidate.escolaridad ||
-    "No solicitada";
+    estadoDatoPerfil(candidate, "escolaridad", "solicitarEscolaridad");
 
   modalFecha.textContent =
     formatFecha(
@@ -1812,36 +1862,36 @@ function openCandidateModal(candidate) {
 
   modalExperiencia.textContent =
     candidate.experiencia ||
-    "No proporcionada";
+    estadoDatoPerfil(candidate, "experiencia", "solicitarExperiencia");
 
   modalHabilidades.textContent =
     candidate.habilidades ||
-    "No proporcionadas";
+    (candidate.habilidadesDetectadas?.length ? `Detectadas en el CV: ${candidate.habilidadesDetectadas.join(", ")}` : "Sin evidencia de habilidades registrada");
 
   /* Ubicación y transporte */
 
   if (modalCodigoPostal) {
     modalCodigoPostal.textContent =
       candidate.codigoPostal ||
-      "No proporcionado";
+      estadoDatoPerfil(candidate, "codigoPostal", "solicitarCodigoPostal");
   }
 
   if (modalMedioTransporte) {
     modalMedioTransporte.textContent =
       candidate.medioTransporte ||
-      "No proporcionado";
+      estadoDatoPerfil(candidate, "medioTransporte", "solicitarTransporte");
   }
 
   if (modalVehiculoPropio) {
     modalVehiculoPropio.textContent =
       candidate.vehiculoPropio ||
-      "No proporcionado";
+      estadoDatoPerfil(candidate, "vehiculoPropio", "solicitarVehiculoPropio");
   }
 
   if (modalTiempoMaximoTraslado) {
     modalTiempoMaximoTraslado.textContent =
       candidate.tiempoMaximoTraslado ||
-      "No proporcionado";
+      estadoDatoPerfil(candidate, "tiempoMaximoTraslado", "solicitarTiempoTraslado");
   }
 
   if (modalDistanciaSucursal) {
@@ -1928,43 +1978,33 @@ if (modalCompatibilityLevel) {
 }
 
 if (modalScoreCv) {
-  modalScoreCv.textContent =
-    formatComponentScore(
-      compatibilityBreakdown.cv,
-      35
-    );
+  modalScoreCv.textContent = candidate.detalleCompatibilidad?.cv?.disponible === false
+    ? "No evaluable"
+    : formatComponentScore(compatibilityBreakdown.cv, 35);
 }
 
 if (modalScoreExperience) {
-  modalScoreExperience.textContent =
-    formatComponentScore(
-      compatibilityBreakdown.experiencia,
-      20
-    );
+  modalScoreExperience.textContent = candidate.detalleCompatibilidad?.experiencia?.disponible === false
+    ? "No evaluable"
+    : formatComponentScore(compatibilityBreakdown.experiencia, 20);
 }
 
 if (modalScoreAvailability) {
-  modalScoreAvailability.textContent =
-    formatComponentScore(
-      compatibilityBreakdown.disponibilidad,
-      15
-    );
+  modalScoreAvailability.textContent = candidate.detalleCompatibilidad?.disponibilidad?.disponible === false
+    ? "No evaluable"
+    : formatComponentScore(compatibilityBreakdown.disponibilidad, 15);
 }
 
 if (modalScoreGeography) {
-  modalScoreGeography.textContent =
-    formatComponentScore(
-      compatibilityBreakdown.geografia,
-      15
-    );
+  modalScoreGeography.textContent = candidate.detalleCompatibilidad?.geografia?.disponible === false
+    ? "No evaluable"
+    : formatComponentScore(compatibilityBreakdown.geografia, 15);
 }
 
 if (modalScoreQuestions) {
-  modalScoreQuestions.textContent =
-    formatComponentScore(
-      compatibilityBreakdown.preguntas,
-      15
-    );
+  modalScoreQuestions.textContent = candidate.detalleCompatibilidad?.preguntas?.disponible === false
+    ? "No evaluable"
+    : formatComponentScore(compatibilityBreakdown.preguntas, 15);
 }
 
 renderEvaluationList(
@@ -3012,3 +3052,69 @@ auth.onAuthStateChanged(
     }
   }
 );
+
+function estadoDatoPerfil(candidate, campo, config) {
+  const asked = candidate.configuracionPostulacion?.[config] || Object.values(candidate.respuestasPersonalizadas || {}).some(item => campoDePregunta(item) === campo);
+  return asked ? "Pendiente de información" : "No solicitado por RH";
+}
+function renderInformePerfil(candidate, recovered) {
+  const host = document.getElementById("modalInformePerfil");
+  if (!host) return;
+  host.replaceChildren();
+  const report = candidate.informePerfil || {};
+  function node(tag, text, className = "") {
+    const element = document.createElement(tag); element.textContent = text; element.className = className; return element;
+  }
+  host.append(node("h4", "Perfil y evidencia del candidato"));
+  const status = {analizado:"Análisis de IA disponible",pendiente:"IA pendiente; las respuestas se conservaron",sin_ia:"Informe con datos del formulario"};
+  host.append(node("p", status[report.estado] || "Registro anterior: revisión con los datos conservados", "profile-status"));
+  if (hasPermission("candidatos.editar")) {
+    const button = node("button", "Actualizar análisis con IA", "btn btn--secondary");
+    button.type = "button";
+    button.addEventListener("click", async () => {
+      button.disabled = true; button.textContent = "Analizando respuestas y CV…";
+      try {
+        const response = await fetch(`${API_URL}/api/postulaciones/${encodeURIComponent(candidate.id)}/analizar-perfil`, {method:"POST",headers:authHeaders(),cache:"no-store"});
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "No fue posible actualizar el informe.");
+        // Invalidar caché para que la próxima carga use el perfil actualizado.
+        try { sessionStorage.removeItem(DASHBOARD_CACHE_KEY); } catch {}
+        postulaciones = postulaciones.map(item => String(item.id) === String(data.postulacion.id) ? data.postulacion : item);
+        guardarPostulacionesCache(postulaciones);
+        renderPostulaciones();
+        updateStats();
+        openCandidateModal(data.postulacion);
+        setStatus(data.postulacion.informePerfil?.estado === "analizado" ? "Informe actualizado con los datos disponibles." : "Datos conservados. El análisis de IA sigue pendiente.");
+      } catch(error) {
+        setStatus(`⚠️ ${error.message}`); button.disabled = false; button.textContent = "Reintentar análisis con IA";
+      }
+    });
+    host.append(button);
+  }
+  if (candidate.resumenIA) { host.append(node("h5", "Síntesis del CV"),node("p",candidate.resumenIA)); }
+  const facts = node("div", "", "profile-facts");
+  const labels = {escolaridad:"Escolaridad",experiencia:"Experiencia",disponibilidad:"Disponibilidad",medioTransporte:"Transporte",vehiculoPropio:"Vehículo propio",tiempoMaximoTraslado:"Traslado máximo aceptado"};
+  for (const [field,label] of Object.entries(labels)) {
+    const value = recovered.datos[field] || candidate[field] || report.datos?.[field];
+    if (!value) continue;
+    const card = node("article", "", "profile-fact");
+    const origin = report.fuentes?.[field] || recovered.fuentes[field];
+    card.append(node("h5",label),node("p",String(value)),node("small",`Fuente: ${origin?.fuente || "Formulario"}`)); facts.append(card);
+  }
+  host.append(facts);
+  host.append(node("h5", "Preguntas y respuestas de la postulación"));
+  const answers = report.respuestas?.length ? report.respuestas : recovered.respuestas;
+  if (!answers.length) host.append(node("p","No hay respuestas conservadas en este registro."));
+  for (const entry of answers) {
+    const card=node("article","","profile-answer");
+    card.append(node("h5",entry.pregunta || "Pregunta de RH"),node("p",String(entry.respuesta ?? "").trim() || "Sin respuesta"));host.append(card);
+  }
+  host.append(node("h5","Análisis de requisitos con IA"));
+  const states={evidencia_favorable:"Evidencia favorable",por_confirmar:"Por confirmar con RH",sin_evidencia:"Sin evidencia suficiente"};
+  if (!(report.criterios || []).length) host.append(node("p","No hay un análisis de requisitos con evidencia disponible. RH puede revisar las respuestas y el CV."));
+  for (const criterion of report.criterios || []) {
+    const card=node("article","",`profile-criterion profile-criterion--${criterion.estado}`);
+    card.append(node("small",states[criterion.estado] || "Por revisar"),node("h5",criterion.requisito),node("p",criterion.observacion));
+    if (criterion.evidencia) card.append(node("blockquote",criterion.evidencia),node("small",`Fuente: ${criterion.fuente}`));host.append(card);
+  }
+}

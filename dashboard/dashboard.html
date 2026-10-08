@@ -18,7 +18,7 @@
     href="icons8-documento-32.png"
   />
 
-  <link rel="stylesheet" href="dashboard.css?v=9" />
+  <link rel="stylesheet" href="dashboard.css?v=13" />
 </head>
 
 <body>
@@ -718,7 +718,7 @@
                 Evaluación automática de apoyo
               </span>
 
-              <h4>Compatibilidad con la vacante</h4>
+              <h4>Indicador preliminar de coincidencia</h4>
             </div>
 
             <div
@@ -739,7 +739,7 @@
             </span>
 
             <p>
-              Esta evaluación sirve como apoyo para RH y no aprueba ni rechaza
+              Este indicador usa coincidencias textuales y datos del formulario; no es una probabilidad de éxito. Sirve de apoyo para RH y no aprueba ni rechaza
               automáticamente al candidato.
             </p>
           </div>
@@ -798,6 +798,8 @@
 
         </div>
 
+        <section id="modalInformePerfil" class="modal-section profile-report" aria-label="Informe del candidato"></section>
+
         <!-- EXPERIENCIA -->
         <div class="modal-section">
           <h4>Experiencia</h4>
@@ -821,7 +823,7 @@
             rel="noopener noreferrer"
             class="btn btn--secondary"
           >
-            Ver CV PDF
+            Ver CV adjunto
           </a>
         </div>
 
@@ -990,7 +992,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
-  <script src="dashboard.js?v=12"></script>
+  <script src="dashboard.js?v=13"></script>
 
 </body>
 </html>

@@ -1,3 +1,4 @@
+import { analizarPerfilPostulacion, resolverDatosPerfil } from "./perfilPostulacion.js";
 import express from "express";
 import dotenv from "dotenv";
 import OpenAI from "openai";
@@ -4320,6 +4321,8 @@ function estimarTiempoTraslado({
       medioTransporte || ""
     );
 
+  if (!transporte) return null;
+
   let velocidadPromedio = 25;
 
   if (
@@ -4330,7 +4333,9 @@ function estimarTiempoTraslado({
     velocidadPromedio = 35;
   } else if (
     transporte.includes("transporte publico") ||
-    transporte.includes("servicio de transporte")
+    transporte.includes("servicio de transporte") ||
+    transporte.includes("autobus") ||
+    transporte.includes("camion")
   ) {
     velocidadPromedio = 20;
   } else if (
@@ -4361,41 +4366,22 @@ function estimarTiempoTraslado({
   );
 }
 
-function obtenerMinutosMaximosTraslado(
-  tiempoMaximoTraslado = ""
-) {
-  const valor = normalizarTexto(
-    tiempoMaximoTraslado
-  );
-
-  if (valor.includes("15")) {
-    return 15;
+function obtenerMinutosMaximosTraslado(tiempoMaximoTraslado = "") {
+  const value = normalizarTexto(tiempoMaximoTraslado).replace(/,/g, ".");
+  if (!value || /sin limite|cualquier tiempo|mas de|mayor a/.test(value)) return null;
+  if (/media hora/.test(value)) return 30;
+  const hours = value.match(/(\d+(?:\.\d+)?|una?|dos)\s*(?:horas?|hrs?|h\b)/);
+  const minutes = value.match(/(\d+(?:\.\d+)?)\s*(?:minutos?|mins?|min\b)/);
+  if (hours) {
+    const words = {un:1,una:1,dos:2};
+    return (words[hours[1]] || Number(hours[1])) * 60 + (minutes ? Number(minutes[1]) : 0);
   }
-
-  if (valor.includes("30")) {
-    return 30;
-  }
-
-  if (valor.includes("45")) {
-    return 45;
-  }
-
-  if (valor.includes("60") &&
-      !valor.includes("mas")) {
-    return 60;
-  }
-
-  if (
-    valor.includes("mas de 60") ||
-    valor.includes("más de 60")
-  ) {
-    return 90;
-  }
-
+  const range = value.match(/(\d+)\s*(?:a|hasta|-)\s*(\d+)/);
+  if (range) return Number(range[2]);
+  if (minutes) return Number(minutes[1]);
+  if (/^\d+(?:\.\d+)?$/.test(value)) return Number(value);
   return null;
 }
-
-
 
 function evaluarCompatibilidadTraslado({
   tiempoEstimadoMin,
@@ -4891,7 +4877,7 @@ function evaluarComponenteGeografico({
     valores.no_disponible;
 
   return {
-    disponible: true,
+    disponible: estado !== "no_disponible",
 
     puntos:
       Number(
@@ -7767,6 +7753,7 @@ for (const pregunta of preguntasConfiguradas) {
         perfilRecomendado: ""
       };
 
+      let textoCvParaPerfil = "";
       let cvNombre = "";
       let cvArchivo = "";
 
@@ -7791,6 +7778,7 @@ for (const pregunta of preguntasConfiguradas) {
             cvFile.path
           );
 
+        textoCvParaPerfil = cvTexto;
         if (cvTexto.trim()) {
           analisisIA =
             await analizarCvConIA(
@@ -7833,6 +7821,15 @@ if (domicilioFile) {
    EXTRAER DATOS IMPORTANTES DE LAS PREGUNTAS DINÁMICAS
 ========================================================= */
 
+const informePerfil = await analizarPerfilPostulacion({
+  datos: { nombre, correo, telefono, codigoPostal, escolaridad, experiencia, disponibilidad, medioTransporte, vehiculoPropio, tiempoMaximoTraslado },
+  respuestas: respuestasPersonalizadasParseadas,
+  vacante,
+  cvTexto: textoCvParaPerfil,
+  openai,
+  habilitado: Boolean(process.env.OPENAI_API_KEY)
+});
+
 const normalizarNombreCampo = (valor = "") =>
   String(valor || "")
     .normalize("NFD")
@@ -7846,6 +7843,17 @@ function obtenerRespuestaDinamica({
   tipos = [],
   etiquetas = []
 } = {}) {
+
+  const canonical = resolverDatosPerfil({}, Object.fromEntries(
+    informePerfil.respuestas.map(item => [item.id, item])
+  )).datos;
+  const requestedField = resolverDatosPerfil({}, {
+    consulta: { pregunta: etiquetas[0] || "", tipo: tipos[0] || "", respuesta: "valor" }
+  }).datos;
+  const field = Object.keys(requestedField)[0];
+  if (field && (canonical[field] || informePerfil.datos[field])) {
+    return canonical[field] || informePerfil.datos[field];
+  }
 
   const tiposNormalizados =
     tipos.map(normalizarNombreCampo);
@@ -8584,6 +8592,8 @@ const postulacion = {
   /* =========================
      ANÁLISIS DE IA
   ========================= */
+
+  informePerfil,
 
   resumenIA:
     analisisIA.resumen ||
@@ -11427,6 +11437,40 @@ app.get(
    ACTUALIZAR ESTADO DE POSTULACIÓN
    CON CONTROL DE PERMISOS
 ========================================================= */
+
+app.post("/api/postulaciones/:id/analizar-perfil", verifyAdmin, requirePermission("candidatos.editar"), async (req, res) => {
+  try {
+    const id = String(req.params.id);
+    let candidate;
+    if (db) {
+      const snapshot = await db.collection(POSTULACIONES_COLLECTION).doc(id).get();
+      if (snapshot.exists) candidate = { ...snapshot.data(), id };
+    } else {
+      candidate = leerJson(postulacionesFile, []).find(item => String(item.id) === id);
+    }
+    if (!candidate) return res.status(404).json({ error: "Postulación no encontrada." });
+    if (!adminTieneAccesoRecurso(req.adminUser, candidate)) return res.status(403).json({ error: "No tienes acceso a esta postulación." });
+    const vacante = (await leerVacantes()).find(item => String(item.id) === String(candidate.vacanteId));
+    if (!vacante) return res.status(404).json({ error: "La vacante original no está disponible para analizar sus requisitos." });
+    let cvTexto = "";
+    const archivo = path.basename(String(candidate.cvArchivo || candidate.cvRuta || ""));
+    if (archivo && fs.existsSync(path.join(uploadsDir, archivo))) {
+      cvTexto = await extraerTextoCv(path.join(uploadsDir, archivo));
+    }
+    const informePerfil = await analizarPerfilPostulacion({ datos: candidate, respuestas: candidate.respuestasPersonalizadas || {}, vacante, cvTexto, openai, habilitado: Boolean(process.env.OPENAI_API_KEY) });
+    const datos = { ...candidate, ...informePerfil.datos };
+    const estimado = candidate.distanciaSucursalKm == null ? null : estimarTiempoTraslado({distanciaKm:candidate.distanciaSucursalKm,medioTransporte:datos.medioTransporte});
+    const traslado = evaluarCompatibilidadTraslado({tiempoEstimadoMin:estimado,tiempoMaximoTraslado:datos.tiempoMaximoTraslado});
+    const configuracion = normalizarConfiguracionPostulacion(vacante.configuracionPostulacion || {});
+    const resultado = calcularCompatibilidadCandidato({vacante,configuracion,analisisIA:{resumen:candidate.resumenIA||'',habilidadesDetectadas:candidate.habilidadesDetectadas||[],perfilRecomendado:candidate.perfilRecomendado||''},cvDisponible:Boolean(cvTexto),experiencia:datos.experiencia,habilidades:datos.habilidades,disponibilidad:datos.disponibilidad,respuestasPersonalizadas:candidate.respuestasPersonalizadas||{},compatibilidadTraslado:traslado});
+    const changes = { ...informePerfil.datos, informePerfil, tiempoTrasladoEstimadoMin:estimado, compatibilidadTraslado:traslado, compatibilidadGeografica:traslado.estado, etiquetaCompatibilidadGeografica:traslado.etiqueta, puntuacionCompatibilidad:resultado.puntuacion,nivelCompatibilidad:resultado.nivel,etiquetaNivelCompatibilidad:resultado.etiqueta,desgloseCompatibilidad:resultado.desglose,detalleCompatibilidad:resultado.detalleComponentes,motivosCompatibilidad:resultado.motivos,alertasCompatibilidad:resultado.alertas,versionMotorCompatibilidad:resultado.versionMotor };
+    await actualizarPostulacion(id, changes);
+    return res.json({ok:true,postulacion:{...candidate,...changes}});
+  } catch (error) {
+    console.error("Error actualizando informe del candidato:", error?.message);
+    return res.status(500).json({error:"No fue posible actualizar el informe del candidato. Las respuestas guardadas se conservaron."});
+  }
+});
 
 app.patch(
   "/api/postulaciones/:id/estado",
