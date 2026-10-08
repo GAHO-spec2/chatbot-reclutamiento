@@ -598,13 +598,25 @@ function renderMessages() {
         const card = document.createElement("div");
         card.className = "chat-vacancy-card";
 
-        card.innerHTML = `
-          <h4>${vacante.titulo || "Vacante disponible"}</h4>
-          <p><strong>${vacante.grupo || "GA Hospitality"}</strong></p>
-          <p>${vacante.area || ""}</p>
-          <p>${vacante.ciudad || ""}${vacante.estado ? ", " + vacante.estado : ""}</p>
-          <p>${vacante.sucursal || ""}</p>
-        `;
+        const addText = (tag, value) => {
+          const element = document.createElement(tag);
+          element.textContent = String(value || "");
+          card.appendChild(element);
+        };
+        addText("h4", vacante.titulo || "Vacante disponible");
+        addText("p", vacante.grupo || "GA Hospitality");
+        addText("p", vacante.area);
+        addText("p", `${vacante.ciudad || ""}${vacante.estado ? ", " + vacante.estado : ""}`);
+        addText("p", vacante.sucursal);
+        if (vacante.evidenciasCv?.length) {
+          addText("strong", "Por qué se relaciona con tu perfil");
+          vacante.evidenciasCv.forEach(evidence => {
+            addText("p", evidence.motivo);
+            addText("small", `En tu CV: «${evidence.cv}»`);
+            addText("small", `En la vacante: «${evidence.vacante}»`);
+          });
+          if (vacante.pendientesCv?.length) addText("p", `Por confirmar con RH: ${vacante.pendientesCv.join("; ")}`);
+        }
 
         const btn = document.createElement("button");
         btn.className = "chat-option-btn";
@@ -1370,6 +1382,9 @@ function handleOption(value, label = "") {
 ========================= */
 
 function startCvAnalysisFlow() {
+  candidateProfile.suggestedVacancies = [];
+  candidateProfile.estadoRecomendaciones = "pendiente";
+  candidateProfile.resumenIA = "";
   applicationFlow.active = true;
   applicationFlow.mode = "cv_analysis";
   applicationFlow.step = 0;
@@ -1440,6 +1455,7 @@ async function processCvAnalysisOnly() {
       ? analisis.areasCompatibles
       : [];
     candidateProfile.suggestedVacancies = sugerencias;
+    candidateProfile.estadoRecomendaciones = analisis.estadoRecomendaciones || "analizado";
 
     addAssistantText(
       `✅ Análisis completado.\n\n📝 Resumen detectado:\n${candidateProfile.resumenIA || "CV recibido correctamente."}`
@@ -1447,7 +1463,7 @@ async function processCvAnalysisOnly() {
 
     if (sugerencias.length) {
       addVacancyCards(
-        "🎯 Con base en tu CV, estas vacantes podrían adaptarse mejor a tu perfil:",
+        "🎯 Estas son las vacantes con mayor relación con tu experiencia y estudios:",
         sugerencias
       );
 
@@ -1457,10 +1473,13 @@ async function processCvAnalysisOnly() {
       ]);
     } else {
       addAssistantText(
-        "😅 No encontré una coincidencia directa con las vacantes actuales. Aun así, puedes buscar por ubicación o revisar vacantes disponibles."
+        candidateProfile.estadoRecomendaciones === "pendiente"
+          ? "El CV se analizó, pero no fue posible completar la comparación con las vacantes. Puedes volver a analizarlo o buscar por ubicación."
+          : "No encontré vacantes con suficiente relación con la experiencia y los estudios de tu CV. Puedes explorar otras vacantes por ubicación."
       );
 
       addOptions("¿Cómo deseas continuar?", [
+        ...(candidateProfile.estadoRecomendaciones === "pendiente" ? [{label:"📄 Volver a analizar mi CV",value:"analizar_cv"}] : []),
         { label: "📍 Buscar vacantes por ubicación", value: "buscar_ubicacion" }
       ]);
     }
@@ -1488,14 +1507,16 @@ function showCvRecommendations() {
 
   if (sugerencias.length) {
     addVacancyCards(
-      "🎯 Según el análisis de tu CV, estas vacantes son las que más podrían interesarte:",
+      "🎯 Vacantes con mayor relación con tu experiencia y estudios:",
       sugerencias
     );
     return;
   }
 
   addAssistantText(
-    "🔍 Ya tengo el análisis de tu CV, pero no encontré vacantes con coincidencia directa. Te recomiendo buscar por ubicación para revisar opciones disponibles."
+    candidateProfile.estadoRecomendaciones === "pendiente"
+      ? "La comparación con las vacantes está pendiente. Vuelve a analizar tu CV para reintentar."
+      : "No encontré vacantes con suficiente relación con tu experiencia y estudios. Puedes explorar por ubicación."
   );
 
   addOptions("Puedes continuar aquí:", [

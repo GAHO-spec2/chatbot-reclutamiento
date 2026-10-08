@@ -1,3 +1,4 @@
+import { recomendarVacantesCv } from "./recomendacionesCv.js";
 import { analizarPerfilPostulacion, resolverDatosPerfil } from "./perfilPostulacion.js";
 import express from "express";
 import dotenv from "dotenv";
@@ -5856,202 +5857,6 @@ function limpiarJsonRespuesta(texto = "") {
   return String(texto).replace(/```json/gi, "").replace(/```/g, "").trim();
 }
 
-async function sugerirVacantesBasicas(texto = "", tipoVacante = "") {
-  const lower = normalizarTexto(texto);
-  const vacantes = await leerVacantes();
-
-  const gruposPerfil = {
-    sistemas: [
-      "sistemas",
-      "soporte",
-      "tecnico",
-      "tecnologias de la informacion",
-      "ti",
-      "it",
-      "redes",
-      "cisco",
-      "python",
-      "react",
-      "angular",
-      "mysql",
-      "mongodb",
-      "docker",
-      "git",
-      "software",
-      "programacion",
-      "desarrollo",
-      "cybersecurity",
-      "seguridad informatica"
-    ],
-    monitoreo: [
-      "monitoreo",
-      "monitorista",
-      "camaras",
-      "cctv",
-      "reportes",
-      "atencion al detalle",
-      "seguridad",
-      "vigilancia"
-    ],
-    rh: [
-      "rh",
-      "recursos humanos",
-      "reclutamiento",
-      "entrevistas",
-      "seleccion",
-      "capital humano",
-      "seguimiento",
-      "personal"
-    ],
-    contabilidad: [
-      "contabilidad",
-      "contable",
-      "facturacion",
-      "excel",
-      "administracion",
-      "cuentas",
-      "pagos",
-      "bancos"
-    ],
-    servicio: [
-      "cliente",
-      "servicio",
-      "ventas",
-      "atencion al cliente",
-      "hostess",
-      "mesero",
-      "mostrador",
-      "caja",
-      "cajero"
-    ],
-    cocina: [
-      "cocina",
-      "alimentos",
-      "preparacion",
-      "chef",
-      "linea",
-      "parrilla",
-      "sushi",
-      "sushero",
-      "limpieza",
-      "restaurante"
-    ],
-    proyectos: [
-      "proyectos",
-      "construccion",
-      "planeacion",
-      "seguimiento",
-      "coordinacion",
-      "obra"
-    ],
-    logistica: [
-      "logistica",
-      "importacion",
-      "exportacion",
-      "aduana",
-      "pedimentos",
-      "almacen",
-      "inventario",
-      "transporte",
-      "documental"
-    ]
-  };
-
-  function scoreVacante(vacante) {
-    let score = 0;
-    const motivos = [];
-
-    const fullVacante = normalizarTexto(`
-      ${vacante.titulo || ""}
-      ${vacante.area || ""}
-      ${vacante.grupo || ""}
-      ${(vacante.requisitos || []).join(" ")}
-      ${vacante.sucursal || ""}
-      ${vacante.tipoVacante || ""}
-    `);
-
-    if (tipoVacante && vacante.tipoVacante === tipoVacante) {
-      score += 15;
-      motivos.push("Coincide con el tipo de vacante recomendado.");
-    }
-
-    if (lower.includes(normalizarTexto(vacante.titulo || ""))) {
-      score += 35;
-      motivos.push(`Coincide con el puesto ${vacante.titulo}.`);
-    }
-
-    if (lower.includes(normalizarTexto(vacante.area || ""))) {
-      score += 25;
-      motivos.push(`Coincide con el área ${vacante.area}.`);
-    }
-
-    Object.entries(gruposPerfil).forEach(([perfil, keywords]) => {
-      let hits = 0;
-
-      keywords.forEach((keyword) => {
-        const k = normalizarTexto(keyword);
-
-        if (lower.includes(k) && fullVacante.includes(k)) {
-          hits += 1;
-        }
-      });
-
-      if (hits > 0) {
-        score += hits * 18;
-        motivos.push(`Coincidencia con perfil de ${perfil}.`);
-      }
-    });
-
-    if (
-      lower.includes("sistemas") ||
-      lower.includes("soporte") ||
-      lower.includes("software") ||
-      lower.includes("programacion") ||
-      lower.includes("redes") ||
-      lower.includes("cisco")
-    ) {
-      if (
-        fullVacante.includes("sistemas") ||
-        fullVacante.includes("soporte") ||
-        fullVacante.includes("monitoreo")
-      ) {
-        score += 45;
-        motivos.push("Tu perfil técnico puede adaptarse a Sistemas o Monitoreo.");
-      }
-    }
-
-    if (
-      lower.includes("sin experiencia") ||
-      lower.includes("primer empleo") ||
-      lower.includes("estudiante")
-    ) {
-      if (
-        fullVacante.includes("cajero") ||
-        fullVacante.includes("servicio") ||
-        fullVacante.includes("auxiliar") ||
-        fullVacante.includes("mostrador")
-      ) {
-        score += 20;
-        motivos.push("Puede ser una opción accesible para iniciar experiencia laboral.");
-      }
-    }
-
-    return {
-      ...vacante,
-      score,
-      motivoCoincidencia: [...new Set(motivos)].slice(0, 3)
-    };
-  }
-
-  return vacantes
-    .map(enriquecerVacanteConSucursal)
-    .filter((v) => !tipoVacante || v.tipoVacante === tipoVacante || tipoVacante === "mixta")
-    .map(scoreVacante)
-    .filter((v) => v.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 6);
-}
-
 async function analizarCvConIA(cvTexto = "") {
   const textoLimpio = String(cvTexto || "").trim();
 
@@ -7164,44 +6969,13 @@ app.post(
 
       // Continúa aquí el resto de tu ruta actual.
 
-    let tipoSugerido = "";
-
-const perfilNormalizado = normalizarTexto(analisisIA.perfilRecomendado);
-const tipoPerfilNormalizado = normalizarTexto(analisisIA.tipoPerfil);
-
-if (perfilNormalizado.includes("administr")) {
-  tipoSugerido = "administrativa";
-}
-
-if (perfilNormalizado.includes("operativ")) {
-  tipoSugerido = "operativa";
-}
-
-if (
-  tipoPerfilNormalizado.includes("sistemas") ||
-  tipoPerfilNormalizado.includes("soporte") ||
-  tipoPerfilNormalizado.includes("monitoreo") ||
-  tipoPerfilNormalizado.includes("contabilidad") ||
-  tipoPerfilNormalizado.includes("rh") ||
-  tipoPerfilNormalizado.includes("proyectos")
-) {
-  tipoSugerido = "administrativa";
-}
-
-
-  const sugerenciasIA = await sugerirVacantesBasicas(
-  `
-  ${cvTexto}
-  ${analisisIA.resumen}
-  ${analisisIA.habilidadesDetectadas.join(" ")}
-  ${analisisIA.palabrasClave.join(" ")}
-  ${analisisIA.areasCompatibles.join(" ")}
-  ${analisisIA.puestosSugeridos.join(" ")}
-  ${analisisIA.tipoPerfil}
-  ${analisisIA.nivelExperiencia}
-  `,
-  tipoSugerido
-);     
+  const resultadoRecomendaciones = await recomendarVacantesCv({
+    cvTexto,
+    perfil: analisisIA,
+    vacantes: (await leerVacantes()).map(enriquecerVacanteConSucursal),
+    openai
+  });
+  const sugerenciasIA = resultadoRecomendaciones.vacantes;
 
     res.json({
       ok: true,
@@ -7217,6 +6991,7 @@ if (
         puestosSugeridos: analisisIA.puestosSugeridos,
         palabrasClave: analisisIA.palabrasClave,
         areasCompatibles: analisisIA.areasCompatibles,
+        estadoRecomendaciones: resultadoRecomendaciones.estado,
         sugerenciasIA
       }
     });
