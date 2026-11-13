@@ -1,0 +1,47 @@
+# Blueprint de Render (opcional). Para usarlo: Render > New > Blueprint.
+# Los valores marcados con sync: false se capturan en el dashboard de Render
+# y nunca se guardan en el repositorio.
+services:
+  - type: web
+    name: chatbot-reclutamiento
+    runtime: node
+    plan: free  # igual al plan actual; cambia a starter si necesitas disco persistente
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /index.html
+    autoDeploy: false
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: NODE_ENV
+        value: production
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: PRIMARY_ADMIN_EMAILS
+        sync: false
+      - key: EMAIL_MODE
+        sync: false
+      - key: EMAIL_FROM_ADDRESS
+        sync: false
+      - key: EMAIL_FROM_NAME
+        sync: false
+      - key: EMAIL_REPLY_TO
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_SECURE
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
