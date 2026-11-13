@@ -5420,7 +5420,9 @@ app.disable(
    CORS
 ========================================================= */
 const CORS_ORIGINS = [
-  "http://localhost:3000",
+  ...(process.env.NODE_ENV === "production"
+    ? []
+    : ["http://localhost:3000"]),
   "https://chatbot-reclutamiento-dcqb.onrender.com",
 
   ...String(
