@@ -562,20 +562,6 @@ async function cargarUsuarioAdministrativo() {
   }
 
 
-  console.log(
-    "Usuario administrativo en Entrevistas:",
-    {
-      nombre: currentAdminUser.nombre,
-      email: currentAdminUser.email,
-      role: currentAdminUser.role,
-      isPrimaryAdmin:
-        currentAdminUser.isPrimaryAdmin,
-      globalAccess:
-        currentAdminUser.globalAccess,
-      permissions:
-        currentAdminUser.permissions
-    }
-  );
 
 
   return currentAdminUser;

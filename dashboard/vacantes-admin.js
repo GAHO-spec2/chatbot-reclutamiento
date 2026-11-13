@@ -424,25 +424,6 @@ async function cargarUsuarioAdministrativo() {
     }
   }
 
-  console.log(
-    "Usuario administrativo en Vacantes:",
-    {
-      nombre:
-        currentAdminUser.nombre,
-
-      email:
-        currentAdminUser.email,
-
-      role:
-        currentAdminUser.role,
-
-      globalAccess:
-        currentAdminUser.globalAccess,
-
-      permissions:
-        currentAdminUser.permissions
-    }
-  );
 
   return currentAdminUser;
 }

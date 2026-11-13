@@ -270,20 +270,6 @@ async function cargarUsuarioAdministrativo() {
 
   currentAdminUser = data.user;
 
-  console.log(
-    "Usuario administrativo en Usuarios y accesos:",
-    {
-      nombre: currentAdminUser.nombre,
-      email: currentAdminUser.email,
-      role: currentAdminUser.role,
-      isPrimaryAdmin:
-        currentAdminUser.isPrimaryAdmin,
-      globalAccess:
-        currentAdminUser.globalAccess,
-      permissions:
-        currentAdminUser.permissions
-    }
-  );
 
   return currentAdminUser;
 }
@@ -1054,30 +1040,6 @@ const response =
     }
 
 
-    console.log(
-  esEdicion
-    ? "Usuario administrativo actualizado:"
-    : "Usuario administrativo creado:",
-  {
-    uid:
-      data?.user?.uid,
-
-    nombre:
-      data?.user?.nombre,
-
-    email:
-      data?.user?.email,
-
-    role:
-      data?.user?.role,
-
-    passwordLinkGenerated:
-      Boolean(
-        data?.passwordSetup
-          ?.linkGenerated
-      )
-  }
-);
 
 
     
@@ -1088,19 +1050,6 @@ const response =
 
     if (esEdicion) {
 
-  console.log(
-    "Cambios del usuario guardados correctamente.",
-    {
-      uid:
-        data?.user?.uid,
-
-      nombre:
-        data?.user?.nombre,
-
-      role:
-        data?.user?.role
-    }
-  );
 
 } else {
 
@@ -1108,19 +1057,6 @@ const response =
     data?.passwordSetup?.emailSent === true;
 
 
-  console.log(
-    "Cuenta creada correctamente.",
-    {
-      uid:
-        data?.user?.uid,
-
-      email:
-        data?.user?.email,
-
-      accessEmailSent:
-        emailSent
-    }
-  );
 
 
   if (!emailSent) {
@@ -1748,9 +1684,6 @@ async function generarEnlacePassword(uid) {
     }
 
 
-    console.log(
-      `Correo de acceso enviado correctamente a ${usuario.email}.`
-    );
 
     mostrarToast(
   `Acceso enviado correctamente a ${usuario.email}.`,
@@ -2132,13 +2065,6 @@ document.addEventListener(
 
 
 
-        console.log(
-  "Acción seleccionada:",
-  {
-    uid,
-    action
-  }
-);
 
 
 cerrarMenusUsuarios();
@@ -2269,13 +2195,6 @@ await cargarUsuariosAdministrativos();
 
 mostrarAplicacion();
 
-console.log(
-  "Módulo Usuarios y accesos autorizado correctamente.",
-  {
-    usuariosCargados:
-      usuarios.length
-  }
-);
 
   } catch (error) {
     console.error(
