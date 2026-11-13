@@ -6,6 +6,7 @@ import OpenAI from "openai";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
+import rateLimit from "express-rate-limit";
 import admin from "firebase-admin";
 import { fileURLToPath } from "url";
 import { createRequire } from "module";
@@ -85,6 +86,43 @@ const pdfParse =
 
 const app =
   express();
+
+/*
+ * Render (y cualquier proxy) envía la IP real en X-Forwarded-For.
+ * Sin esto, todos los usuarios compartirían un mismo contador de límite.
+ */
+app.set("trust proxy", 1);
+
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  next();
+});
+
+const crearLimitador = ({ windowMs, max, mensaje }) =>
+  rateLimit({
+    windowMs,
+    limit: max,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    handler: (req, res) =>
+      res.status(429).json({ error: mensaje })
+  });
+
+/* Rutas que llaman a OpenAI: limitar para proteger el costo. */
+const limitadorIA = crearLimitador({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  mensaje: "Demasiadas solicitudes al asistente. Intenta de nuevo en unos minutos."
+});
+
+/* Rutas de envío público: limitar spam y abuso. */
+const limitadorEnvios = crearLimitador({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  mensaje: "Demasiados envíos desde esta conexión. Intenta más tarde."
+});
 
 const PORT =
   process.env.PORT || 3000;
@@ -302,6 +340,12 @@ if (db) {
     ignoreUndefinedProperties:
       true
   });
+}
+
+if (!db) {
+  console.warn(
+    "ADVERTENCIA: Firestore no está configurado. Los datos se guardan en archivos locales y se pierden al reiniciar o redesplegar el servicio."
+  );
 }
 
 const VACANTES_COLLECTION = "vacantes";
@@ -1865,6 +1909,23 @@ async function eliminarPostulacion(id) {
   await referencia.delete();
 
   return true;
+}
+
+async function obtenerPostulacionPorId(id) {
+  if (!id) return null;
+
+  if (!db) {
+    return leerJson(postulacionesFile, []).find(
+      (p) => String(p.id) === String(id)
+    ) || null;
+  }
+
+  const doc = await db
+    .collection(POSTULACIONES_COLLECTION)
+    .doc(String(id))
+    .get();
+
+  return doc.exists ? { id: doc.id, ...doc.data() } : null;
 }
 
 async function leerPostulaciones(limit = 50) {
@@ -6925,6 +6986,7 @@ app.get(
 
 app.post(
   "/api/analizar-cv",
+  limitadorIA,
   upload.fields([
     { name: "cvFile", maxCount: 1 }
   ]),
@@ -7292,6 +7354,7 @@ app.get(
 
 app.post(
   "/api/postulacion",
+  limitadorEnvios,
   upload.fields([
     { name: "cvFile", maxCount: 1 },
     { name: "ineFile", maxCount: 1 },
@@ -8155,7 +8218,7 @@ const resultadoCompatibilidad =
 ========================================================= */
 
 const postulacionId =
-  Date.now().toString();
+  crypto.randomUUID();
 
 
 const postulacion = {
@@ -8554,7 +8617,7 @@ res.status(201).json({
   }
 );
 
-app.post("/chat", async (req, res) => {
+app.post("/chat", limitadorIA, async (req, res) => {
   try {
     const { messages, candidateProfile } = req.body;
 
@@ -11776,6 +11839,7 @@ app.get(
 
 app.post(
   "/api/entrevistas/reservar",
+  limitadorEnvios,
   async (req, res) => {
     try {
       const {
@@ -11820,6 +11884,21 @@ app.post(
         return res.status(400).json({
           error:
             "La disponibilidad seleccionada ya no está activa."
+        });
+      }
+
+      /*
+       * El candidato debe existir. Los datos de contacto se toman
+       * de la postulación guardada, no del cliente, para que nadie
+       * pueda reservar a nombre de otra persona.
+       */
+      const candidatoRegistrado =
+        await obtenerPostulacionPorId(candidatoId);
+
+      if (!candidatoRegistrado) {
+        return res.status(404).json({
+          error:
+            "No encontramos tu postulación. Verifica tu folio e intenta de nuevo."
         });
       }
 
@@ -11873,9 +11952,15 @@ app.post(
         disponibilidadId,
 
         candidatoId,
-        candidatoNombre,
-        correo,
-        telefono,
+        candidatoNombre:
+          candidatoRegistrado.nombre ||
+          candidatoNombre,
+        correo:
+          candidatoRegistrado.correo ||
+          correo,
+        telefono:
+          candidatoRegistrado.telefono ||
+          telefono,
         puesto,
         marca,
 
