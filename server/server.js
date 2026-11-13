@@ -1911,6 +1911,68 @@ async function eliminarPostulacion(id) {
   return true;
 }
 
+/* URL pública: usa PUBLIC_BASE_URL o, si no existe, el host real de la petición. */
+function obtenerBaseUrlPublica(req) {
+  if (process.env.PUBLIC_BASE_URL) {
+    return String(process.env.PUBLIC_BASE_URL).replace(/\/+$/, "");
+  }
+  if (req && req.get) {
+    return `${req.protocol}://${req.get("host")}`;
+  }
+  return "";
+}
+
+function formatearFechaEntrevista(fecha = "") {
+  const valor = String(fecha || "").trim();
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(valor)
+    ? new Date(`${valor}T12:00:00Z`)
+    : null;
+  if (!date || Number.isNaN(date.getTime())) return valor || "Por confirmar";
+  return date.toLocaleDateString("es-MX", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "America/Ciudad_Juarez"
+  });
+}
+
+function construirVariablesEntrevista({ candidato, entrevista, disponibilidad, req }) {
+  const sucursales = leerSucursales();
+  const sucursal =
+    sucursales.find((s) => s.id === entrevista.sucursalId) || null;
+  const direccion = sucursal?.direccion || "";
+  const base = obtenerBaseUrlPublica(req);
+  const estatusUrl = `${base}/?folio=${encodeURIComponent(candidato.id)}`;
+  const pendiente = "Por confirmar";
+
+  return {
+    nombre: candidato.nombre || "",
+    empresa: "GA Hospitality",
+    vacante: entrevista.puesto || "Vacante",
+    fecha: formatearFechaEntrevista(entrevista.fecha),
+    hora: entrevista.hora || pendiente,
+    duracion: entrevista.duracionMinutos
+      ? `${entrevista.duracionMinutos} minutos`
+      : pendiente,
+    modalidad: entrevista.tipo || pendiente,
+    sucursal: entrevista.sucursal || sucursal?.nombre || pendiente,
+    direccion: direccion || pendiente,
+    lugarEntrevista: direccion || pendiente,
+    googleMaps: direccion
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccion)}`
+      : pendiente,
+    reclutador: entrevista.reclutador || disponibilidad?.reclutador || pendiente,
+    reclutadorCargo: pendiente,
+    reclutadorCorreo: pendiente,
+    reclutadorTelefono: pendiente,
+    indicaciones: entrevista.comentarios || pendiente,
+    documentosRequeridos: pendiente,
+    confirmarUrl: estatusUrl,
+    reagendarUrl: estatusUrl
+  };
+}
+
 async function obtenerPostulacionPorId(id) {
   if (!id) return null;
 
@@ -5515,6 +5577,12 @@ const communicationsRepository =
    PROVEEDOR DE CORREO
 ========================= */
 
+if (process.env.EMAIL_MODE !== "smtp") {
+  console.warn(
+    "ADVERTENCIA: EMAIL_MODE no es 'smtp'. Los correos se simulan y NO se envían a los candidatos."
+  );
+}
+
 const emailProvider =
   crearEmailProvider({
     modo:
@@ -8540,8 +8608,7 @@ try {
 
           estatusUrl:
             `${
-              process.env.PUBLIC_BASE_URL ||
-              "http://localhost:3000"
+              obtenerBaseUrlPublica(req)
             }/?folio=${
               encodeURIComponent(
                 postulacion.id
@@ -12050,6 +12117,44 @@ app.post(
             fechaActual
         }
       );
+
+      /* ENCOLAR CORREO DE ENTREVISTA PROGRAMADA */
+      try {
+        if (candidatoRegistrado.correo) {
+          await communicationQueue.agregar({
+            payload: {
+              tipo: "entrevista_programada",
+              canal: "email",
+              destinatario: {
+                nombre: candidatoRegistrado.nombre,
+                correo: candidatoRegistrado.correo,
+                telefono: candidatoRegistrado.telefono
+              },
+              candidatoId,
+              postulacionId: candidatoId,
+              entrevistaId: entrevistaGuardada.id,
+              variables: construirVariablesEntrevista({
+                candidato: candidatoRegistrado,
+                entrevista: entrevistaGuardada,
+                disponibilidad,
+                req
+              }),
+              prioridad: 1,
+              maxIntentos: 3,
+              creadoPor: "sistema_entrevistas",
+              metadata: {
+                evento: "entrevista_programada",
+                vacanteId: entrevistaGuardada.vacanteId,
+                sucursalId: entrevistaGuardada.sucursalId
+              }
+            }
+          });
+        } else {
+          console.warn(`[CommunicationQueue] Entrevista ${entrevistaGuardada.id} sin correo; no se encoló confirmación.`);
+        }
+      } catch (communicationError) {
+        console.error(`[CommunicationQueue] No fue posible encolar la entrevista ${entrevistaGuardada.id}:`, communicationError);
+      }
 
       res.status(201).json({
         ok: true,
