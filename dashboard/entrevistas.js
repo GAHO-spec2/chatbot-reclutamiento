@@ -2715,7 +2715,6 @@ document.addEventListener("keydown", (event) => {
    INIT
 ========================= */
 async function init() {
-  async function init() {
 
   /* =========================================================
      CARGAR PERFIL ADMINISTRATIVO
@@ -2764,8 +2763,6 @@ if (
   ]);
 }
 
-
-}
 if (auth) {
   auth.onAuthStateChanged(async (user) => {
     if (!user) {
