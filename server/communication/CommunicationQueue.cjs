@@ -352,6 +352,19 @@ function crearCommunicationQueue({
       true;
 
     try {
+      if (typeof repository.recuperarAtascados === "function") {
+        try {
+          await repository.recuperarAtascados({
+            minutos: 5
+          });
+        } catch (errorRecuperacion) {
+          console.warn(
+            "[CommunicationQueue] No se pudieron recuperar trabajos atascados:",
+            errorRecuperacion
+          );
+        }
+      }
+
       const siguiente =
         await repository
           .obtenerSiguiente();
