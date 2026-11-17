@@ -7498,6 +7498,13 @@ const correoNormalizado =
     correo || ""
   ).trim();
 
+if (!correoNormalizado) {
+  return res.status(400).json({
+    error:
+      "Tu correo electrónico es obligatorio para continuar."
+  });
+}
+
 if (correoNormalizado) {
 
   const correoValido =
@@ -7528,12 +7535,12 @@ const telefonoNormalizado =
     .replace(/[^\d]/g, "");
 
 if (
-  telefonoNormalizado &&
+  !telefonoNormalizado ||
   telefonoNormalizado.length < 10
 ) {
   return res.status(400).json({
     error:
-      "El número de teléfono debe contener al menos 10 dígitos."
+      "Tu número de teléfono es obligatorio y debe contener al menos 10 dígitos."
   });
 }
 
@@ -13183,15 +13190,9 @@ function normalizarConfiguracionPostulacion(
         configuracion.solicitarNombre
       ),
 
-    solicitarTelefono:
-      Boolean(
-        configuracion.solicitarTelefono
-      ),
-
-    solicitarCorreo:
-      Boolean(
-        configuracion.solicitarCorreo
-      ),
+    /* Correo y teléfono son obligatorios en todas las vacantes. */
+    solicitarTelefono: true,
+    solicitarCorreo: true,
 
     solicitarCodigoPostal:
       Boolean(
