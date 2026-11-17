@@ -5579,9 +5579,9 @@ const communicationsRepository =
    PROVEEDOR DE CORREO
 ========================= */
 
-if (process.env.EMAIL_MODE !== "smtp") {
+if (!["smtp", "brevo"].includes(process.env.EMAIL_MODE)) {
   console.warn(
-    "ADVERTENCIA: EMAIL_MODE no es 'smtp'. Los correos se simulan y NO se envían a los candidatos."
+    "ADVERTENCIA: EMAIL_MODE no es 'smtp' ni 'brevo'. Los correos se simulan y NO se envían a los candidatos."
   );
 }
 
@@ -5590,6 +5590,10 @@ const emailProvider =
     modo:
       process.env.EMAIL_MODE ||
       "simulacion",
+
+    brevoApiKey:
+      process.env.BREVO_API_KEY ||
+      "",
 
     remitenteNombre:
       process.env.EMAIL_FROM_NAME ||

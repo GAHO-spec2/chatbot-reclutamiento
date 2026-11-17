@@ -214,6 +214,8 @@ function crearEmailProvider({
   smtpUser = "",
   smtpPass = "",
 
+  brevoApiKey = "",
+
   logger = console,
 
   guardarContenidoEnLog = false
@@ -241,6 +243,13 @@ function crearEmailProvider({
       limpiarTexto(
         replyTo
       ),
+
+    brevo: {
+      apiKey:
+        limpiarTexto(
+          brevoApiKey
+        )
+    },
 
     smtp: {
       host:
@@ -288,6 +297,42 @@ function crearEmailProvider({
         valido: true,
         modo:
           modoNormalizado
+      };
+    }
+
+    if (
+      modoNormalizado ===
+      "brevo"
+    ) {
+      if (
+        !configuracion
+          .brevo.apiKey
+      ) {
+        return {
+          valido: false,
+          modo: modoNormalizado,
+          error:
+            "Falta BREVO_API_KEY en la configuración."
+        };
+      }
+
+      if (
+        !validarCorreo(
+          configuracion
+            .remitenteCorreo
+        )
+      ) {
+        return {
+          valido: false,
+          modo: modoNormalizado,
+          error:
+            "El correo del remitente no es válido."
+        };
+      }
+
+      return {
+        valido: true,
+        modo: modoNormalizado
       };
     }
 
@@ -585,6 +630,161 @@ function crearEmailProvider({
      ENVÍO SMTP REAL
   ======================================================= */
 
+  /* =======================================================
+     ENVIAR POR API HTTP (BREVO)
+     Funciona en planes gratuitos de Render, que bloquean
+     los puertos SMTP 25, 465 y 587.
+  ======================================================= */
+
+  async function enviarBrevo(
+    mensaje
+  ) {
+    const apiKey =
+      configuracion.brevo.apiKey;
+
+    const cuerpo = {
+      sender: {
+        name:
+          configuracion.remitenteNombre ||
+          undefined,
+
+        email:
+          configuracion.remitenteCorreo
+      },
+
+      to: [
+        {
+          email: mensaje.para,
+
+          name:
+            mensaje.nombre ||
+            undefined
+        }
+      ],
+
+      subject:
+        mensaje.asunto,
+
+      htmlContent:
+        mensaje.html ||
+        undefined,
+
+      textContent:
+        mensaje.texto ||
+        undefined
+    };
+
+    const replyToFinal =
+      mensaje.replyTo ||
+      configuracion.replyTo;
+
+    if (
+      replyToFinal &&
+      validarCorreo(replyToFinal)
+    ) {
+      cuerpo.replyTo = {
+        email: replyToFinal
+      };
+    }
+
+    let respuesta;
+
+    try {
+      respuesta = await fetch(
+        "https://api.brevo.com/v3/smtp/email",
+        {
+          method: "POST",
+
+          headers: {
+            "api-key": apiKey,
+            "content-type": "application/json",
+            accept: "application/json"
+          },
+
+          body: JSON.stringify(cuerpo),
+
+          signal:
+            AbortSignal.timeout(20000)
+        }
+      );
+    } catch (error) {
+      logger.error?.(
+        "[EmailProvider] Error de red con Brevo:",
+        error
+      );
+
+      throw crearErrorProveedor(
+        "No fue posible conectar con el servicio de correo.",
+        "EMAIL_API_RED_ERROR",
+        { mensaje: error.message }
+      );
+    }
+
+    const datos = await respuesta
+      .json()
+      .catch(() => ({}));
+
+    if (!respuesta.ok) {
+      logger.error?.(
+        "[EmailProvider] Brevo rechazó el correo:",
+        respuesta.status,
+        datos
+      );
+
+      throw crearErrorProveedor(
+        datos.message ||
+          "El servicio de correo rechazó el envío.",
+        "EMAIL_API_RECHAZADO",
+        {
+          status: respuesta.status,
+          codigo: datos.code || ""
+        }
+      );
+    }
+
+    logger.info?.(
+      `[EmailProvider] Correo enviado por Brevo a ${mensaje.para}`
+    );
+
+    return {
+      ok: true,
+
+      simulado: false,
+
+      proveedor:
+        "brevo",
+
+      mensajeId:
+        datos.messageId ||
+        generarMensajeId(),
+
+      estado:
+        "enviado",
+
+      para:
+        mensaje.para,
+
+      asunto:
+        mensaje.asunto,
+
+      fechaEnvio:
+        new Date()
+          .toISOString(),
+
+      accepted: [
+        mensaje.para
+      ],
+
+      rejected: [],
+
+      response:
+        "",
+
+      metadata:
+        mensaje.metadata
+    };
+  }
+
   async function enviarSmtp(
     mensaje
   ) {
@@ -754,6 +954,15 @@ function crearEmailProvider({
       "smtp"
     ) {
       return enviarSmtp(
+        mensaje
+      );
+    }
+
+    if (
+      modoNormalizado ===
+      "brevo"
+    ) {
+      return enviarBrevo(
         mensaje
       );
     }
