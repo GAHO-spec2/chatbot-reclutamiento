@@ -1991,10 +1991,7 @@ function renderComunicaciones() {
 
               <small>
                 ${escapeHtml(
-                  (typeof item.destinatario === "string"
-                    ? item.destinatario
-                    : item.destinatario?.correo ||
-                      item.payload?.destinatario?.correo) ||
+                  item.destinatario ||
                   "Sin destinatario"
                 )}
               </small>

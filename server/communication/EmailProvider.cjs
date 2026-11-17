@@ -418,12 +418,7 @@ function crearEmailProvider({
             pass:
               configuracion
                 .smtp.pass
-          },
-
-          /* Evita que una conexión colgada bloquee toda la cola. */
-          connectionTimeout: 15000,
-          greetingTimeout: 15000,
-          socketTimeout: 30000
+          }
         });
 
     return transporter;

@@ -866,67 +866,9 @@ function crearCommunicationQueueRepository({
     return trabajo;
   }
 
-  /* =======================================================
-     RECUPERAR TRABAJOS ATASCADOS
-     Si el proceso se reinicia mientras envía, el trabajo
-     queda en "procesando" para siempre. Aquí se libera.
-  ======================================================= */
-
-  async function recuperarAtascados({
-    minutos = 5,
-    ahora = new Date()
-  } = {}) {
-    const enProceso = await listar({
-      limite: 1000,
-      estado: QUEUE_STATUS.PROCESANDO
-    });
-
-    const limiteMs =
-      ahora.getTime() - minutos * 60 * 1000;
-
-    let recuperados = 0;
-
-    for (const trabajo of enProceso) {
-      const inicioMs = new Date(
-        trabajo.fechaInicio ||
-        trabajo.fechaUltimoIntento ||
-        0
-      ).getTime();
-
-      if (!Number.isFinite(inicioMs) || inicioMs > limiteMs) {
-        continue;
-      }
-
-      const agotado =
-        Number(trabajo.intentos || 0) >=
-        Number(trabajo.maxIntentos || 3);
-
-      await actualizar(
-        trabajo.id,
-        agotado
-          ? {
-              estado: QUEUE_STATUS.ERROR,
-              ultimoError:
-                "Procesamiento interrumpido repetidamente."
-            }
-          : {
-              estado: QUEUE_STATUS.PENDIENTE,
-              fechaDisponible: ahora.toISOString(),
-              ultimoError:
-                "Procesamiento interrumpido; se reintentará."
-            }
-      );
-
-      recuperados += 1;
-    }
-
-    return recuperados;
-  }
-
   return {
     crear,
     buscarPorId,
-    recuperarAtascados,
     listar,
     actualizar,
     obtenerSiguiente,
