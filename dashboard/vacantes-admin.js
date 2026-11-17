@@ -2061,21 +2061,19 @@ if (vacanteSolicitarNombre) {
 
 /* Teléfono */
 
+/* Obligatorio en todas las vacantes: se fuerza y se bloquea. */
 if (vacanteSolicitarTelefono) {
-  vacanteSolicitarTelefono.checked =
-    Boolean(
-      configuracion.solicitarTelefono
-    );
+  vacanteSolicitarTelefono.checked = true;
+  vacanteSolicitarTelefono.disabled = true;
 }
 
 
 /* Correo */
 
+/* Obligatorio en todas las vacantes: se fuerza y se bloquea. */
 if (vacanteSolicitarCorreo) {
-  vacanteSolicitarCorreo.checked =
-    Boolean(
-      configuracion.solicitarCorreo
-    );
+  vacanteSolicitarCorreo.checked = true;
+  vacanteSolicitarCorreo.disabled = true;
 }
 
 

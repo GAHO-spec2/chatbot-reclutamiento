@@ -1548,15 +1548,9 @@ function getVacancyApplicationConfig(vacante = {}) {
         config.solicitarNombre
       ),
 
-    solicitarTelefono:
-      Boolean(
-        config.solicitarTelefono
-      ),
-
-    solicitarCorreo:
-      Boolean(
-        config.solicitarCorreo
-      ),
+    /* Correo y teléfono siempre se solicitan. */
+    solicitarTelefono: true,
+    solicitarCorreo: true,
 
     solicitarCodigoPostal:
       Boolean(
