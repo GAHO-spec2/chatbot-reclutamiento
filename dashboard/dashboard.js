@@ -2662,25 +2662,6 @@ if (usuariosAdminNavLink) {
 }
 
 
-  console.log(
-    "Usuario administrativo:",
-    {
-      nombre:
-        currentAdminUser.nombre,
-
-      email:
-        currentAdminUser.email,
-
-      role:
-        currentAdminUser.role,
-
-      globalAccess:
-        currentAdminUser.globalAccess,
-
-      permissions:
-        currentAdminUser.permissions
-    }
-  );
 
 
   return currentAdminUser;

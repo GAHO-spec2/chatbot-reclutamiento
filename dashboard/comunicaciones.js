@@ -670,28 +670,6 @@ async function cargarUsuarioAdministrativo() {
   }
 
 
-  console.log(
-    "Usuario administrativo en Comunicaciones:",
-    {
-      nombre:
-        currentAdminUser.nombre,
-
-      email:
-        currentAdminUser.email,
-
-      role:
-        currentAdminUser.role,
-
-      isPrimaryAdmin:
-        currentAdminUser.isPrimaryAdmin,
-
-      globalAccess:
-        currentAdminUser.globalAccess,
-
-      permissions:
-        currentAdminUser.permissions
-    }
-  );
 
 
   return currentAdminUser;

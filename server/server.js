@@ -6,6 +6,7 @@ import OpenAI from "openai";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
+import rateLimit from "express-rate-limit";
 import admin from "firebase-admin";
 import { fileURLToPath } from "url";
 import { createRequire } from "module";
@@ -85,6 +86,43 @@ const pdfParse =
 
 const app =
   express();
+
+/*
+ * Render (y cualquier proxy) envía la IP real en X-Forwarded-For.
+ * Sin esto, todos los usuarios compartirían un mismo contador de límite.
+ */
+app.set("trust proxy", 1);
+
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  next();
+});
+
+const crearLimitador = ({ windowMs, max, mensaje }) =>
+  rateLimit({
+    windowMs,
+    limit: max,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    handler: (req, res) =>
+      res.status(429).json({ error: mensaje })
+  });
+
+/* Rutas que llaman a OpenAI: limitar para proteger el costo. */
+const limitadorIA = crearLimitador({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  mensaje: "Demasiadas solicitudes al asistente. Intenta de nuevo en unos minutos."
+});
+
+/* Rutas de envío público: limitar spam y abuso. */
+const limitadorEnvios = crearLimitador({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  mensaje: "Demasiados envíos desde esta conexión. Intenta más tarde."
+});
 
 const PORT =
   process.env.PORT || 3000;
@@ -302,6 +340,12 @@ if (db) {
     ignoreUndefinedProperties:
       true
   });
+}
+
+if (!db) {
+  console.warn(
+    "ADVERTENCIA: Firestore no está configurado. Los datos se guardan en archivos locales y se pierden al reiniciar o redesplegar el servicio."
+  );
 }
 
 const VACANTES_COLLECTION = "vacantes";
@@ -1865,6 +1909,85 @@ async function eliminarPostulacion(id) {
   await referencia.delete();
 
   return true;
+}
+
+/* URL pública: usa PUBLIC_BASE_URL o, si no existe, el host real de la petición. */
+function obtenerBaseUrlPublica(req) {
+  if (process.env.PUBLIC_BASE_URL) {
+    return String(process.env.PUBLIC_BASE_URL).replace(/\/+$/, "");
+  }
+  if (req && req.get) {
+    return `${req.protocol}://${req.get("host")}`;
+  }
+  return "";
+}
+
+function formatearFechaEntrevista(fecha = "") {
+  const valor = String(fecha || "").trim();
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(valor)
+    ? new Date(`${valor}T12:00:00Z`)
+    : null;
+  if (!date || Number.isNaN(date.getTime())) return valor || "Por confirmar";
+  return date.toLocaleDateString("es-MX", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "America/Ciudad_Juarez"
+  });
+}
+
+function construirVariablesEntrevista({ candidato, entrevista, disponibilidad, req }) {
+  const sucursales = leerSucursales();
+  const sucursal =
+    sucursales.find((s) => s.id === entrevista.sucursalId) || null;
+  const direccion = sucursal?.direccion || "";
+  const base = obtenerBaseUrlPublica(req);
+  const estatusUrl = `${base}/?folio=${encodeURIComponent(candidato.id)}`;
+  const pendiente = "Por confirmar";
+
+  return {
+    nombre: candidato.nombre || "",
+    empresa: "GA Hospitality",
+    vacante: entrevista.puesto || "Vacante",
+    fecha: formatearFechaEntrevista(entrevista.fecha),
+    hora: entrevista.hora || pendiente,
+    duracion: entrevista.duracionMinutos
+      ? `${entrevista.duracionMinutos} minutos`
+      : pendiente,
+    modalidad: entrevista.tipo || pendiente,
+    sucursal: entrevista.sucursal || sucursal?.nombre || pendiente,
+    direccion: direccion || pendiente,
+    lugarEntrevista: direccion || pendiente,
+    googleMaps: direccion
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccion)}`
+      : pendiente,
+    reclutador: entrevista.reclutador || disponibilidad?.reclutador || pendiente,
+    reclutadorCargo: pendiente,
+    reclutadorCorreo: pendiente,
+    reclutadorTelefono: pendiente,
+    indicaciones: entrevista.comentarios || pendiente,
+    documentosRequeridos: pendiente,
+    confirmarUrl: estatusUrl,
+    reagendarUrl: estatusUrl
+  };
+}
+
+async function obtenerPostulacionPorId(id) {
+  if (!id) return null;
+
+  if (!db) {
+    return leerJson(postulacionesFile, []).find(
+      (p) => String(p.id) === String(id)
+    ) || null;
+  }
+
+  const doc = await db
+    .collection(POSTULACIONES_COLLECTION)
+    .doc(String(id))
+    .get();
+
+  return doc.exists ? { id: doc.id, ...doc.data() } : null;
 }
 
 async function leerPostulaciones(limit = 50) {
@@ -5297,7 +5420,9 @@ app.disable(
    CORS
 ========================================================= */
 const CORS_ORIGINS = [
-  "http://localhost:3000",
+  ...(process.env.NODE_ENV === "production"
+    ? []
+    : ["http://localhost:3000"]),
   "https://chatbot-reclutamiento-dcqb.onrender.com",
 
   ...String(
@@ -5453,6 +5578,12 @@ const communicationsRepository =
 /* =========================
    PROVEEDOR DE CORREO
 ========================= */
+
+if (process.env.EMAIL_MODE !== "smtp") {
+  console.warn(
+    "ADVERTENCIA: EMAIL_MODE no es 'smtp'. Los correos se simulan y NO se envían a los candidatos."
+  );
+}
 
 const emailProvider =
   crearEmailProvider({
@@ -6925,6 +7056,7 @@ app.get(
 
 app.post(
   "/api/analizar-cv",
+  limitadorIA,
   upload.fields([
     { name: "cvFile", maxCount: 1 }
   ]),
@@ -7292,6 +7424,7 @@ app.get(
 
 app.post(
   "/api/postulacion",
+  limitadorEnvios,
   upload.fields([
     { name: "cvFile", maxCount: 1 },
     { name: "ineFile", maxCount: 1 },
@@ -8155,7 +8288,7 @@ const resultadoCompatibilidad =
 ========================================================= */
 
 const postulacionId =
-  Date.now().toString();
+  crypto.randomUUID();
 
 
 const postulacion = {
@@ -8477,8 +8610,7 @@ try {
 
           estatusUrl:
             `${
-              process.env.PUBLIC_BASE_URL ||
-              "http://localhost:3000"
+              obtenerBaseUrlPublica(req)
             }/?folio=${
               encodeURIComponent(
                 postulacion.id
@@ -8554,7 +8686,7 @@ res.status(201).json({
   }
 );
 
-app.post("/chat", async (req, res) => {
+app.post("/chat", limitadorIA, async (req, res) => {
   try {
     const { messages, candidateProfile } = req.body;
 
@@ -11776,6 +11908,7 @@ app.get(
 
 app.post(
   "/api/entrevistas/reservar",
+  limitadorEnvios,
   async (req, res) => {
     try {
       const {
@@ -11820,6 +11953,21 @@ app.post(
         return res.status(400).json({
           error:
             "La disponibilidad seleccionada ya no está activa."
+        });
+      }
+
+      /*
+       * El candidato debe existir. Los datos de contacto se toman
+       * de la postulación guardada, no del cliente, para que nadie
+       * pueda reservar a nombre de otra persona.
+       */
+      const candidatoRegistrado =
+        await obtenerPostulacionPorId(candidatoId);
+
+      if (!candidatoRegistrado) {
+        return res.status(404).json({
+          error:
+            "No encontramos tu postulación. Verifica tu folio e intenta de nuevo."
         });
       }
 
@@ -11873,9 +12021,15 @@ app.post(
         disponibilidadId,
 
         candidatoId,
-        candidatoNombre,
-        correo,
-        telefono,
+        candidatoNombre:
+          candidatoRegistrado.nombre ||
+          candidatoNombre,
+        correo:
+          candidatoRegistrado.correo ||
+          correo,
+        telefono:
+          candidatoRegistrado.telefono ||
+          telefono,
         puesto,
         marca,
 
@@ -11965,6 +12119,44 @@ app.post(
             fechaActual
         }
       );
+
+      /* ENCOLAR CORREO DE ENTREVISTA PROGRAMADA */
+      try {
+        if (candidatoRegistrado.correo) {
+          await communicationQueue.agregar({
+            payload: {
+              tipo: "entrevista_programada",
+              canal: "email",
+              destinatario: {
+                nombre: candidatoRegistrado.nombre,
+                correo: candidatoRegistrado.correo,
+                telefono: candidatoRegistrado.telefono
+              },
+              candidatoId,
+              postulacionId: candidatoId,
+              entrevistaId: entrevistaGuardada.id,
+              variables: construirVariablesEntrevista({
+                candidato: candidatoRegistrado,
+                entrevista: entrevistaGuardada,
+                disponibilidad,
+                req
+              }),
+              prioridad: 1,
+              maxIntentos: 3,
+              creadoPor: "sistema_entrevistas",
+              metadata: {
+                evento: "entrevista_programada",
+                vacanteId: entrevistaGuardada.vacanteId,
+                sucursalId: entrevistaGuardada.sucursalId
+              }
+            }
+          });
+        } else {
+          console.warn(`[CommunicationQueue] Entrevista ${entrevistaGuardada.id} sin correo; no se encoló confirmación.`);
+        }
+      } catch (communicationError) {
+        console.error(`[CommunicationQueue] No fue posible encolar la entrevista ${entrevistaGuardada.id}:`, communicationError);
+      }
 
       res.status(201).json({
         ok: true,
